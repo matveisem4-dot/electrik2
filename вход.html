@@ -3,194 +3,206 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Diary Pro</title>
+    <title>Государственная Образовательная Платформа</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
             --p-teacher: #5D5FEF;
             --p-student: #00BA88;
-            --bg: #F8FAFC;
-            --text-main: #1A1C1E;
-            --text-sec: #6C7278;
+            --bg: #F8F9FC;
+            --text-main: #111827;
+            --text-sec: #6B7280;
+            --white: #FFFFFF;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
 
-        body { background: var(--bg); color: var(--text-main); min-height: 100vh; }
+        body { 
+            background: var(--bg); 
+            color: var(--text-main); 
+            min-height: 100vh; 
+            display: flex; align-items: center; justify-content: center;
+            background-image: radial-gradient(at 0% 0%, rgba(93, 95, 239, 0.05) 0px, transparent 50%), 
+                              radial-gradient(at 100% 100%, rgba(0, 186, 136, 0.05) 0px, transparent 50%);
+        }
 
-        /* Экраны */
-        .page { display: none; min-height: 100vh; width: 100%; padding: 20px; }
-        .page.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-
-        /* ДИЗАЙН КАРТОЧЕК (КАК НА СКРИНШОТАХ) */
-        .main-container { text-align: center; max-width: 900px; }
-        .cards-grid { display: flex; gap: 24px; margin-top: 40px; }
+        .container { width: 100%; max-width: 1100px; padding: 20px; text-align: center; }
         
-        .card {
-            background: white; border-radius: 32px; padding: 48px 32px; width: 340px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.04); cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border: 2px solid transparent;
-        }
-        .card:hover { transform: translateY(-12px); box-shadow: 0 20px 60px rgba(0,0,0,0.08); }
-        .card.teacher:hover { border-color: var(--p-teacher); }
-        .card.student:hover { border-color: var(--p-student); }
+        /* ГЛАВНЫЙ ЭКРАН */
+        .main-header { margin-bottom: 60px; }
+        .main-header h1 { font-size: 48px; font-weight: 800; letter-spacing: -1px; margin-bottom: 15px; }
+        .main-header p { color: var(--text-sec); font-size: 18px; }
 
-        .icon-circle {
-            width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 24px;
-            display: flex; align-items: center; justify-content: center; font-size: 32px;
+        .roles-grid { display: flex; gap: 30px; justify-content: center; }
+        
+        .role-card {
+            background: var(--white); border-radius: 35px; padding: 50px 40px; width: 380px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.03); cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            border: 1px solid rgba(0,0,0,0.05);
         }
-        .teacher .icon-circle { background: #EEF0FF; color: var(--p-teacher); }
-        .student .icon-circle { background: #E6FFF1; color: var(--p-student); }
+        .role-card:hover { transform: translateY(-15px); box-shadow: 0 30px 60px rgba(0,0,0,0.08); }
+        .role-card.t:hover { border-color: var(--p-teacher); }
+        .role-card.s:hover { border-color: var(--p-student); }
 
-        /* ФОРМА ВХОДА (ЗАЩИЩЕННАЯ) */
-        .auth-card {
-            background: white; padding: 40px; border-radius: 32px; width: 100%;
-            max-width: 440px; box-shadow: 0 25px 70px rgba(0,0,0,0.07);
+        .icon-wrap { 
+            width: 90px; height: 90px; border-radius: 25px; margin: 0 auto 30px;
+            display: flex; align-items: center; justify-content: center; font-size: 40px;
+            transition: 0.3s;
         }
-        .input-box { text-align: left; margin-bottom: 20px; }
-        .input-box label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+        .t .icon-wrap { background: #EEF0FF; color: var(--p-teacher); }
+        .s .icon-wrap { background: #E6FFF1; color: var(--p-student); }
+
+        /* ПРЕМИАЛЬНЫЕ ФОРМЫ */
+        .auth-window { 
+            background: var(--white); padding: 50px; border-radius: 40px; 
+            width: 100%; max-width: 480px; display: none;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.1); animation: slideUp 0.5s ease;
+        }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .input-group { text-align: left; margin-bottom: 25px; }
+        .input-group label { display: block; margin-bottom: 10px; font-weight: 600; font-size: 14px; color: #374151; }
         
         input {
-            width: 100%; padding: 16px; border: 1.5px solid #E2E8F0; border-radius: 16px;
-            font-size: 16px; transition: 0.3s; background: #FDFDFF;
+            width: 100%; padding: 18px; border: 2px solid #F3F4F6; border-radius: 18px;
+            font-size: 16px; background: #F9FAFB; transition: 0.3s;
         }
-        input:focus { border-color: var(--p-teacher); outline: none; background: #fff; }
+        input:focus { outline: none; border-color: var(--p-teacher); background: #FFF; box-shadow: 0 0 0 4px rgba(93, 95, 239, 0.1); }
+        .s-focus:focus { border-color: var(--p-student); box-shadow: 0 0 0 4px rgba(0, 186, 136, 0.1); }
 
         .btn {
-            width: 100%; padding: 18px; border: none; border-radius: 16px;
-            font-size: 18px; font-weight: 700; cursor: pointer; transition: 0.3s;
+            width: 100%; padding: 20px; border: none; border-radius: 18px;
+            font-size: 18px; font-weight: 700; cursor: pointer; color: white; transition: 0.3s;
         }
-        .btn-p { background: var(--p-teacher); color: white; }
-        .btn-p:hover { opacity: 0.9; transform: scale(1.02); }
+        .btn-t { background: var(--p-teacher); box-shadow: 0 10px 25px rgba(93, 95, 239, 0.3); }
+        .btn-s { background: var(--p-student); box-shadow: 0 10px 25px rgba(0, 186, 136, 0.3); }
+        .btn:hover { transform: scale(1.02); filter: brightness(1.1); }
 
-        /* ПАНЕЛЬ УЧИТЕЛЯ */
-        .teacher-layout { display: none; width: 100%; height: 100vh; flex-direction: column; }
-        .header {
-            height: 80px; background: white; border-bottom: 1px solid #E2E8F0;
-            display: flex; align-items: center; padding: 0 40px; justify-content: space-between;
-        }
-        .nav { display: flex; gap: 32px; height: 100%; }
-        .nav-btn {
-            height: 100%; display: flex; align-items: center; cursor: pointer;
-            font-weight: 600; color: var(--text-sec); border-bottom: 3px solid transparent;
-        }
-        .nav-btn.active { color: var(--p-teacher); border-bottom-color: var(--p-teacher); }
+        .text-link { color: var(--p-teacher); cursor: pointer; font-weight: 700; text-decoration: none; }
+        .s-link { color: var(--p-student); }
 
+        /* ЧЕКБОКС ГОССТАНДАРТ */
+        .agreement { display: flex; gap: 12px; align-items: flex-start; text-align: left; margin: 20px 0; font-size: 13px; color: var(--text-sec); }
+        .agreement input { width: 20px; height: 20px; margin: 0; cursor: pointer; flex-shrink: 0; }
     </style>
 </head>
 <body>
 
-    <div id="page-roles" class="page active">
-        <div class="main-container">
-            <h1 style="font-size: 40px; font-weight: 800; margin-bottom: 8px;">Электронный Дневник</h1>
-            <p style="color: var(--text-sec); font-size: 18px;">Выберите вашу роль в системе</p>
-            <div class="cards-grid">
-                <div class="card student" onclick="showAuth('student')">
-                    <div class="icon-circle">🎓</div>
-                    <h2 style="margin-bottom: 12px;">Ученикам</h2>
-                    <p style="color: var(--text-sec); font-size: 14px;">Смотрите расписание, оценки и домашние задания.</p>
-                </div>
-                <div class="card teacher" onclick="showAuth('teacher')">
-                    <div class="icon-circle">🏫</div>
-                    <h2 style="margin-bottom: 12px;">Учителям</h2>
-                    <p style="color: var(--text-sec); font-size: 14px;">Управляйте классами, ставьте оценки и ведите журнал.</p>
-                </div>
+    <div id="screen-main" class="container">
+        <div class="main-header">
+            <h1>Мой Дневник</h1>
+            <p>Государственная информационная система образования</p>
+        </div>
+        <div class="roles-grid">
+            <div class="role-card s" onclick="nav('student-login')">
+                <div class="icon-wrap">🎓</div>
+                <h2>Ученик</h2>
+                <p style="margin-top:10px; color:var(--text-sec);">Вход в личный кабинет учащегося</p>
+            </div>
+            <div class="role-card t" onclick="nav('teacher-login')">
+                <div class="icon-wrap">🏫</div>
+                <h2>Преподаватель</h2>
+                <p style="margin-top:10px; color:var(--text-sec);">Доступ к электронному журналу</p>
             </div>
         </div>
     </div>
 
-    <div id="page-auth-teacher" class="page">
-        <div class="auth-card" id="login-form">
-            <div class="icon-circle" style="background: #EEF0FF; color: var(--p-teacher);">🏫</div>
-            <h2 style="margin-bottom: 8px;">Вход для учителя</h2>
-            <p style="color: var(--text-sec); margin-bottom: 32px;">С возвращением!</p>
-            
-            <div class="input-box">
-                <label>Email адрес</label>
-                <input type="email" id="t-email" placeholder="name@school.ru">
-            </div>
-            <div class="input-box">
-                <label>Пароль</label>
-                <input type="password" id="t-pass" placeholder="••••••••">
-            </div>
-            
-            <button class="btn btn-p" onclick="processAuth('login')">Войти в кабинет</button>
-            <p style="margin-top: 24px; font-size: 14px;">
-                Нет аккаунта? <span style="color:var(--p-teacher); font-weight:700; cursor:pointer;" onclick="toggleAuth(true)">Создать</span>
-            </p>
-            <p style="margin-top: 15px; cursor:pointer; color:var(--text-sec);" onclick="location.reload()">← Назад</p>
+    <div id="teacher-login" class="auth-window">
+        <div class="icon-wrap" style="background:#EEF0FF; color:var(--p-teacher); margin-bottom: 20px;">👤</div>
+        <h2 style="margin-bottom: 5px;">Вход для учителей</h2>
+        <p style="color:var(--text-sec); margin-bottom: 35px;">Авторизуйтесь через рабочую почту</p>
+        
+        <div class="input-group">
+            <label>Электронная почта</label>
+            <input type="email" id="t-log-email" placeholder="example@school.ru">
+        </div>
+        <div class="input-group">
+            <label>Пароль</label>
+            <input type="password" id="t-log-pass" placeholder="••••••••">
         </div>
 
-        <div class="auth-card" id="reg-form" style="display:none;">
-            <h2>Регистрация</h2>
-            <button class="btn btn-p" onclick="processAuth('reg')">Зарегистрироваться</button>
-            <p onclick="toggleAuth(false)">Уже есть аккаунт? Войти</p>
-        </div>
+        <button class="btn btn-t" onclick="login('teacher')">Войти в систему</button>
+        <p style="margin-top: 25px; font-size: 14px; color: var(--text-sec);">
+            Нет аккаунта? <span class="text-link" onclick="nav('teacher-reg')">Зарегистрироваться</span>
+        </p>
+        <p style="margin-top: 15px; cursor:pointer; font-size: 14px;" onclick="nav('main')">← Вернуться назад</p>
     </div>
 
-    <div id="page-teacher-dashboard" class="teacher-layout">
-        <div class="header">
-            <h2 style="color: var(--p-teacher); font-weight: 800;">SmartDiary</h2>
-            <div class="nav">
-                <div class="nav-btn active">Предметы</div>
-                <div class="nav-btn">Ученики</div>
-                <div class="nav-btn">Журнал</div>
-                <div class="nav-btn">ДЗ</div>
-            </div>
-            <button onclick="location.reload()" style="background: #FFF0F0; color: #FF4D4D; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 700; cursor: pointer;">Выйти</button>
+    <div id="teacher-reg" class="auth-window">
+        <h2 style="margin-bottom: 10px;">Регистрация</h2>
+        <p style="color:var(--text-sec); margin-bottom: 30px;">Создание учетной записи педагога</p>
+        
+        <div class="input-group"><label>Email</label><input type="email" id="t-reg-email"></div>
+        <div class="input-group"><label>Придумайте пароль</label><input type="password" id="t-reg-pass"></div>
+
+        <div class="agreement">
+            <input type="checkbox" id="reg-check">
+            <span>Я подтверждаю согласие на обработку персональных данных и использование системы в образовательных целях.</span>
         </div>
-        <div style="padding: 40px; background: #F8FAFF; flex: 1;">
-            <div style="background: white; padding: 32px; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.02);">
-                <h2>Добро пожаловать в кабинет учителя!</h2>
-                <p style="color: var(--text-sec); margin-top: 10px;">Здесь вы можете управлять своими предметами и классами.</p>
-            </div>
+
+        <button class="btn btn-t" onclick="register()">Создать аккаунт</button>
+        <p style="margin-top: 25px; font-size: 14px;">
+            Уже есть аккаунт? <span class="text-link" onclick="nav('teacher-login')">Войти</span>
+        </p>
+    </div>
+
+    <div id="student-login" class="auth-window">
+        <div class="icon-wrap" style="background:#E6FFF1; color:var(--p-student); margin-bottom: 20px;">🎓</div>
+        <h2>Вход для учеников</h2>
+        <p style="color:var(--text-sec); margin-bottom: 35px;">Используйте логин, выданный учителем</p>
+        
+        <div class="input-group">
+            <label>Логин или ID</label>
+            <input type="text" class="s-focus" id="s-log-id" placeholder="id-000000">
         </div>
+        <div class="input-group">
+            <label>Пароль</label>
+            <input type="password" class="s-focus" id="s-log-pass" placeholder="••••••••">
+        </div>
+
+        <button class="btn btn-s" onclick="login('student')">Открыть дневник</button>
+        <p style="margin-top: 25px; cursor:pointer; font-size: 14px;" onclick="nav('main')">← Назад к выбору</p>
     </div>
 
     <script>
-        // --- ЗАЩИТА И КОНФИГУРАЦИЯ ---
-        const firebaseConfig = {
-            apiKey: "AIzaSy...", // Ключ API открыт, но бесполезен без Rules в Firebase
-            databaseURL: "https://your-diary-db.firebaseio.com/",
-            authDomain: "your-diary.firebaseapp.com"
-        };
+        // Инициализация Firebase (обязательно замени на свои данные!)
+        const firebaseConfig = { databaseURL: "https://your-project.firebaseio.com/" };
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
 
-        function showAuth(role) {
-            document.getElementById('page-roles').classList.remove('active');
-            if(role === 'teacher') document.getElementById('page-auth-teacher').classList.add('active');
-        }
-
-        function toggleAuth(showReg) {
-            document.getElementById('login-form').style.display = showReg ? 'none' : 'block';
-            document.getElementById('reg-form').style.display = showReg ? 'block' : 'none';
-        }
-
-        function processAuth(type) {
-            const email = document.getElementById('t-email').value;
-            const pass = document.getElementById('t-pass').value;
-
-            if(type === 'login') {
-                auth.signInWithEmailAndPassword(email, pass)
-                    .then(() => openDashboard())
-                    .catch(e => alert("Ошибка защиты: " + e.message));
+        function nav(id) {
+            document.querySelectorAll('.auth-window, #screen-main').forEach(el => el.style.display = 'none');
+            if(id === 'main') document.getElementById('screen-main').style.display = 'block';
+            else {
+                const target = document.getElementById(id);
+                target.style.display = 'block';
+                document.body.style.alignItems = 'center';
             }
         }
 
-        function openDashboard() {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById('page-teacher-dashboard').style.display = 'flex';
+        // БЕЗОПАСНЫЙ ВХОД
+        function login(role) {
+            const email = role === 'teacher' ? document.getElementById('t-log-email').value : document.getElementById('s-log-id').value + "@school.com";
+            const pass = role === 'teacher' ? document.getElementById('t-log-pass').value : document.getElementById('s-log-pass').value;
+
+            auth.signInWithEmailAndPassword(email, pass)
+                .then(() => alert("Успешный вход в систему!"))
+                .catch(e => alert("Ошибка доступа: " + e.message));
         }
 
-        // Авто-логин (Безопасная проверка сессии)
-        auth.onAuthStateChanged(user => {
-            if(user) openDashboard();
-        });
+        function register() {
+            if(!document.getElementById('reg-check').checked) return alert("Необходимо согласие!");
+            const email = document.getElementById('t-reg-email').value;
+            const pass = document.getElementById('t-reg-pass').value;
+
+            auth.createUserWithEmailAndPassword(email, pass)
+                .then(() => alert("Аккаунт учителя создан!"))
+                .catch(e => alert(e.message));
+        }
     </script>
 </body>
 </html>
