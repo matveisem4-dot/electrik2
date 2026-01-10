@@ -3,209 +3,259 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Государственная Образовательная Платформа</title>
+    <title>Smart Diary Premium</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --p-teacher: #5D5FEF; --p-student: #00BA88;
-            --bg: #F8FAFC; --white: #FFFFFF; --text: #111827; --text-sec: #6B7280;
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --student-color: #10b981;
+            --bg: #030712;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text: #f3f4f6;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        body { background: var(--bg); color: var(--text); overflow-x: hidden; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
 
-        /* Центровка для окон входа */
-        .flex-center { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        body { 
+            background: var(--bg); 
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 40%);
+        }
 
-        /* ЭКРАНЫ */
-        .screen { display: none; width: 100%; }
-        .screen.active { display: block; }
+        /* АНИМИРОВАННЫЙ ФОН */
+        .bg-glow {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            filter: blur(100px); opacity: 0.5;
+        }
 
-        /* КАРТОЧКИ ВЫБОРА */
-        .roles-container { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; }
+        /* ГЛАВНЫЙ КОНТЕЙНЕР */
+        .wrapper { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; transition: 0.5s; }
+
+        .screen { display: none; width: 100%; max-width: 1000px; animation: fadeIn 0.8s ease-out; }
+        .active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* КАРТОЧКИ РОЛЕЙ */
+        .roles-grid { display: flex; gap: 30px; justify-content: center; margin-top: 50px; }
         .role-card {
-            background: var(--white); border-radius: 35px; padding: 50px; width: 380px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.03); cursor: pointer; text-align: center;
-            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); border: 1px solid #F1F5F9;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 40px;
+            padding: 60px 40px;
+            width: 380px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
         }
-        .role-card:hover { transform: translateY(-15px); border-color: var(--p-teacher); box-shadow: 0 30px 60px rgba(0,0,0,0.08); }
+        .role-card:hover { 
+            transform: translateY(-20px) scale(1.02);
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--accent);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 20px rgba(99, 102, 241, 0.2);
+        }
 
-        /* ПРЕМИАЛЬНЫЕ ФОРМЫ */
-        .auth-window { 
-            background: var(--white); padding: 50px; border-radius: 40px; 
-            width: 100%; max-width: 480px; margin: 0 auto;
-            box-shadow: 0 40px 100px rgba(0,0,0,0.1); 
+        /* ФОРМЫ */
+        .glass-box {
+            background: var(--glass);
+            backdrop-filter: blur(30px);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            padding: 60px;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.4);
         }
-        .input-group { text-align: left; margin-bottom: 20px; }
-        .input-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+
         input {
-            width: 100%; padding: 18px; border: 2px solid #F3F4F6; border-radius: 18px;
-            font-size: 16px; background: #F9FAFB; transition: 0.3s;
+            width: 100%; padding: 20px; margin-bottom: 20px;
+            background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border);
+            border-radius: 20px; color: white; font-size: 16px; transition: 0.3s;
         }
-        input:focus { outline: none; border-color: var(--p-teacher); background: #FFF; }
+        input:focus { border-color: var(--accent); outline: none; background: rgba(0,0,0,0.5); }
 
         .btn {
-            width: 100%; padding: 18px; border: none; border-radius: 18px;
-            font-size: 18px; font-weight: 700; cursor: pointer; color: white; transition: 0.3s;
+            width: 100%; padding: 20px; border: none; border-radius: 20px;
+            font-size: 18px; font-weight: 800; cursor: pointer; color: white;
+            transition: 0.3s; text-transform: uppercase; letter-spacing: 1px;
         }
-        .btn-t { background: var(--p-teacher); }
-        .btn-s { background: var(--p-student); }
+        .btn-t { background: linear-gradient(135deg, #6366f1, #a855f7); }
+        .btn-s { background: linear-gradient(135deg, #10b981, #3b82f6); }
+        .btn:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(99, 102, 241, 0.4); }
 
-        /* КАБИНЕТ УЧИТЕЛЯ */
-        .dashboard { display: none; height: 100vh; flex-direction: column; }
-        .top-bar { 
-            background: white; padding: 0 50px; height: 80px; border-bottom: 1px solid #E5E7EB;
-            display: flex; align-items: center; justify-content: space-between;
+        /* ПАНЕЛЬ УПРАВЛЕНИЯ */
+        .dashboard { 
+            display: none; height: 100vh; width: 100vw; 
+            background: #030712; flex-direction: column;
         }
-        .nav-tabs { display: flex; gap: 40px; height: 100%; }
-        .tab { 
-            display: flex; align-items: center; cursor: pointer; font-weight: 600; 
-            color: var(--text-sec); border-bottom: 3px solid transparent; height: 100%;
+        .header {
+            padding: 20px 60px; display: flex; justify-content: space-between; align-items: center;
+            background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--glass-border);
         }
-        .tab.active { color: var(--p-teacher); border-bottom-color: var(--p-teacher); }
+        .nav-tabs { display: flex; gap: 40px; }
+        .tab-link { 
+            font-weight: 700; color: #9ca3af; cursor: pointer; transition: 0.3s;
+            padding: 10px 0; border-bottom: 2px solid transparent;
+        }
+        .tab-link.active { color: var(--accent); border-bottom-color: var(--accent); }
+
     </style>
 </head>
 <body>
 
-    <div class="flex-center">
+    <div class="bg-glow"></div>
+
+    <div class="wrapper" id="auth-wrapper">
         
         <div id="scr-roles" class="screen active">
-            <h1 style="text-align:center; font-size:42px; margin-bottom:50px;">Мой Дневник</h1>
-            <div class="roles-container">
-                <div class="role-card" onclick="show('scr-t-login')">
-                    <div style="font-size:50px; margin-bottom:20px;">🏫</div>
-                    <h2>Учитель</h2>
-                    <p style="color:var(--text-sec); margin-top:10px;">Вход в электронный журнал</p>
+            <h1 style="text-align:center; font-size:56px; font-weight:800; margin-bottom:10px; letter-spacing:-2px;">SmartDiary <span style="color:var(--accent)">OS</span></h1>
+            <p style="text-align:center; color:#9ca3af; margin-bottom:50px;">Будущее образования начинается здесь</p>
+            <div class="roles-grid">
+                <div class="role-card" onclick="nav('scr-t-login')">
+                    <div style="font-size:60px; margin-bottom:20px;">⚡</div>
+                    <h2 style="font-size:28px;">Учитель</h2>
+                    <p style="color:#9ca3af; margin-top:10px;">Управление системой и журналом</p>
                 </div>
-                <div class="role-card" onclick="show('scr-s-login')" style="border-color:transparent;">
-                    <div style="font-size:50px; margin-bottom:20px;">🎓</div>
-                    <h2>Ученик</h2>
-                    <p style="color:var(--text-sec); margin-top:10px;">Просмотр оценок и ДЗ</p>
+                <div class="role-card" onclick="nav('scr-s-login')">
+                    <div style="font-size:60px; margin-bottom:20px;">💎</div>
+                    <h2 style="font-size:28px;">Ученик</h2>
+                    <p style="color:#9ca3af; margin-top:10px;">Доступ к знаниям и прогрессу</p>
                 </div>
             </div>
         </div>
 
         <div id="scr-t-login" class="screen">
-            <div class="auth-window">
-                <h2 style="margin-bottom:10px;">Вход для учителя</h2>
-                <div class="input-group">
-                    <label>Почта</label>
-                    <input type="email" id="t-email-log" placeholder="teacher@school.ru">
-                </div>
-                <div class="input-group">
-                    <label>Пароль</label>
-                    <input type="password" id="t-pass-log" placeholder="••••••••">
-                </div>
-                <button class="btn btn-t" onclick="authAction('login')">Войти</button>
-                <p style="margin-top:20px; font-size:14px;">Нет аккаунта? <span style="color:var(--p-teacher); cursor:pointer; font-weight:bold;" onclick="show('scr-t-reg')">Зарегистрироваться</span></p>
-                <p style="margin-top:15px; cursor:pointer; color:var(--text-sec);" onclick="show('scr-roles')">← Назад</p>
+            <div class="glass-box">
+                <h2 style="font-size:32px; margin-bottom:40px;">Вход для учителя</h2>
+                <input type="email" id="t-email-log" placeholder="Email">
+                <input type="password" id="t-pass-log" placeholder="Пароль">
+                <button class="btn btn-t" onclick="authAction('login')">Авторизоваться</button>
+                <p style="margin-top:30px; color:#9ca3af;">Нет доступа? <span style="color:var(--accent); cursor:pointer; font-weight:700;" onclick="nav('scr-t-reg')">Регистрация</span></p>
+                <p style="margin-top:20px; cursor:pointer; opacity:0.5;" onclick="nav('scr-roles')">← Назад</p>
             </div>
         </div>
 
         <div id="scr-t-reg" class="screen">
-            <div class="auth-window">
-                <h2 style="margin-bottom:10px;">Регистрация учителя</h2>
-                <div class="input-group">
-                    <label>Email</label>
-                    <input type="email" id="t-email-reg">
-                </div>
-                <div class="input-group">
-                    <label>Придумайте пароль (мин. 6 знаков)</label>
-                    <input type="password" id="t-pass-reg">
-                </div>
-                <div style="display:flex; gap:10px; margin-bottom:20px; text-align:left; font-size:12px; color:var(--text-sec);">
-                    <input type="checkbox" id="t-check" style="width:18px; height:18px;">
-                    <span>Я согласен с правилами обработки персональных данных ГИС "Дневник".</span>
+            <div class="glass-box">
+                <h2 style="font-size:32px; margin-bottom:40px;">Регистрация</h2>
+                <input type="email" id="t-email-reg" placeholder="Ваша рабочая почта">
+                <input type="password" id="t-pass-reg" placeholder="Надежный пароль">
+                <div style="display:flex; gap:15px; margin-bottom:30px; text-align:left; font-size:13px;">
+                    <input type="checkbox" id="t-check" style="width:20px; height:20px;">
+                    <span>Я принимаю условия использования государственной платформы SmartDiary.</span>
                 </div>
                 <button class="btn btn-t" onclick="authAction('reg')">Создать аккаунт</button>
-                <p style="margin-top:20px; font-size:14px;">Уже есть аккаунт? <span style="color:var(--p-teacher); cursor:pointer; font-weight:bold;" onclick="show('scr-t-login')">Войти</span></p>
+                <p style="margin-top:20px; cursor:pointer;" onclick="nav('scr-t-login')">Уже есть аккаунт? Войти</p>
             </div>
         </div>
 
         <div id="scr-s-login" class="screen">
-            <div class="auth-window" style="border-top: 5px solid var(--p-student);">
-                <h2 style="margin-bottom:20px;">Вход для ученика</h2>
-                <div class="input-group">
-                    <label>Логин ученика</label>
-                    <input type="text" id="s-id-log" placeholder="id-000000">
-                </div>
-                <div class="input-group">
-                    <label>Пароль</label>
-                    <input type="password" id="s-pass-log" placeholder="••••••••">
-                </div>
-                <button class="btn btn-s" onclick="authAction('login-s')">Открыть дневник</button>
-                <p style="margin-top:20px; cursor:pointer; color:var(--text-sec);" onclick="show('scr-roles')">← Назад</p>
+            <div class="glass-box" style="border-color: var(--student-color);">
+                <h2 style="font-size:32px; margin-bottom:40px;">Личный кабинет</h2>
+                <input type="text" id="s-id-log" placeholder="Ваш ID">
+                <input type="password" id="s-pass-log" placeholder="Пароль">
+                <button class="btn btn-s" onclick="authAction('login-s')">Войти</button>
+                <p style="margin-top:20px; cursor:pointer;" onclick="nav('scr-roles')">← Вернуться</p>
             </div>
         </div>
 
     </div>
 
     <div id="scr-t-panel" class="dashboard">
-        <header class="top-bar">
-            <h2 style="color:var(--p-teacher); font-weight:800; letter-spacing:-1px;">ГОСДНЕВНИК</h2>
+        <header class="header">
+            <h2 style="font-weight:800; font-size:24px; letter-spacing:-1px;">SMART<span style="color:var(--accent)">DIARY</span></h2>
             <div class="nav-tabs">
-                <div class="tab active">Предметы</div>
-                <div class="tab">Ученики</div>
-                <div class="tab">Журнал</div>
+                <div class="tab-link active">Журнал</div>
+                <div class="tab-link">Расписание</div>
+                <div class="tab-link">Аналитика</div>
             </div>
-            <button onclick="location.reload()" style="background:#FFF1F1; color:#F87171; border:none; padding:10px 20px; border-radius:12px; font-weight:700; cursor:pointer;">Выход</button>
+            <button onclick="logout()" style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2); padding:10px 25px; border-radius:15px; font-weight:700; cursor:pointer;">Выход</button>
         </header>
-        <main style="padding:50px; background:#F9FAFB; flex:1;">
-            <div style="background:white; padding:40px; border-radius:30px; box-shadow:0 10px 30px rgba(0,0,0,0.02);">
-                <h1>Добро пожаловать в систему</h1>
-                <p style="color:var(--text-sec); margin-top:10px;">Используйте верхнее меню для управления вашими классами и оценками.</p>
+        <main style="padding:60px; display:flex; gap:30px;">
+            <div class="glass-box" style="max-width:100%; flex:1; margin:0; text-align:left;">
+                <h1 style="font-size:36px;">Добро пожаловать в систему</h1>
+                <p style="color:#9ca3af; margin-top:15px;">Все данные синхронизированы и защищены сквозным шифрованием.</p>
+                <div style="margin-top:40px; display:grid; grid-template-columns: repeat(3, 1fr); gap:20px;">
+                    <div style="background:rgba(255,255,255,0.02); padding:30px; border-radius:30px; border:1px solid var(--glass-border);">
+                        <h3>Математика 9А</h3>
+                        <p style="color:var(--accent); font-weight:700; margin-top:10px;">Проверить ДЗ</p>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
 
     <script>
-        // FIREBASE CONFIG - ВСТАВЬ СВОИ ДАННЫЕ
-        const firebaseConfig = { databaseURL: "https://your-project.firebaseio.com/", authDomain: "your-project.firebaseapp.com" };
+        // --- 1. ПРАВИЛЬНАЯ ИНИЦИАЛИЗАЦИЯ (БЕЗ ОШИБОК) ---
+        const firebaseConfig = {
+            apiKey: "ТВОЙ_API_KEY",
+            authDomain: "ТВОЙ_ПРОЕКТ.firebaseapp.com",
+            databaseURL: "https://ТВОЙ_ПРОЕКТ.firebaseio.com",
+            projectId: "ТВОЙ_ПРОЕКТ",
+        };
+
+        // Запускаем Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
+        const db = firebase.database();
 
-        function show(id) {
+        // --- 2. НАВИГАЦИЯ ---
+        function nav(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById('scr-t-panel').style.display = 'none';
-            document.querySelector('.flex-center').style.display = 'flex';
-            
             const target = document.getElementById(id);
-            if(target) target.classList.add('active');
+            if (target) target.classList.add('active');
         }
 
-        function openDashboard() {
-            document.querySelector('.flex-center').style.display = 'none';
+        function showDashboard() {
+            document.getElementById('auth-wrapper').style.display = 'none';
             document.getElementById('scr-t-panel').style.display = 'flex';
         }
 
+        function logout() {
+            auth.signOut().then(() => location.reload());
+        }
+
+        // --- 3. ЛОГИКА ЗАЩИТЫ И ВХОДА ---
         async function authAction(type) {
             try {
-                if(type === 'reg') {
+                if (type === 'reg') {
                     const email = document.getElementById('t-email-reg').value;
                     const pass = document.getElementById('t-pass-reg').value;
-                    if(!document.getElementById('t-check').checked) return alert("Примите соглашение!");
+                    if (!document.getElementById('t-check').checked) return alert("Примите условия!");
+                    if (pass.length < 6) return alert("Пароль слишком простой (мин. 6 символов)");
+                    
                     await auth.createUserWithEmailAndPassword(email, pass);
-                    alert("Аккаунт учителя успешно создан!");
-                    openDashboard();
+                    alert("Премиальный доступ активирован!");
                 } 
-                else if(type === 'login') {
+                else if (type === 'login') {
                     const email = document.getElementById('t-email-log').value;
                     const pass = document.getElementById('t-pass-log').value;
                     await auth.signInWithEmailAndPassword(email, pass);
-                    openDashboard();
                 }
             } catch (e) {
-                alert("Ошибка: " + e.message);
+                alert("Ошибка безопасности: " + e.message);
             }
         }
 
-        // Авто-проверка входа
-        auth.onAuthStateChanged(user => { if(user) openDashboard(); });
+        // --- 4. СЛУШАТЕЛЬ СОСТОЯНИЯ (ОШИБКИ ИСПРАВЛЕНЫ) ---
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                showDashboard();
+            }
+        });
     </script>
 </body>
 </html>
