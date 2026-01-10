@@ -3,152 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Электронный Дневник - Платформа</title>
+    <title>Smart Diary - Teacher Panel</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary-teacher: #5D5FEF;
-            --primary-student: #00BA88;
-            --text-main: #1A1C1E;
-            --text-secondary: #6C7278;
-            --bg-light: #F4F7FA;
-        }
-
+        :root { --p-teach: #5D5FEF; --p-stud: #00BA88; --bg: #F4F7FA; --text: #1A1C1E; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); color: var(--text); min-height: 100vh; }
 
-        body { 
-            background: linear-gradient(135deg, #F0F4FF 0%, #E8FFF3 100%); 
-            min-height: 100vh; 
-            display: flex; align-items: center; justify-content: center; 
-        }
+        /* ЭКРАНЫ */
+        .screen { display: none; min-height: 100vh; align-items: center; justify-content: center; padding: 20px; }
+        .active-screen { display: flex; }
 
-        /* ГЛАВНЫЙ ЭКРАН */
-        .container { text-align: center; max-width: 1000px; width: 100%; padding: 20px; }
-        .main-title { font-size: 42px; font-weight: 800; color: var(--text-main); margin-bottom: 10px; }
-        .main-subtitle { color: var(--text-secondary); margin-bottom: 50px; font-size: 18px; }
+        /* КАРТОЧКИ РОЛЕЙ */
+        .cards-grid { display: flex; gap: 20px; }
+        .role-card { background: white; padding: 40px; border-radius: 24px; width: 320px; text-align: center; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        .role-card:hover { transform: translateY(-10px); border: 2px solid var(--p-teach); }
 
-        .cards-grid { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; }
-        .role-card {
-            background: white; border-radius: 24px; padding: 40px; width: 350px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05); cursor: pointer;
-            transition: 0.3s; border: 2px solid transparent;
-        }
-        .role-card:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
-        .role-card.student:hover { border-color: var(--primary-student); }
-        .role-card.teacher:hover { border-color: var(--primary-teacher); }
+        /* ФОРМЫ */
+        .auth-box { background: white; padding: 40px; border-radius: 24px; width: 100%; max-width: 420px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 14px; margin: 10px 0; border: 1.5px solid #E2E8F0; border-radius: 12px; font-size: 16px; }
+        .btn { width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer; color: white; margin-top: 10px; }
+        .btn-t { background: var(--p-teach); }
+        .link { color: var(--p-teach); cursor: pointer; font-weight: 600; margin-top: 15px; display: inline-block; }
 
-        .icon-box { 
-            width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 25px;
-            display: flex; align-items: center; justify-content: center; font-size: 32px;
-        }
-        .student .icon-box { background: #E6FFF1; color: var(--primary-student); }
-        .teacher .icon-box { background: #EEF0FF; color: var(--primary-teacher); }
+        /* ПАНЕЛЬ УЧИТЕЛЯ */
+        #teacher-panel { display: none; flex-direction: column; align-items: stretch; justify-content: flex-start; background: white; }
+        .top-nav { background: white; padding: 0 40px; height: 80px; display: flex; align-items: center; border-bottom: 1px solid #E2E8F0; gap: 40px; }
+        .nav-item { cursor: pointer; font-weight: 600; color: #6C7278; position: relative; height: 100%; display: flex; align-items: center; }
+        .nav-item.active { color: var(--p-teach); }
+        .nav-item.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: var(--p-teach); }
 
-        .card-name { font-size: 24px; font-weight: 700; margin-bottom: 15px; }
-        .card-desc { color: var(--text-secondary); line-height: 1.5; font-size: 14px; }
-
-        /* ФОРМЫ ВХОДА */
-        .auth-form {
-            background: white; padding: 40px; border-radius: 24px; width: 100%; max-width: 450px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.1); display: none;
-        }
-        .auth-form h2 { font-size: 28px; margin-bottom: 10px; }
-        .input-group { text-align: left; margin-bottom: 20px; }
-        .input-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-main); }
-        input {
-            width: 100%; padding: 14px; border: 1.5px solid #E2E8F0; border-radius: 12px;
-            font-size: 16px; transition: 0.3s;
-        }
-        input:focus { border-color: var(--primary-teacher); outline: none; }
-
-        .btn {
-            width: 100%; padding: 16px; border: none; border-radius: 12px;
-            font-size: 18px; font-weight: 700; cursor: pointer; color: white; transition: 0.3s;
-        }
-        .btn-teacher { background: var(--primary-teacher); }
-        .btn-student { background: var(--primary-student); }
-
-        .demo-box {
-            background: #F8FAFF; border: 1px solid #E0E7FF; padding: 15px;
-            border-radius: 12px; margin-bottom: 20px; font-size: 13px; text-align: left;
-            display: flex; gap: 10px; color: #475467;
-        }
+        .content-area { padding: 40px; flex: 1; background: #F8FAFF; }
+        .data-card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { text-align: left; padding: 15px; border-bottom: 1px solid #F1F5F9; }
+        .add-btn { background: var(--p-teach); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; float: right; }
     </style>
 </head>
 <body>
 
-    <div id="screen-main" class="container">
-        <h1 class="main-title">Электронный Дневник</h1>
-        <p class="main-subtitle">Платформа для управления школьной жизнью.</p>
-        
+    <div id="screen-roles" class="screen active-screen">
         <div class="cards-grid">
-            <div class="role-card student" onclick="showAuth('student')">
-                <div class="icon-box">🎓</div>
-                <div class="card-name">Ученикам</div>
-                <div class="card-desc">Смотрите оценки, домашние задания и следите за успеваемостью.</div>
-            </div>
-            <div class="role-card teacher" onclick="showAuth('teacher')">
-                <div class="icon-box">🏫</div>
-                <div class="card-name">Учителям</div>
-                <div class="card-desc">Управляйте классами, предметами, выставляйте оценки и задавайте ДЗ.</div>
-            </div>
+            <div class="role-card" onclick="openAuth('teacher')"><h2>🏫 Учитель</h2></div>
+            <div class="role-card" onclick="openAuth('student')"><h2>🎓 Ученик</h2></div>
         </div>
     </div>
 
-    <div id="auth-teacher" class="auth-form">
-        <div class="icon-box" style="background: #EEF0FF; color: var(--primary-teacher);">🏫</div>
-        <h2>Регистрация учителя</h2>
-        <p class="main-subtitle" style="margin-bottom: 30px;">Создайте аккаунт для управления</p>
-        
-        <div class="input-group">
-            <label>Email</label>
-            <input type="email" id="t-email" placeholder="mail@example.com">
+    <div id="screen-t-login" class="screen">
+        <div class="auth-box">
+            <h2>Вход для учителя</h2>
+            <input type="email" id="log-email" placeholder="Email">
+            <input type="password" id="log-pass" placeholder="Пароль">
+            <button class="btn btn-t" onclick="loginTeacher()">Войти</button>
+            <p>Нет аккаунта? <span class="link" onclick="toggleAuth('reg')">Зарегистрироваться</span></p>
         </div>
-        <div class="input-group">
-            <label>Пароль</label>
-            <input type="password" id="t-pass" placeholder=" Минимум 6 символов">
-        </div>
-
-        <div class="demo-box">
-            <input type="checkbox" id="t-check" style="width: 20px; height: 20px;">
-            <p>Я понимаю, что это демонстрационное приложение... мои данные будут храниться в зашифрованном виде на серверах Firebase.</p>
-        </div>
-
-        <button class="btn btn-teacher">Создать аккаунт</button>
-        <p style="margin-top: 20px; color: var(--primary-teacher); cursor: pointer;" onclick="goBack()">На главную</p>
     </div>
 
-    <div id="auth-student" class="auth-form">
-        <div class="icon-box" style="background: #E6FFF1; color: var(--primary-student);">🎓</div>
-        <h2>Вход для ученика</h2>
-        <p class="main-subtitle" style="margin-bottom: 30px;">Введите данные, выданные учителем</p>
-        
-        <div class="input-group">
-            <label>Логин</label>
-            <input type="text" id="s-login" placeholder="Ваш ID">
+    <div id="screen-t-reg" class="screen">
+        <div class="auth-box">
+            <h2>Регистрация учителя</h2>
+            <input type="email" id="reg-email" placeholder="Email">
+            <input type="password" id="reg-pass" placeholder="Пароль">
+            <label style="font-size: 12px; display: flex; gap: 10px; margin-top: 10px;">
+                <input type="checkbox" style="width: 20px; height: 20px;"> Согласен на обработку данных
+            </label>
+            <button class="btn btn-t" onclick="registerTeacher()">Создать аккаунт</button>
+            <p>Уже есть аккаунт? <span class="link" onclick="toggleAuth('log')">Войти</span></p>
         </div>
-        <div class="input-group">
-            <label>Пароль</label>
-            <input type="password" id="s-pass" placeholder="Пароль">
-        </div>
+    </div>
 
-        <button class="btn btn-student">Войти в дневник</button>
-        <p style="margin-top: 20px; color: var(--primary-student); cursor: pointer;" onclick="goBack()">На главную</p>
+    <div id="teacher-panel">
+        <div class="top-nav">
+            <h2 style="margin-right: 50px; color: var(--p-teach);">SmartDiary</h2>
+            <div class="nav-item active" onclick="switchTab('subjects')">Предметы</div>
+            <div class="nav-item" onclick="switchTab('students')">Ученики</div>
+            <div class="nav-item" onclick="switchTab('journal')">Журнал</div>
+            <div class="nav-item" onclick="switchTab('homework')">ДЗ</div>
+            <button onclick="location.reload()" style="margin-left: auto; border: none; background: none; color: red; cursor: pointer;">Выход</button>
+        </div>
+        
+        <div class="content-area">
+            <div id="tab-subjects" class="data-card">
+                <button class="add-btn">+ Добавить предмет</button>
+                <h3>Мои предметы</h3>
+                <table>
+                    <thead><tr><th>Название предмета</th><th>Классы</th><th>Действие</th></tr></thead>
+                    <tbody id="list-subjects">
+                        <tr><td>Математика</td><td>9А, 9Б</td><td>⚙️</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="tab-students" class="data-card" style="display:none;">
+                <button class="add-btn">+ Создать ученика</button>
+                <h3>Список учеников</h3>
+                <table>
+                    <thead><tr><th>ФИО</th><th>Класс</th><th>Логин для входа</th></tr></thead>
+                    <tbody><tr><td>Иванов Иван</td><td>9А</td><td><code>user_552</code></td></tr></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script>
-        function showAuth(role) {
-            document.getElementById('screen-main').style.display = 'none';
-            if(role === 'teacher') document.getElementById('auth-teacher').style.display = 'block';
-            else document.getElementById('auth-student').style.display = 'block';
+        // Инициализация Firebase (вставь свои данные)
+        const firebaseConfig = { databaseURL: "https://your-db.firebaseio.com/" };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        function openAuth(role) {
+            document.getElementById('screen-roles').classList.remove('active-screen');
+            if(role === 'teacher') document.getElementById('screen-t-login').classList.add('active-screen');
         }
 
-        function goBack() {
-            document.querySelectorAll('.auth-form').forEach(f => f.style.display = 'none');
-            document.getElementById('screen-main').style.display = 'block';
+        function toggleAuth(type) {
+            document.getElementById('screen-t-login').classList.remove('active-screen');
+            document.getElementById('screen-t-reg').classList.remove('active-screen');
+            document.getElementById('screen-t-' + type).classList.add('active-screen');
+        }
+
+        function loginTeacher() {
+            // Здесь будет auth.signInWithEmailAndPassword
+            showTeacherPanel();
+        }
+
+        function registerTeacher() {
+            // Здесь будет auth.createUserWithEmailAndPassword
+            alert("Аккаунт создан!");
+            showTeacherPanel();
+        }
+
+        function showTeacherPanel() {
+            document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+            document.getElementById('teacher-panel').style.display = 'flex';
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.getElementById('tab-subjects').style.display = (tab === 'subjects' ? 'block' : 'none');
+            document.getElementById('tab-students').style.display = (tab === 'students' ? 'block' : 'none');
         }
     </script>
 </body>
