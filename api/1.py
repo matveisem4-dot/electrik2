@@ -47,7 +47,7 @@ async def handle_msg(message: types.Message):
     
     elif state["step"] == "wait_amount" and text.isdigit():
         amount = int(text)
-        res = requests.get(f"{FIREBASE_URL}/cards={state['card']}.json").json()
+        res = requests.get(f"{FIREBASE_URL}/cards/{state['card']}.json")
         new_balance = res['balance'] + amount
         requests.patch(f"{FIREBASE_URL}/cards/{state['card']}.json", json={"balance": new_balance})
         await message.answer(f"💰 Зачислено: {amount} руб.\nИтог: {new_balance} руб.")
