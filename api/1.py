@@ -1,15 +1,15 @@
-import os
 import asyncio
 import requests
 from flask import Flask, request
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.types import Update
 
-# Данные
+# Конфигурация
 TOKEN = '8225785801:AAEer9ushgGTeFpOvvPJ417EzLAqU_7sr10'
 FIREBASE_URL = "https://cassa-simulator-4-default-rtdb.firebaseio.com"
+# ТВОЯ РЕАЛЬНАЯ ССЫЛКА ИЗ СКРИНШОТА
+VERCEL_URL = "https://electrik2-git-main-matveisem4-dots-projects.vercel.app"
 
-# Инициализация
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 app = Flask(__name__)
@@ -39,7 +39,7 @@ async def handle_msg(message: types.Message):
     state = user_states[uid]
     if state["step"] == "wait_pin":
         res = requests.get(f"{FIREBASE_URL}/cards/{state['card']}.json").json()
-        if str(res.get('pin')) == text:
+        if res and str(res.get('pin')) == text:
             user_states[uid]["step"] = "wait_amount"
             await message.answer(f"✅ ПИН верный!\n💰 Баланс: {res['balance']} руб.\nНапишите сумму пополнения:")
         else:
@@ -47,24 +47,24 @@ async def handle_msg(message: types.Message):
     
     elif state["step"] == "wait_amount" and text.isdigit():
         amount = int(text)
-        res = requests.get(f"{FIREBASE_URL}/cards/{state['card']}.json")
+        res = requests.get(f"{FIREBASE_URL}/cards/{state['card']}.json").json()
         new_balance = res['balance'] + amount
         requests.patch(f"{FIREBASE_URL}/cards/{state['card']}.json", json={"balance": new_balance})
         await message.answer(f"💰 Зачислено: {amount} руб.\nИтог: {new_balance} руб.")
         del user_states[uid]
 
-# Обработчик для Vercel
 @app.route('/', methods=['POST'])
 async def webhook():
-    if request.method == "POST":
-        update = Update.model_validate(request.json, context={"bot": bot})
-        await dp.feed_update(bot, update)
-        return "OK", 200
-    return "Method not allowed", 405
+    update = Update.model_validate(request.json, context={"bot": bot})
+    await dp.feed_update(bot, update)
+    return "OK", 200
 
 @app.route('/set_webhook')
 async def set_webhook():
-    # Замени на свою ссылку от Vercel после деплоя!
-    url = "url = "https://electrik2-git-main-matveisem4-dots-projects.vercel.app/"" 
-    s = await bot.set_webhook(url)
-    return "Webhook set: " + str(s)
+    # Используем переменную VERCEL_URL
+    s = await bot.set_webhook(VERCEL_URL)
+    return f"Webhook set: {s}"
+
+@app.route('/debug')
+def debug():
+    return "Server is running!"
