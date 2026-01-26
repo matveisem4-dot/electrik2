@@ -65,6 +65,6 @@ async def webhook():
 @app.route('/set_webhook')
 async def set_webhook():
     # Замени на свою ссылку от Vercel после деплоя!
-    url = "ТВОЯ_ССЫЛКА_ОТ_VERCEL" 
+    url = "url = "https://electrik2-git-main-matveisem4-dots-projects.vercel.app/"" 
     s = await bot.set_webhook(url)
     return "Webhook set: " + str(s)
