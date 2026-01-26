@@ -1,14 +1,12 @@
-import os
 import asyncio
 import requests
 from flask import Flask, request
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.types import Update
 
-# Твои данные
+# Данные
 TOKEN = '8225785801:AAEer9ushgGTeFpOvvPJ417EzLAqU_7sr10'
 FIREBASE_URL = "https://cassa-simulator-4-default-rtdb.firebaseio.com"
-# ТВОЯ ССЫЛКА ИЗ СКРИНШОТА
 VERCEL_URL = "https://electrik2-git-main-matveisem4-dots-projects.vercel.app"
 
 # Инициализация
@@ -25,15 +23,12 @@ async def start_cmd(message: types.Message):
 @dp.message(F.text.startswith("4400"))
 async def card_input(message: types.Message):
     card_num = message.text.strip().replace(" ", "")
-    try:
-        res = requests.get(f"{FIREBASE_URL}/cards/{card_num}.json").json()
-        if res:
-            user_states[message.from_user.id] = {"card": card_num, "step": "wait_pin"}
-            await message.answer("🔒 Введите ПИН-код от этой карты:")
-        else:
-            await message.answer("❌ Карта не найдена.")
-    except Exception as e:
-        await message.answer(f"Ошибка базы: {str(e)}")
+    res = requests.get(f"{FIREBASE_URL}/cards/{card_num}.json").json()
+    if res:
+        user_states[message.from_user.id] = {"card": card_num, "step": "wait_pin"}
+        await message.answer("🔒 Введите ПИН-код от этой карты:")
+    else:
+        await message.answer("❌ Карта не найдена.")
 
 @dp.message()
 async def handle_msg(message: types.Message):
@@ -53,30 +48,27 @@ async def handle_msg(message: types.Message):
     elif state["step"] == "wait_amount" and text.isdigit():
         amount = int(text)
         res = requests.get(f"{FIREBASE_URL}/cards/{state['card']}.json").json()
-        new_balance = res['balance'] + amount
+        new_balance = int(res['balance']) + amount
         requests.patch(f"{FIREBASE_URL}/cards/{state['card']}.json", json={"balance": new_balance})
         await message.answer(f"💰 Зачислено: {amount} руб.\nИтог: {new_balance} руб.")
         del user_states[uid]
 
-# Обработчик для Vercel
 @app.route('/', methods=['POST'])
-async def webhook():
-    try:
-        update = Update.model_validate(request.json, context={"bot": bot})
-        await dp.feed_update(bot, update)
-        return "OK", 200
-    except Exception as e:
-        return str(e), 500
+def webhook():
+    # Важный костыль для работы aiogram внутри Flask на Vercel
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    update = Update.model_validate(request.json, context={"bot": bot})
+    loop.run_until_complete(dp.feed_update(bot, update))
+    return "OK", 200
 
 @app.route('/set_webhook')
-async def set_webhook():
-    try:
-        # Устанавливаем вебхук на твой домен
-        success = await bot.set_webhook(VERCEL_URL)
-        return f"Webhook set: {success}"
-    except Exception as e:
-        return f"Error: {str(e)}", 500
+def set_webhook():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    s = loop.run_until_complete(bot.set_webhook(VERCEL_URL))
+    return f"Webhook set: {s}"
 
 @app.route('/')
 def index():
-    return "Bot Server is Alive!"
+    return "Bot is alive!"
