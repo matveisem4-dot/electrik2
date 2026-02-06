@@ -2,97 +2,74 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>FearConnect v34 Neo</title>
+    <title>FearConnect v35 | Secure</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
-        :root { 
-            --red: #ff3b30; 
-            --bg: #050505; 
-            --panel: #121214; 
-            --border: #252529; 
-            --glass: rgba(255, 255, 255, 0.03);
-        }
-
-        * { box-sizing: border-box; outline: none; font-family: 'Segoe UI', system-ui, sans-serif; }
+        :root { --red: #ff3b30; --bg: #050505; --panel: #121214; --border: #252529; }
+        * { box-sizing: border-box; outline: none; font-family: 'Segoe UI', sans-serif; }
         body { margin: 0; background: var(--bg); color: #fff; overflow: hidden; }
 
-        /* ВХОД */
-        #auth-screen { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; align-items: center; justify-content: center; }
-        .m-card { background: var(--panel); border: 1px solid var(--border); padding: 40px; border-radius: 30px; width: 350px; text-align: center; }
+        /* ЭКРАН ВХОДА */
+        #auth-screen { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        .m-card { background: var(--panel); border: 1px solid var(--border); padding: 40px; border-radius: 30px; width: 360px; text-align: center; box-shadow: 0 0 50px rgba(255,59,48,0.1); }
         
-        .inp-neo { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 15px; margin: 15px 0; border-radius: 15px; font-size: 16px; text-align: center; }
-        .inp-neo:focus { border-color: var(--red); }
-
-        .btn-neo { background: var(--red); color: #fff; border: none; padding: 16px; width: 100%; border-radius: 15px; cursor: pointer; font-weight: bold; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; }
+        .inp { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 15px; margin: 10px 0; border-radius: 12px; font-size: 15px; }
+        .inp:focus { border-color: var(--red); }
+        
+        .btn { background: var(--red); color: #fff; border: none; padding: 16px; width: 100%; border-radius: 12px; cursor: pointer; font-weight: bold; letter-spacing: 1px; margin-top: 10px; }
+        .btn:active { transform: scale(0.98); }
 
         /* ИНТЕРФЕЙС */
         #app { display: none; height: 100vh; grid-template-columns: 280px 1fr; }
         #sidebar { background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-        
         .side-head { padding: 25px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .add-btn { background: var(--red); color: #fff; border: none; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-size: 20px; font-weight: bold; }
-
+        
         #list { flex: 1; overflow-y: auto; padding: 10px; }
-        .f-item { padding: 15px; margin-bottom: 5px; cursor: pointer; border-radius: 15px; display: flex; align-items: center; gap: 12px; transition: 0.2s; border: 1px solid transparent; }
-        .f-item:hover { background: var(--glass); }
-        .f-item.active { background: rgba(255, 59, 48, 0.1); border-color: rgba(255, 59, 48, 0.3); color: var(--red); }
+        .f-item { padding: 15px; margin-bottom: 5px; cursor: pointer; border-radius: 12px; display: flex; align-items: center; gap: 10px; transition: 0.2s; }
+        .f-item:hover { background: rgba(255,255,255,0.03); }
+        .f-item.active { background: rgba(255,59,48,0.1); color: var(--red); font-weight: bold; }
 
-        /* ЧАТ */
         #chat { display: flex; flex-direction: column; background: #080808; }
         #msgs { flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 10px; }
         
-        .msg { padding: 12px 16px; border-radius: 18px; max-width: 75%; font-size: 15px; animation: msgPop 0.3s ease-out; }
-        @keyframes msgPop { from { opacity: 0; transform: scale(0.9) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-        
-        .out { align-self: flex-end; background: var(--red); color: #fff; border-bottom-right-radius: 2px; }
+        .msg { padding: 12px 16px; border-radius: 18px; max-width: 75%; font-size: 14px; line-height: 1.4; animation: pop 0.2s ease-out; }
+        @keyframes pop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .out { align-self: flex-end; background: var(--red); border-bottom-right-radius: 2px; }
         .in { align-self: flex-start; background: #1c1c1e; border-bottom-left-radius: 2px; }
 
-        #inp-p { padding: 20px; background: var(--panel); border-top: 1px solid var(--border); display: none; gap: 10px; align-items: center; }
-        #inp-p input { flex: 1; background: #000; border: 1px solid var(--border); padding: 12px 18px; border-radius: 20px; color: #fff; }
-
-        /* МОДАЛКА */
-        #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 2000; }
+        #inp-p { padding: 20px; background: var(--panel); border-top: 1px solid var(--border); display: none; gap: 10px; }
+        #m-in { flex: 1; background: #000; border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 20px; }
     </style>
 </head>
 <body>
 
 <div id="auth-screen">
     <div class="m-card">
-        <h2 style="color:var(--red); margin: 0;">FEARCONNECT</h2>
-        <p style="font-size: 10px; color: #555; letter-spacing: 2px; margin-bottom: 30px;">NEURAL INTERFACE v34</p>
-        <input type="text" id="alog" class="inp-neo" placeholder="ID АГЕНТА">
-        <button class="btn-neo" onclick="login()">ВОЙТИ</button>
-    </div>
-</div>
-
-<div id="modal">
-    <div class="m-card" style="width: 300px;">
-        <h3 style="margin-top:0">НОВЫЙ КОНТАКТ</h3>
-        <input type="text" id="target-id" class="inp-neo" placeholder="ID ЦЕЛИ">
-        <button class="btn-neo" onclick="addFriend()">ДОБАВИТЬ</button>
-        <button class="btn-neo" style="background:#222; margin-top:10px" onclick="closeM()">ОТМЕНА</button>
+        <h2 style="color:var(--red); margin:0;">FEARCONNECT</h2>
+        <p id="auth-mode-text" style="font-size: 12px; color: #555; margin-bottom: 25px;">ВХОД В СИСТЕМУ</p>
+        
+        <input type="text" id="alog" class="inp" placeholder="ID АГЕНТА">
+        <input type="password" id="apass" class="inp" placeholder="ПАРОЛЬ">
+        
+        <button class="btn" id="main-btn" onclick="handleAuth()">ВОЙТИ</button>
+        
+        <div style="margin-top: 20px; font-size: 12px;">
+            <span id="switch-text">Нет аккаунта?</span> 
+            <a href="#" onclick="toggleMode()" id="switch-link" style="color:var(--red); text-decoration:none; font-weight:bold;">Создать</a>
+        </div>
     </div>
 </div>
 
 <div id="app">
     <div id="sidebar">
-        <div class="side-head">
-            <b style="color:var(--red)">FEAR.NET</b>
-            <button class="add-btn" onclick="openM()">+</button>
-        </div>
+        <div class="side-head"><b style="color:var(--red)">FEAR.NET</b> <button onclick="alert('Поиск...')" style="background:none; border:none; color:#fff; cursor:pointer; font-size:20px;">+</button></div>
         <div id="list"></div>
     </div>
     <div id="chat">
-        <div style="padding:15px 25px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-            <div>
-                <b id="chat-title" style="font-size: 18px; color: var(--red);">СИСТЕМА</b>
-                <div id="ty-status" style="font-size: 10px; color: #555; opacity:0">печатает...</div>
-            </div>
-            <button id="call-btn" onclick="startCall()" style="display:none; background:none; border:1px solid #333; color:#fff; border-radius:50%; width:40px; height:40px; cursor:pointer;">📞</button>
-        </div>
+        <div style="padding:20px; border-bottom:1px solid var(--border);"><b id="chat-title">СИСТЕМА</b></div>
         <div id="msgs"></div>
         <div id="inp-p">
-            <input type="text" id="m-in" placeholder="Введите сообщение...">
+            <input type="text" id="m-in" placeholder="Сообщение...">
             <button onclick="send()" style="background:var(--red); border:none; color:#fff; width:40px; height:40px; border-radius:50%; cursor:pointer;">➤</button>
         </div>
     </div>
@@ -100,18 +77,31 @@
 
 <script>
     const S_URL = "https://matvey228552858258489842494-fearconnect.hf.space";
-    let socket, me = "", activePeer = "SYSTEM";
+    let socket = io(S_URL), me = "", activePeer = "SYSTEM", isRegMode = false;
 
-    socket = io(S_URL);
+    function toggleMode() {
+        isRegMode = !isRegMode;
+        document.getElementById('auth-mode-text').innerText = isRegMode ? "РЕГИСТРАЦИЯ НОВОГО АГЕНТА" : "ВХОД В СИСТЕМУ";
+        document.getElementById('main-btn').innerText = isRegMode ? "ЗАРЕГИСТРИРОВАТЬСЯ" : "ВОЙТИ";
+        document.getElementById('switch-text').innerText = isRegMode ? "Уже есть аккаунт?" : "Нет аккаунта?";
+        document.getElementById('switch-link').innerText = isRegMode ? "Войти" : "Создать";
+    }
 
-    function login() {
-        me = document.getElementById('alog').value.trim();
-        if(!me) return;
-        socket.emit('auth', { login: me });
+    function handleAuth() {
+        const login = document.getElementById('alog').value.trim();
+        const pass = document.getElementById('apass').value.trim();
+        if(!login || !pass) return alert("Заполните все поля");
+        socket.emit('auth', { login, pass, isReg: isRegMode });
+    }
+
+    socket.on('auth_success', (data) => {
+        me = data.login;
         document.getElementById('auth-screen').style.display = 'none';
         document.getElementById('app').style.display = 'grid';
         setChat('SYSTEM');
-    }
+    });
+
+    socket.on('auth_error', (err) => alert(err));
 
     function send() {
         const i = document.getElementById('m-in');
@@ -121,16 +111,13 @@
     }
 
     socket.on('new_msg', m => {
-        if(m.from === activePeer || m.from === me) {
-            renderMsg(m);
-        }
+        if(m.from === activePeer || m.from === me || (m.to === me && activePeer === m.from)) renderMsg(m);
     });
 
     socket.on('load_history', h => {
+        document.getElementById('msgs').innerHTML = "";
         h.forEach(m => {
-            if((m.from === me && m.to === activePeer) || (m.from === activePeer && m.to === me)) {
-                renderMsg(m);
-            }
+            if((m.from === me && m.to === activePeer) || (m.from === activePeer && m.to === me)) renderMsg(m);
         });
     });
 
@@ -145,29 +132,15 @@
     socket.on('update_friends', list => {
         const l = document.getElementById('list');
         l.innerHTML = `<div class="f-item ${activePeer==='SYSTEM'?'active':''}" onclick="setChat('SYSTEM')">📢 СИСТЕМА</div>`;
-        list.forEach(u => { 
-            if(u !== me) l.innerHTML += `<div class="f-item ${activePeer===u?'active':''}" onclick="setChat('${u}')">👤 ${u}</div>`; 
-        });
+        list.forEach(u => { if(u !== me) l.innerHTML += `<div class="f-item ${activePeer===u?'active':''}" onclick="setChat('${u}')">👤 ${u}</div>`; });
     });
 
     function setChat(p) {
         activePeer = p;
         document.getElementById('chat-title').innerText = p;
         document.getElementById('inp-p').style.display = p === 'SYSTEM' ? 'none' : 'flex';
-        document.getElementById('call-btn').style.display = p === 'SYSTEM' ? 'none' : 'block';
-        document.getElementById('msgs').innerHTML = "";
-        socket.emit('auth', { login: me }); // Обновляем историю
+        socket.emit('auth', { login: me, pass: "checked", isReg: false }); // Обновить историю
     }
-
-    // МОДАЛКА
-    function openM() { document.getElementById('modal').style.display = 'flex'; }
-    function closeM() { document.getElementById('modal').style.display = 'none'; }
-    function addFriend() {
-        const id = document.getElementById('target-id').value;
-        if(id) { setChat(id); closeM(); }
-    }
-
-    function startCall() { alert("Вызов " + activePeer + " инициирован через защищенный канал..."); }
 </script>
 </body>
 </html>
