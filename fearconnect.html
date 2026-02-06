@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>FearConnect v32</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        :root { --red: #ff3b30; --bg: #000; --panel: #0d0d0d; --border: #1a1a1a; --green: #4cd964; }
+        * { box-sizing: border-box; outline: none; font-family: sans-serif; }
+        body { margin: 0; background: #000; color: #fff; overflow: hidden; }
+        #auth-screen { position: fixed; inset: 0; background: #000; z-index: 100; display: flex; align-items: center; justify-content: center; }
+        .m-card { background: var(--panel); border: 1px solid var(--border); padding: 30px; border-radius: 20px; width: 320px; text-align: center; }
+        input { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 12px; margin: 10px 0; border-radius: 10px; }
+        .btn { background: var(--red); color: #fff; border: none; padding: 12px; width: 100%; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        #app { display: none; height: 100vh; grid-template-columns: 250px 1fr; }
+        #sidebar { background: var(--panel); border-right: 1px solid var(--border); }
+        .f-item { padding: 15px; cursor: pointer; border-bottom: 1px solid #111; }
+        .f-item.active { background: #111; border-left: 3px solid var(--red); }
+        #msgs { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 10px; border-radius: 10px; max-width: 80%; font-size: 14px; }
+        .out { align-self: flex-end; background: var(--red); }
+        .in { align-self: flex-start; background: #222; }
+        #call-ui { display: none; position: fixed; top: 20px; right: 20px; background: var(--green); padding: 20px; border-radius: 15px; color: #000; z-index: 200; }
+    </style>
+</head>
+<body>
+
+<div id="auth-screen">
+    <div class="m-card">
+        <h2 style="color:var(--red)">FEARCONNECT</h2>
+        <input type="text" id="alog" placeholder="ID">
+        <input type="password" id="apass" placeholder="ПАРОЛЬ">
+        <button class="btn" onclick="login()">ВХОД</button>
+    </div>
+</div>
+
+<div id="call-ui">
+    <b id="call-status">ЗВОНОК...</b><br>
+    <button onclick="endCall()" style="margin-top:10px;">ЗАВЕРШИТЬ</button>
+</div>
+
+<div id="app">
+    <div id="sidebar"><div style="padding:20px; color:var(--red)">FEAR.NET</div><div id="list"></div></div>
+    <div id="chat" style="display:flex; flex-direction:column; background:#050505;">
+        <div style="padding:15px; border-bottom:1px solid #1a1a1a; display:flex; justify-content:space-between;">
+            <b id="chat-title">СИСТЕМА</b>
+            <button id="call-btn" onclick="initiateCall()" style="display:none; background:none; border:1px solid var(--red); color:#fff; border-radius:50%; cursor:pointer;">📞</button>
+        </div>
+        <div id="msgs"></div>
+        <div id="inp-p" style="padding:20px; display:none; gap:10px;">
+            <input type="text" id="m-in" style="margin:0; flex:1">
+            <button class="btn" style="width:50px;" onclick="send()">➤</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const S_URL = "https://matvey228552858258489842494-fearconnect.hf.space";
+    let socket, me = "", activePeer = "SYSTEM", localStream, peerConn;
+
+    socket = io(S_URL);
+
+    function login() {
+        me = document.getElementById('alog').value;
+        const p = document.getElementById('apass').value;
+        if(p !== "1234") return alert("Доступ запрещен");
+        socket.emit('auth', { login: me });
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'grid';
+    }
+
+    function send() {
+        const i = document.getElementById('m-in');
+        socket.emit('send_msg', { from: me, to: activePeer, text: i.value });
+        i.value = '';
+    }
+
+    socket.on('new_msg', m => {
+        if(m.from === activePeer || m.from === me) {
+            const d = document.createElement('div');
+            d.className = `msg ${m.from === me ? 'out' : 'in'}`;
+            d.innerText = m.text;
+            document.getElementById('msgs').appendChild(d);
+            document.getElementById('msgs').scrollTop = 99999;
+        }
+    });
+
+    socket.on('load_history', h => {
+        h.forEach(m => {
+            if((m.from === me && m.to === activePeer) || (m.from === activePeer && m.to === me)) {
+                const d = document.createElement('div');
+                d.className = `msg ${m.from === me ? 'out' : 'in'}`;
+                d.innerText = m.text;
+                document.getElementById('msgs').appendChild(d);
+            }
+        });
+    });
+
+    socket.on('update_friends', list => {
+        const l = document.getElementById('list');
+        l.innerHTML = `<div class="f-item" onclick="setChat('SYSTEM')">📢 СИСТЕМА</div>`;
+        list.forEach(u => { if(u !== me) l.innerHTML += `<div class="f-item" onclick="setChat('${u}')">👤 ${u}</div>`; });
+    });
+
+    function setChat(p) {
+        activePeer = p;
+        document.getElementById('chat-title').innerText = p;
+        document.getElementById('inp-p').style.display = p === 'SYSTEM' ? 'none' : 'flex';
+        document.getElementById('call-btn').style.display = p === 'SYSTEM' ? 'none' : 'block';
+        document.getElementById('msgs').innerHTML = "";
+    }
+
+    // --- ЛОГИКА ГОЛОСОВОГО ЗВОНКА ---
+    async function initiateCall() {
+        document.getElementById('call-ui').style.display = 'block';
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        socket.emit('call_signal', { to: activePeer, from: me, signal: { type: 'offer' } });
+    }
+
+    socket.on('call_signal', async data => {
+        if(data.signal.type === 'offer') {
+            if(confirm("Входящий вызов от " + data.from)) {
+                document.getElementById('call-ui').style.display = 'block';
+                document.getElementById('call-status').innerText = "РАЗГОВОР С " + data.from;
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                socket.emit('call_signal', { to: data.from, from: me, signal: { type: 'answer' } });
+            }
+        }
+        if(data.signal.type === 'answer') {
+            document.getElementById('call-status').innerText = "В СЕТИ";
+        }
+    });
+
+    function endCall() {
+        if(localStream) localStream.getTracks().forEach(t => t.stop());
+        document.getElementById('call-ui').style.display = 'none';
+    }
+</script>
+</body>
+</html>
