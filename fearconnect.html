@@ -2,81 +2,80 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>FearConnect Debug</title>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <title>FearConnect WS Edition</title>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #111; padding: 30px; border-radius: 20px; border: 1px solid #333; width: 300px; text-align: center; }
+        body { background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .card { background: #111; padding: 30px; border-radius: 20px; width: 300px; border: 1px solid #333; }
         input { width: 100%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #444; color: #fff; border-radius: 8px; }
         button { width: 100%; padding: 12px; background: #ff3b30; border: none; color: #fff; font-weight: bold; border-radius: 8px; cursor: pointer; }
-        #log { font-size: 10px; color: #777; margin-top: 15px; }
-        #app { display:none; position: fixed; inset: 0; background: #000; padding: 20px; }
+        #status { font-size: 12px; margin-top: 10px; color: orange; }
     </style>
 </head>
 <body>
 
-<div id="auth-screen">
-    <div class="card">
-        <h2>FEARCONNECT</h2>
-        <input type="text" id="alog" placeholder="ID">
-        <input type="password" id="apass" placeholder="PASSWORD">
-        <button id="main-btn">ВОЙТИ / РЕГА</button>
-        <div id="log">Статус: Ожидание нажатия...</div>
-    </div>
+<div id="auth-screen" class="card">
+    <h2>FEAR WS</h2>
+    <input type="text" id="log-in" placeholder="ID Агента">
+    <input type="password" id="pass-in" placeholder="Пароль">
+    <button onclick="doAuth(true)">СОЗДАТЬ АККАУНТ</button>
+    <button onclick="doAuth(false)" style="background:none; border:1px solid #333; margin-top:5px;">ВОЙТИ</button>
+    <div id="status">Подключение...</div>
 </div>
 
-<div id="app">
-    <h1>Вы вошли как: <span id="my-id"></span></h1>
-    <p>Если ты видишь это окно — всё работает!</p>
+<div id="chat-screen" style="display:none; width: 100%; max-width: 400px;">
+    <div id="msgs" style="height: 300px; overflow-y: auto; background: #111; padding: 20px; border-radius: 10px; margin-bottom: 10px;"></div>
+    <input type="text" id="msg-to" placeholder="Кому (ID)">
+    <input type="text" id="msg-text" placeholder="Сообщение...">
+    <button onclick="send()">ОТПРАВИТЬ</button>
 </div>
 
 <script>
-    const LOG = document.getElementById('log');
-    const S_URL = "https://matvey228552858258489842494-fearconnect.hf.space";
-    
-    LOG.innerText = "Подключение к серверу...";
-    
-    // Инициализация сокета с обработкой ошибок
-    const socket = io(S_URL, { 
-        transports: ['websocket', 'polling'],
-        timeout: 5000 
-    });
+    // МЕНЯЕМ https:// на wss:// для библиотеки WS [cite: 2026-02-06]
+    const S_URL = "wss://matvey228552858258489842494-fearconnect.hf.space";
+    let ws;
 
-    socket.on('connect', () => {
-        LOG.innerText = "Статус: Соединение установлено!";
-        LOG.style.color = "#4cd964";
-    });
+    function connect() {
+        ws = new WebSocket(S_URL);
 
-    socket.on('connect_error', (err) => {
-        LOG.innerText = "Ошибка сети: Сервер недоступен";
-        LOG.style.color = "#ff3b30";
-        console.error(err);
-    });
+        ws.onopen = () => {
+            document.getElementById('status').innerText = "Статус: В сети";
+            document.getElementById('status').style.color = "green";
+        };
 
-    document.getElementById('main-btn').onclick = function() {
-        const login = document.getElementById('alog').value.trim();
-        const pass = document.getElementById('apass').value.trim();
-        
-        if(!login || !pass) {
-            alert("Введи данные!");
-            return;
-        }
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'auth_success') {
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('chat-screen').style.display = 'block';
+            }
+            if (data.type === 'auth_error') alert(data.error);
+            if (data.type === 'new_msg') {
+                const div = document.createElement('div');
+                div.innerText = `${data.from}: ${data.text}`;
+                document.getElementById('msgs').appendChild(div);
+            }
+        };
 
-        LOG.innerText = "Отправка запроса...";
-        // Пытаемся и зарегаться и войти одновременно для теста
-        socket.emit('auth', { login, pass, isReg: true });
-    };
+        ws.onclose = () => {
+            document.getElementById('status').innerText = "Статус: Разрыв. Переподключение...";
+            setTimeout(connect, 3000);
+        };
+    }
 
-    socket.on('auth_success', (data) => {
-        document.getElementById('auth-screen').style.display = 'none';
-        document.getElementById('app').style.display = 'block';
-        document.getElementById('my-id').innerText = data.login;
-    });
+    function doAuth(isReg) {
+        const login = document.getElementById('log-in').value;
+        const pass = document.getElementById('pass-in').value;
+        ws.send(JSON.stringify({ type: 'auth', login, pass, isReg }));
+    }
 
-    socket.on('auth_error', (err) => {
-        alert("Ошибка: " + err);
-        LOG.innerText = "Статус: " + err;
-    });
+    function send() {
+        const to = document.getElementById('msg-to').value;
+        const text = document.getElementById('msg-text').value;
+        ws.send(JSON.stringify({ type: 'msg', to, text }));
+        document.getElementById('msg-text').value = "";
+    }
+
+    connect();
 </script>
 </body>
 </html>
