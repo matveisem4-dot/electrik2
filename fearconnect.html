@@ -2,75 +2,127 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>FearConnect v32</title>
+    <title>FearConnect v33 Neo</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
-        :root { --red: #ff3b30; --bg: #000; --panel: #0d0d0d; --border: #1a1a1a; --green: #4cd964; }
-        * { box-sizing: border-box; outline: none; font-family: sans-serif; }
-        body { margin: 0; background: #000; color: #fff; overflow: hidden; }
-        #auth-screen { position: fixed; inset: 0; background: #000; z-index: 100; display: flex; align-items: center; justify-content: center; }
-        .m-card { background: var(--panel); border: 1px solid var(--border); padding: 30px; border-radius: 20px; width: 320px; text-align: center; }
-        input { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 12px; margin: 10px 0; border-radius: 10px; }
-        .btn { background: var(--red); color: #fff; border: none; padding: 12px; width: 100%; border-radius: 10px; cursor: pointer; font-weight: bold; }
-        #app { display: none; height: 100vh; grid-template-columns: 250px 1fr; }
-        #sidebar { background: var(--panel); border-right: 1px solid var(--border); }
-        .f-item { padding: 15px; cursor: pointer; border-bottom: 1px solid #111; }
-        .f-item.active { background: #111; border-left: 3px solid var(--red); }
-        #msgs { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 10px; border-radius: 10px; max-width: 80%; font-size: 14px; }
-        .out { align-self: flex-end; background: var(--red); }
-        .in { align-self: flex-start; background: #222; }
-        #call-ui { display: none; position: fixed; top: 20px; right: 20px; background: var(--green); padding: 20px; border-radius: 15px; color: #000; z-index: 200; }
+        :root { 
+            --red: #ff3b30; 
+            --accent: #ff4d4d;
+            --bg: #0a0a0b; 
+            --panel: #141417; 
+            --border: #252529; 
+            --green: #34c759;
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        * { box-sizing: border-box; outline: none; font-family: 'Inter', -apple-system, sans-serif; }
+        body { margin: 0; background: var(--bg); color: #fff; overflow: hidden; }
+
+        /* АНИМАЦИИ */
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 59, 48, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); } }
+
+        /* ВХОД */
+        #auth-screen { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; align-items: center; justify-content: center; transition: 0.5s; }
+        .m-card { background: var(--panel); border: 1px solid var(--border); padding: 40px; border-radius: 30px; width: 350px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        
+        input { width: 100%; background: #1c1c1f; border: 1px solid var(--border); color: #fff; padding: 15px; margin: 10px 0; border-radius: 15px; transition: 0.3s; }
+        input:focus { border-color: var(--red); box-shadow: 0 0 10px rgba(255, 59, 48, 0.2); }
+
+        .btn { background: var(--red); color: #fff; border: none; padding: 15px; width: 100%; border-radius: 15px; cursor: pointer; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
+        .btn:hover { background: var(--accent); transform: translateY(-2px); }
+
+        /* ГЛАВНЫЙ ЭКРАН */
+        #app { display: none; height: 100vh; grid-template-columns: 300px 1fr; }
+        #sidebar { background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        
+        .side-head { padding: 25px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .side-head b { color: var(--red); letter-spacing: 2px; }
+
+        .add-btn { background: var(--glass); border: 1px solid var(--border); color: #fff; width: 35px; height: 35px; border-radius: 10px; cursor: pointer; transition: 0.3s; }
+        .add-btn:hover { background: var(--red); border-color: var(--red); }
+
+        #list { flex: 1; overflow-y: auto; padding: 10px; }
+        .f-item { padding: 15px; margin-bottom: 5px; cursor: pointer; border-radius: 15px; transition: 0.3s; display: flex; align-items: center; gap: 12px; }
+        .f-item:hover { background: var(--glass); }
+        .f-item.active { background: rgba(255, 59, 48, 0.15); color: var(--red); border: 1px solid rgba(255, 59, 48, 0.3); }
+
+        /* ЧАТ */
+        #chat { display: flex; flex-direction: column; background: #0e0e10; }
+        #msgs { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 15px; }
+        
+        .msg { padding: 14px 18px; border-radius: 20px; max-width: 70%; font-size: 15px; line-height: 1.4; animation: slideUp 0.4s ease forwards; }
+        .out { align-self: flex-end; background: var(--red); color: #fff; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(255, 59, 48, 0.3); }
+        .in { align-self: flex-start; background: var(--panel); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+
+        #inp-p { padding: 25px; background: var(--panel); border-top: 1px solid var(--border); display: none; gap: 12px; }
+        
+        /* ЗВОНОК */
+        #call-ui { display: none; position: fixed; top: 30px; right: 30px; background: var(--green); padding: 20px; border-radius: 20px; color: #000; z-index: 2000; animation: pulse 2s infinite; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div id="auth-screen">
     <div class="m-card">
-        <h2 style="color:var(--red)">FEARCONNECT</h2>
-        <input type="text" id="alog" placeholder="ID">
-        <input type="password" id="apass" placeholder="ПАРОЛЬ">
-        <button class="btn" onclick="login()">ВХОД</button>
+        <h2 style="color:var(--red); font-size: 24px; margin-bottom: 5px;">FEARCONNECT</h2>
+        <p style="font-size: 12px; color: #666; margin-bottom: 25px;">SECURE NEURAL LINK</p>
+        <input type="text" id="alog" placeholder="ID Агента">
+        <input type="password" id="apass" placeholder="Пароль">
+        <button class="btn" onclick="login()">Подключиться</button>
     </div>
 </div>
 
 <div id="call-ui">
-    <b id="call-status">ЗВОНОК...</b><br>
-    <button onclick="endCall()" style="margin-top:10px;">ЗАВЕРШИТЬ</button>
+    <span id="call-status">📞 ВХОДЯЩИЙ ВЫЗОВ...</span>
+    <button onclick="endCall()" style="margin-left:15px; border:none; background:#000; color:#fff; border-radius:10px; padding:5px 10px; cursor:pointer;">СБРОС</button>
 </div>
 
 <div id="app">
-    <div id="sidebar"><div style="padding:20px; color:var(--red)">FEAR.NET</div><div id="list"></div></div>
-    <div id="chat" style="display:flex; flex-direction:column; background:#050505;">
-        <div style="padding:15px; border-bottom:1px solid #1a1a1a; display:flex; justify-content:space-between;">
-            <b id="chat-title">СИСТЕМА</b>
-            <button id="call-btn" onclick="initiateCall()" style="display:none; background:none; border:1px solid var(--red); color:#fff; border-radius:50%; cursor:pointer;">📞</button>
+    <div id="sidebar">
+        <div class="side-head">
+            <b>FEAR.NET</b>
+            <button class="add-btn" onclick="alert('Поиск агентов активирован...')">+</button>
+        </div>
+        <div id="list"></div>
+    </div>
+    <div id="chat">
+        <div style="padding:20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <b id="chat-title" style="font-size: 18px;">СИСТЕМА</b>
+                <div id="ty-status" style="font-size: 11px; color: var(--red); opacity: 0;">печатает...</div>
+            </div>
+            <button id="call-btn" onclick="initiateCall()" style="display:none; background:none; border:1px solid #333; color:#fff; border-radius:50%; width:40px; height:40px; cursor:pointer;">📞</button>
         </div>
         <div id="msgs"></div>
-        <div id="inp-p" style="padding:20px; display:none; gap:10px;">
-            <input type="text" id="m-in" style="margin:0; flex:1">
-            <button class="btn" style="width:50px;" onclick="send()">➤</button>
+        <div id="inp-p">
+            <input type="text" id="m-in" placeholder="Введите сообщение..." style="margin:0; flex:1">
+            <button class="btn" style="width:60px; margin:0;" onclick="send()">➤</button>
         </div>
     </div>
 </div>
 
 <script>
     const S_URL = "https://matvey228552858258489842494-fearconnect.hf.space";
-    let socket, me = "", activePeer = "SYSTEM", localStream, peerConn;
+    let socket, me = "", activePeer = "SYSTEM", localStream;
 
     socket = io(S_URL);
 
     function login() {
         me = document.getElementById('alog').value;
         const p = document.getElementById('apass').value;
-        if(p !== "1234") return alert("Доступ запрещен");
+        if(p !== "1234") return alert("Доступ отклонен");
         socket.emit('auth', { login: me });
-        document.getElementById('auth-screen').style.display = 'none';
-        document.getElementById('app').style.display = 'grid';
+        document.getElementById('auth-screen').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('app').style.display = 'grid';
+        }, 500);
     }
 
     function send() {
         const i = document.getElementById('m-in');
+        if(!i.value) return;
         socket.emit('send_msg', { from: me, to: activePeer, text: i.value });
         i.value = '';
     }
@@ -108,26 +160,24 @@
         document.getElementById('inp-p').style.display = p === 'SYSTEM' ? 'none' : 'flex';
         document.getElementById('call-btn').style.display = p === 'SYSTEM' ? 'none' : 'block';
         document.getElementById('msgs').innerHTML = "";
+        socket.emit('auth', { login: me }); // Перезагрузка истории для этого чата
     }
 
-    // --- ЛОГИКА ГОЛОСОВОГО ЗВОНКА ---
     async function initiateCall() {
         document.getElementById('call-ui').style.display = 'block';
+        document.getElementById('call-status').innerText = "📞 ВЫЗОВ " + activePeer + "...";
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         socket.emit('call_signal', { to: activePeer, from: me, signal: { type: 'offer' } });
     }
 
     socket.on('call_signal', async data => {
         if(data.signal.type === 'offer') {
-            if(confirm("Входящий вызов от " + data.from)) {
-                document.getElementById('call-ui').style.display = 'block';
-                document.getElementById('call-status').innerText = "РАЗГОВОР С " + data.from;
+            document.getElementById('call-ui').style.display = 'block';
+            if(confirm("Принять вызов от " + data.from + "?")) {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 socket.emit('call_signal', { to: data.from, from: me, signal: { type: 'answer' } });
+                document.getElementById('call-status').innerText = "🎙 В СЕТИ: " + data.from;
             }
-        }
-        if(data.signal.type === 'answer') {
-            document.getElementById('call-status').innerText = "В СЕТИ";
         }
     });
 
