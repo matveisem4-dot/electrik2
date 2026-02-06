@@ -2,41 +2,27 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>FearConnect v35 | Secure</title>
+    <title>FearConnect v35 | Fixed</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
         :root { --red: #ff3b30; --bg: #050505; --panel: #121214; --border: #252529; }
         * { box-sizing: border-box; outline: none; font-family: 'Segoe UI', sans-serif; }
         body { margin: 0; background: var(--bg); color: #fff; overflow: hidden; }
-
-        /* ЭКРАН ВХОДА */
         #auth-screen { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; align-items: center; justify-content: center; }
-        .m-card { background: var(--panel); border: 1px solid var(--border); padding: 40px; border-radius: 30px; width: 360px; text-align: center; box-shadow: 0 0 50px rgba(255,59,48,0.1); }
-        
-        .inp { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 15px; margin: 10px 0; border-radius: 12px; font-size: 15px; }
-        .inp:focus { border-color: var(--red); }
-        
-        .btn { background: var(--red); color: #fff; border: none; padding: 16px; width: 100%; border-radius: 12px; cursor: pointer; font-weight: bold; letter-spacing: 1px; margin-top: 10px; }
-        .btn:active { transform: scale(0.98); }
-
-        /* ИНТЕРФЕЙС */
+        .m-card { background: var(--panel); border: 1px solid var(--border); padding: 40px; border-radius: 30px; width: 360px; text-align: center; }
+        .inp { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 15px; margin: 10px 0; border-radius: 12px; }
+        .btn { background: var(--red); color: #fff; border: none; padding: 16px; width: 100%; border-radius: 12px; cursor: pointer; font-weight: bold; margin-top: 10px; }
         #app { display: none; height: 100vh; grid-template-columns: 280px 1fr; }
         #sidebar { background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         .side-head { padding: 25px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        
         #list { flex: 1; overflow-y: auto; padding: 10px; }
-        .f-item { padding: 15px; margin-bottom: 5px; cursor: pointer; border-radius: 12px; display: flex; align-items: center; gap: 10px; transition: 0.2s; }
-        .f-item:hover { background: rgba(255,255,255,0.03); }
+        .f-item { padding: 15px; margin-bottom: 5px; cursor: pointer; border-radius: 12px; display: flex; align-items: center; gap: 10px; }
         .f-item.active { background: rgba(255,59,48,0.1); color: var(--red); font-weight: bold; }
-
         #chat { display: flex; flex-direction: column; background: #080808; }
         #msgs { flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 10px; }
-        
-        .msg { padding: 12px 16px; border-radius: 18px; max-width: 75%; font-size: 14px; line-height: 1.4; animation: pop 0.2s ease-out; }
-        @keyframes pop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        .out { align-self: flex-end; background: var(--red); border-bottom-right-radius: 2px; }
-        .in { align-self: flex-start; background: #1c1c1e; border-bottom-left-radius: 2px; }
-
+        .msg { padding: 12px 16px; border-radius: 18px; max-width: 75%; font-size: 14px; }
+        .out { align-self: flex-end; background: var(--red); }
+        .in { align-self: flex-start; background: #1c1c1e; }
         #inp-p { padding: 20px; background: var(--panel); border-top: 1px solid var(--border); display: none; gap: 10px; }
         #m-in { flex: 1; background: #000; border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 20px; }
     </style>
@@ -47,12 +33,9 @@
     <div class="m-card">
         <h2 style="color:var(--red); margin:0;">FEARCONNECT</h2>
         <p id="auth-mode-text" style="font-size: 12px; color: #555; margin-bottom: 25px;">ВХОД В СИСТЕМУ</p>
-        
         <input type="text" id="alog" class="inp" placeholder="ID АГЕНТА">
         <input type="password" id="apass" class="inp" placeholder="ПАРОЛЬ">
-        
         <button class="btn" id="main-btn" onclick="handleAuth()">ВОЙТИ</button>
-        
         <div style="margin-top: 20px; font-size: 12px;">
             <span id="switch-text">Нет аккаунта?</span> 
             <a href="#" onclick="toggleMode()" id="switch-link" style="color:var(--red); text-decoration:none; font-weight:bold;">Создать</a>
@@ -139,7 +122,8 @@
         activePeer = p;
         document.getElementById('chat-title').innerText = p;
         document.getElementById('inp-p').style.display = p === 'SYSTEM' ? 'none' : 'flex';
-        socket.emit('auth', { login: me, pass: "checked", isReg: false }); // Обновить историю
+        // Не перезаходим, а просто просим историю
+        socket.emit('auth', { login: me, pass: "checked", isReg: false });
     }
 </script>
 </body>
