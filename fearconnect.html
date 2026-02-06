@@ -2,129 +2,81 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>FearConnect v35 | Fixed</title>
+    <title>FearConnect Debug</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
-        :root { --red: #ff3b30; --bg: #050505; --panel: #121214; --border: #252529; }
-        * { box-sizing: border-box; outline: none; font-family: 'Segoe UI', sans-serif; }
-        body { margin: 0; background: var(--bg); color: #fff; overflow: hidden; }
-        #auth-screen { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; align-items: center; justify-content: center; }
-        .m-card { background: var(--panel); border: 1px solid var(--border); padding: 40px; border-radius: 30px; width: 360px; text-align: center; }
-        .inp { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 15px; margin: 10px 0; border-radius: 12px; }
-        .btn { background: var(--red); color: #fff; border: none; padding: 16px; width: 100%; border-radius: 12px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        #app { display: none; height: 100vh; grid-template-columns: 280px 1fr; }
-        #sidebar { background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-        .side-head { padding: 25px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        #list { flex: 1; overflow-y: auto; padding: 10px; }
-        .f-item { padding: 15px; margin-bottom: 5px; cursor: pointer; border-radius: 12px; display: flex; align-items: center; gap: 10px; }
-        .f-item.active { background: rgba(255,59,48,0.1); color: var(--red); font-weight: bold; }
-        #chat { display: flex; flex-direction: column; background: #080808; }
-        #msgs { flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 12px 16px; border-radius: 18px; max-width: 75%; font-size: 14px; }
-        .out { align-self: flex-end; background: var(--red); }
-        .in { align-self: flex-start; background: #1c1c1e; }
-        #inp-p { padding: 20px; background: var(--panel); border-top: 1px solid var(--border); display: none; gap: 10px; }
-        #m-in { flex: 1; background: #000; border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 20px; }
+        body { background: #000; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #111; padding: 30px; border-radius: 20px; border: 1px solid #333; width: 300px; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #444; color: #fff; border-radius: 8px; }
+        button { width: 100%; padding: 12px; background: #ff3b30; border: none; color: #fff; font-weight: bold; border-radius: 8px; cursor: pointer; }
+        #log { font-size: 10px; color: #777; margin-top: 15px; }
+        #app { display:none; position: fixed; inset: 0; background: #000; padding: 20px; }
     </style>
 </head>
 <body>
 
 <div id="auth-screen">
-    <div class="m-card">
-        <h2 style="color:var(--red); margin:0;">FEARCONNECT</h2>
-        <p id="auth-mode-text" style="font-size: 12px; color: #555; margin-bottom: 25px;">ВХОД В СИСТЕМУ</p>
-        <input type="text" id="alog" class="inp" placeholder="ID АГЕНТА">
-        <input type="password" id="apass" class="inp" placeholder="ПАРОЛЬ">
-        <button class="btn" id="main-btn" onclick="handleAuth()">ВОЙТИ</button>
-        <div style="margin-top: 20px; font-size: 12px;">
-            <span id="switch-text">Нет аккаунта?</span> 
-            <a href="#" onclick="toggleMode()" id="switch-link" style="color:var(--red); text-decoration:none; font-weight:bold;">Создать</a>
-        </div>
+    <div class="card">
+        <h2>FEARCONNECT</h2>
+        <input type="text" id="alog" placeholder="ID">
+        <input type="password" id="apass" placeholder="PASSWORD">
+        <button id="main-btn">ВОЙТИ / РЕГА</button>
+        <div id="log">Статус: Ожидание нажатия...</div>
     </div>
 </div>
 
 <div id="app">
-    <div id="sidebar">
-        <div class="side-head"><b style="color:var(--red)">FEAR.NET</b> <button onclick="alert('Поиск...')" style="background:none; border:none; color:#fff; cursor:pointer; font-size:20px;">+</button></div>
-        <div id="list"></div>
-    </div>
-    <div id="chat">
-        <div style="padding:20px; border-bottom:1px solid var(--border);"><b id="chat-title">СИСТЕМА</b></div>
-        <div id="msgs"></div>
-        <div id="inp-p">
-            <input type="text" id="m-in" placeholder="Сообщение...">
-            <button onclick="send()" style="background:var(--red); border:none; color:#fff; width:40px; height:40px; border-radius:50%; cursor:pointer;">➤</button>
-        </div>
-    </div>
+    <h1>Вы вошли как: <span id="my-id"></span></h1>
+    <p>Если ты видишь это окно — всё работает!</p>
 </div>
 
 <script>
+    const LOG = document.getElementById('log');
     const S_URL = "https://matvey228552858258489842494-fearconnect.hf.space";
-    let socket = io(S_URL), me = "", activePeer = "SYSTEM", isRegMode = false;
+    
+    LOG.innerText = "Подключение к серверу...";
+    
+    // Инициализация сокета с обработкой ошибок
+    const socket = io(S_URL, { 
+        transports: ['websocket', 'polling'],
+        timeout: 5000 
+    });
 
-    function toggleMode() {
-        isRegMode = !isRegMode;
-        document.getElementById('auth-mode-text').innerText = isRegMode ? "РЕГИСТРАЦИЯ НОВОГО АГЕНТА" : "ВХОД В СИСТЕМУ";
-        document.getElementById('main-btn').innerText = isRegMode ? "ЗАРЕГИСТРИРОВАТЬСЯ" : "ВОЙТИ";
-        document.getElementById('switch-text').innerText = isRegMode ? "Уже есть аккаунт?" : "Нет аккаунта?";
-        document.getElementById('switch-link').innerText = isRegMode ? "Войти" : "Создать";
-    }
+    socket.on('connect', () => {
+        LOG.innerText = "Статус: Соединение установлено!";
+        LOG.style.color = "#4cd964";
+    });
 
-    function handleAuth() {
+    socket.on('connect_error', (err) => {
+        LOG.innerText = "Ошибка сети: Сервер недоступен";
+        LOG.style.color = "#ff3b30";
+        console.error(err);
+    });
+
+    document.getElementById('main-btn').onclick = function() {
         const login = document.getElementById('alog').value.trim();
         const pass = document.getElementById('apass').value.trim();
-        if(!login || !pass) return alert("Заполните все поля");
-        socket.emit('auth', { login, pass, isReg: isRegMode });
-    }
+        
+        if(!login || !pass) {
+            alert("Введи данные!");
+            return;
+        }
+
+        LOG.innerText = "Отправка запроса...";
+        // Пытаемся и зарегаться и войти одновременно для теста
+        socket.emit('auth', { login, pass, isReg: true });
+    };
 
     socket.on('auth_success', (data) => {
-        me = data.login;
         document.getElementById('auth-screen').style.display = 'none';
-        document.getElementById('app').style.display = 'grid';
-        setChat('SYSTEM');
+        document.getElementById('app').style.display = 'block';
+        document.getElementById('my-id').innerText = data.login;
     });
 
-    socket.on('auth_error', (err) => alert(err));
-
-    function send() {
-        const i = document.getElementById('m-in');
-        if(!i.value) return;
-        socket.emit('send_msg', { from: me, to: activePeer, text: i.value });
-        i.value = '';
-    }
-
-    socket.on('new_msg', m => {
-        if(m.from === activePeer || m.from === me || (m.to === me && activePeer === m.from)) renderMsg(m);
+    socket.on('auth_error', (err) => {
+        alert("Ошибка: " + err);
+        LOG.innerText = "Статус: " + err;
     });
-
-    socket.on('load_history', h => {
-        document.getElementById('msgs').innerHTML = "";
-        h.forEach(m => {
-            if((m.from === me && m.to === activePeer) || (m.from === activePeer && m.to === me)) renderMsg(m);
-        });
-    });
-
-    function renderMsg(m) {
-        const d = document.createElement('div');
-        d.className = `msg ${m.from === me ? 'out' : 'in'}`;
-        d.innerText = m.text;
-        document.getElementById('msgs').appendChild(d);
-        document.getElementById('msgs').scrollTop = 99999;
-    }
-
-    socket.on('update_friends', list => {
-        const l = document.getElementById('list');
-        l.innerHTML = `<div class="f-item ${activePeer==='SYSTEM'?'active':''}" onclick="setChat('SYSTEM')">📢 СИСТЕМА</div>`;
-        list.forEach(u => { if(u !== me) l.innerHTML += `<div class="f-item ${activePeer===u?'active':''}" onclick="setChat('${u}')">👤 ${u}</div>`; });
-    });
-
-    function setChat(p) {
-        activePeer = p;
-        document.getElementById('chat-title').innerText = p;
-        document.getElementById('inp-p').style.display = p === 'SYSTEM' ? 'none' : 'flex';
-        // Не перезаходим, а просто просим историю
-        socket.emit('auth', { login: me, pass: "checked", isReg: false });
-    }
 </script>
 </body>
 </html>
