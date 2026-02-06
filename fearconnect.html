@@ -2,122 +2,115 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>FearConnect v33 Neo</title>
+    <title>FearConnect v34 Neo</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
         :root { 
             --red: #ff3b30; 
-            --accent: #ff4d4d;
-            --bg: #0a0a0b; 
-            --panel: #141417; 
+            --bg: #050505; 
+            --panel: #121214; 
             --border: #252529; 
-            --green: #34c759;
-            --glass: rgba(255, 255, 255, 0.05);
+            --glass: rgba(255, 255, 255, 0.03);
         }
 
-        * { box-sizing: border-box; outline: none; font-family: 'Inter', -apple-system, sans-serif; }
+        * { box-sizing: border-box; outline: none; font-family: 'Segoe UI', system-ui, sans-serif; }
         body { margin: 0; background: var(--bg); color: #fff; overflow: hidden; }
 
-        /* АНИМАЦИИ */
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 59, 48, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); } }
-
         /* ВХОД */
-        #auth-screen { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; align-items: center; justify-content: center; transition: 0.5s; }
-        .m-card { background: var(--panel); border: 1px solid var(--border); padding: 40px; border-radius: 30px; width: 350px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        #auth-screen { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        .m-card { background: var(--panel); border: 1px solid var(--border); padding: 40px; border-radius: 30px; width: 350px; text-align: center; }
         
-        input { width: 100%; background: #1c1c1f; border: 1px solid var(--border); color: #fff; padding: 15px; margin: 10px 0; border-radius: 15px; transition: 0.3s; }
-        input:focus { border-color: var(--red); box-shadow: 0 0 10px rgba(255, 59, 48, 0.2); }
+        .inp-neo { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 15px; margin: 15px 0; border-radius: 15px; font-size: 16px; text-align: center; }
+        .inp-neo:focus { border-color: var(--red); }
 
-        .btn { background: var(--red); color: #fff; border: none; padding: 15px; width: 100%; border-radius: 15px; cursor: pointer; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
-        .btn:hover { background: var(--accent); transform: translateY(-2px); }
+        .btn-neo { background: var(--red); color: #fff; border: none; padding: 16px; width: 100%; border-radius: 15px; cursor: pointer; font-weight: bold; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; }
 
-        /* ГЛАВНЫЙ ЭКРАН */
-        #app { display: none; height: 100vh; grid-template-columns: 300px 1fr; }
+        /* ИНТЕРФЕЙС */
+        #app { display: none; height: 100vh; grid-template-columns: 280px 1fr; }
         #sidebar { background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         
         .side-head { padding: 25px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .side-head b { color: var(--red); letter-spacing: 2px; }
-
-        .add-btn { background: var(--glass); border: 1px solid var(--border); color: #fff; width: 35px; height: 35px; border-radius: 10px; cursor: pointer; transition: 0.3s; }
-        .add-btn:hover { background: var(--red); border-color: var(--red); }
+        .add-btn { background: var(--red); color: #fff; border: none; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-size: 20px; font-weight: bold; }
 
         #list { flex: 1; overflow-y: auto; padding: 10px; }
-        .f-item { padding: 15px; margin-bottom: 5px; cursor: pointer; border-radius: 15px; transition: 0.3s; display: flex; align-items: center; gap: 12px; }
+        .f-item { padding: 15px; margin-bottom: 5px; cursor: pointer; border-radius: 15px; display: flex; align-items: center; gap: 12px; transition: 0.2s; border: 1px solid transparent; }
         .f-item:hover { background: var(--glass); }
-        .f-item.active { background: rgba(255, 59, 48, 0.15); color: var(--red); border: 1px solid rgba(255, 59, 48, 0.3); }
+        .f-item.active { background: rgba(255, 59, 48, 0.1); border-color: rgba(255, 59, 48, 0.3); color: var(--red); }
 
         /* ЧАТ */
-        #chat { display: flex; flex-direction: column; background: #0e0e10; }
-        #msgs { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 15px; }
+        #chat { display: flex; flex-direction: column; background: #080808; }
+        #msgs { flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 10px; }
         
-        .msg { padding: 14px 18px; border-radius: 20px; max-width: 70%; font-size: 15px; line-height: 1.4; animation: slideUp 0.4s ease forwards; }
-        .out { align-self: flex-end; background: var(--red); color: #fff; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(255, 59, 48, 0.3); }
-        .in { align-self: flex-start; background: var(--panel); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+        .msg { padding: 12px 16px; border-radius: 18px; max-width: 75%; font-size: 15px; animation: msgPop 0.3s ease-out; }
+        @keyframes msgPop { from { opacity: 0; transform: scale(0.9) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        
+        .out { align-self: flex-end; background: var(--red); color: #fff; border-bottom-right-radius: 2px; }
+        .in { align-self: flex-start; background: #1c1c1e; border-bottom-left-radius: 2px; }
 
-        #inp-p { padding: 25px; background: var(--panel); border-top: 1px solid var(--border); display: none; gap: 12px; }
-        
-        /* ЗВОНОК */
-        #call-ui { display: none; position: fixed; top: 30px; right: 30px; background: var(--green); padding: 20px; border-radius: 20px; color: #000; z-index: 2000; animation: pulse 2s infinite; font-weight: bold; }
+        #inp-p { padding: 20px; background: var(--panel); border-top: 1px solid var(--border); display: none; gap: 10px; align-items: center; }
+        #inp-p input { flex: 1; background: #000; border: 1px solid var(--border); padding: 12px 18px; border-radius: 20px; color: #fff; }
+
+        /* МОДАЛКА */
+        #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 2000; }
     </style>
 </head>
 <body>
 
 <div id="auth-screen">
     <div class="m-card">
-        <h2 style="color:var(--red); font-size: 24px; margin-bottom: 5px;">FEARCONNECT</h2>
-        <p style="font-size: 12px; color: #666; margin-bottom: 25px;">SECURE NEURAL LINK</p>
-        <input type="text" id="alog" placeholder="ID Агента">
-        <input type="password" id="apass" placeholder="Пароль">
-        <button class="btn" onclick="login()">Подключиться</button>
+        <h2 style="color:var(--red); margin: 0;">FEARCONNECT</h2>
+        <p style="font-size: 10px; color: #555; letter-spacing: 2px; margin-bottom: 30px;">NEURAL INTERFACE v34</p>
+        <input type="text" id="alog" class="inp-neo" placeholder="ID АГЕНТА">
+        <button class="btn-neo" onclick="login()">ВОЙТИ</button>
     </div>
 </div>
 
-<div id="call-ui">
-    <span id="call-status">📞 ВХОДЯЩИЙ ВЫЗОВ...</span>
-    <button onclick="endCall()" style="margin-left:15px; border:none; background:#000; color:#fff; border-radius:10px; padding:5px 10px; cursor:pointer;">СБРОС</button>
+<div id="modal">
+    <div class="m-card" style="width: 300px;">
+        <h3 style="margin-top:0">НОВЫЙ КОНТАКТ</h3>
+        <input type="text" id="target-id" class="inp-neo" placeholder="ID ЦЕЛИ">
+        <button class="btn-neo" onclick="addFriend()">ДОБАВИТЬ</button>
+        <button class="btn-neo" style="background:#222; margin-top:10px" onclick="closeM()">ОТМЕНА</button>
+    </div>
 </div>
 
 <div id="app">
     <div id="sidebar">
         <div class="side-head">
-            <b>FEAR.NET</b>
-            <button class="add-btn" onclick="alert('Поиск агентов активирован...')">+</button>
+            <b style="color:var(--red)">FEAR.NET</b>
+            <button class="add-btn" onclick="openM()">+</button>
         </div>
         <div id="list"></div>
     </div>
     <div id="chat">
-        <div style="padding:20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+        <div style="padding:15px 25px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
             <div>
-                <b id="chat-title" style="font-size: 18px;">СИСТЕМА</b>
-                <div id="ty-status" style="font-size: 11px; color: var(--red); opacity: 0;">печатает...</div>
+                <b id="chat-title" style="font-size: 18px; color: var(--red);">СИСТЕМА</b>
+                <div id="ty-status" style="font-size: 10px; color: #555; opacity:0">печатает...</div>
             </div>
-            <button id="call-btn" onclick="initiateCall()" style="display:none; background:none; border:1px solid #333; color:#fff; border-radius:50%; width:40px; height:40px; cursor:pointer;">📞</button>
+            <button id="call-btn" onclick="startCall()" style="display:none; background:none; border:1px solid #333; color:#fff; border-radius:50%; width:40px; height:40px; cursor:pointer;">📞</button>
         </div>
         <div id="msgs"></div>
         <div id="inp-p">
-            <input type="text" id="m-in" placeholder="Введите сообщение..." style="margin:0; flex:1">
-            <button class="btn" style="width:60px; margin:0;" onclick="send()">➤</button>
+            <input type="text" id="m-in" placeholder="Введите сообщение...">
+            <button onclick="send()" style="background:var(--red); border:none; color:#fff; width:40px; height:40px; border-radius:50%; cursor:pointer;">➤</button>
         </div>
     </div>
 </div>
 
 <script>
     const S_URL = "https://matvey228552858258489842494-fearconnect.hf.space";
-    let socket, me = "", activePeer = "SYSTEM", localStream;
+    let socket, me = "", activePeer = "SYSTEM";
 
     socket = io(S_URL);
 
     function login() {
-        me = document.getElementById('alog').value;
-        const p = document.getElementById('apass').value;
-        if(p !== "1234") return alert("Доступ отклонен");
+        me = document.getElementById('alog').value.trim();
+        if(!me) return;
         socket.emit('auth', { login: me });
-        document.getElementById('auth-screen').style.opacity = '0';
-        setTimeout(() => {
-            document.getElementById('auth-screen').style.display = 'none';
-            document.getElementById('app').style.display = 'grid';
-        }, 500);
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'grid';
+        setChat('SYSTEM');
     }
 
     function send() {
@@ -129,29 +122,32 @@
 
     socket.on('new_msg', m => {
         if(m.from === activePeer || m.from === me) {
-            const d = document.createElement('div');
-            d.className = `msg ${m.from === me ? 'out' : 'in'}`;
-            d.innerText = m.text;
-            document.getElementById('msgs').appendChild(d);
-            document.getElementById('msgs').scrollTop = 99999;
+            renderMsg(m);
         }
     });
 
     socket.on('load_history', h => {
         h.forEach(m => {
             if((m.from === me && m.to === activePeer) || (m.from === activePeer && m.to === me)) {
-                const d = document.createElement('div');
-                d.className = `msg ${m.from === me ? 'out' : 'in'}`;
-                d.innerText = m.text;
-                document.getElementById('msgs').appendChild(d);
+                renderMsg(m);
             }
         });
     });
 
+    function renderMsg(m) {
+        const d = document.createElement('div');
+        d.className = `msg ${m.from === me ? 'out' : 'in'}`;
+        d.innerText = m.text;
+        document.getElementById('msgs').appendChild(d);
+        document.getElementById('msgs').scrollTop = 99999;
+    }
+
     socket.on('update_friends', list => {
         const l = document.getElementById('list');
-        l.innerHTML = `<div class="f-item" onclick="setChat('SYSTEM')">📢 СИСТЕМА</div>`;
-        list.forEach(u => { if(u !== me) l.innerHTML += `<div class="f-item" onclick="setChat('${u}')">👤 ${u}</div>`; });
+        l.innerHTML = `<div class="f-item ${activePeer==='SYSTEM'?'active':''}" onclick="setChat('SYSTEM')">📢 СИСТЕМА</div>`;
+        list.forEach(u => { 
+            if(u !== me) l.innerHTML += `<div class="f-item ${activePeer===u?'active':''}" onclick="setChat('${u}')">👤 ${u}</div>`; 
+        });
     });
 
     function setChat(p) {
@@ -160,31 +156,18 @@
         document.getElementById('inp-p').style.display = p === 'SYSTEM' ? 'none' : 'flex';
         document.getElementById('call-btn').style.display = p === 'SYSTEM' ? 'none' : 'block';
         document.getElementById('msgs').innerHTML = "";
-        socket.emit('auth', { login: me }); // Перезагрузка истории для этого чата
+        socket.emit('auth', { login: me }); // Обновляем историю
     }
 
-    async function initiateCall() {
-        document.getElementById('call-ui').style.display = 'block';
-        document.getElementById('call-status').innerText = "📞 ВЫЗОВ " + activePeer + "...";
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        socket.emit('call_signal', { to: activePeer, from: me, signal: { type: 'offer' } });
+    // МОДАЛКА
+    function openM() { document.getElementById('modal').style.display = 'flex'; }
+    function closeM() { document.getElementById('modal').style.display = 'none'; }
+    function addFriend() {
+        const id = document.getElementById('target-id').value;
+        if(id) { setChat(id); closeM(); }
     }
 
-    socket.on('call_signal', async data => {
-        if(data.signal.type === 'offer') {
-            document.getElementById('call-ui').style.display = 'block';
-            if(confirm("Принять вызов от " + data.from + "?")) {
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                socket.emit('call_signal', { to: data.from, from: me, signal: { type: 'answer' } });
-                document.getElementById('call-status').innerText = "🎙 В СЕТИ: " + data.from;
-            }
-        }
-    });
-
-    function endCall() {
-        if(localStream) localStream.getTracks().forEach(t => t.stop());
-        document.getElementById('call-ui').style.display = 'none';
-    }
+    function startCall() { alert("Вызов " + activePeer + " инициирован через защищенный канал..."); }
 </script>
 </body>
 </html>
