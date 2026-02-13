@@ -3,108 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FearConnect v1.2</title>
+    <title>FearConnect Persistent P2P</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { font-family: sans-serif; background: #121212; color: #fff; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        #auth-box { margin: auto; background: #1e1e1e; padding: 25px; border-radius: 12px; text-align: center; border: 1px solid #333; width: 300px; z-index: 100; }
-        input { padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #444; background: #252525; color: #fff; width: 90%; font-size: 16px; }
-        button { padding: 12px; border-radius: 6px; border: none; background: #ff4444; color: #fff; cursor: pointer; font-weight: bold; width: 95%; margin: 5px 0; font-size: 14px; }
-        button:disabled { background: #555; cursor: not-allowed; }
-        #main-box { display: none; flex-direction: column; height: 100%; }
-        .vids { display: flex; background: #000; justify-content: center; min-height: 200px; }
-        video { width: 50%; max-width: 400px; background: #222; border: 1px solid #333; }
-        #chat { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; background: #181818; }
-        .m { background: #333; padding: 8px 12px; border-radius: 8px; width: fit-content; max-width: 80%; }
-        .my { background: #ff4444; align-self: flex-end; }
-        .bar { background: #1e1e1e; padding: 15px; display: flex; gap: 10px; }
-        #conn-status { font-size: 12px; color: #ffaa00; margin-bottom: 10px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0b141a; color: #e9edef; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        .header { background: #202c33; padding: 15px; text-align: center; border-bottom: 1px solid #333; }
+        #my-id { color: #00a884; font-size: 1.2em; cursor: pointer; }
+        
+        .video-box { display: flex; background: #000; justify-content: center; gap: 5px; }
+        video { width: 48%; max-height: 200px; background: #222; border-radius: 8px; }
+
+        #chat { flex: 1; overflow-y: auto; padding: 20px; background: #0b141a; display: flex; flex-direction: column; gap: 8px; }
+        .msg { padding: 8px 12px; border-radius: 8px; max-width: 80%; word-wrap: break-word; font-size: 14px; }
+        .incoming { background: #202c33; align-self: flex-start; }
+        .outgoing { background: #005c4b; align-self: flex-end; }
+        
+        .footer { background: #202c33; padding: 15px; display: flex; gap: 10px; align-items: center; }
+        input { background: #2a3942; border: none; padding: 10px; color: #fff; border-radius: 8px; flex: 1; outline: none; }
+        button { background: #00a884; border: none; color: #fff; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn-call { background: #ea0038; }
     </style>
 </head>
 <body>
 
-    <div id="auth-box">
-        <h1>FEAR CONNECT</h1>
-        <div id="conn-status">Подключение к серверу...</div>
-        <input type="text" id="loginInput" placeholder="Твой ID (Логин)">
-        <input type="password" id="passInput" placeholder="Пароль">
-        <button id="regBtn" onclick="handleAuth(true)" disabled>СОЗДАТЬ АККАУНТ</button>
-        <button id="loginBtn" onclick="handleAuth(false)" disabled>ВОЙТИ</button>
-    </div>
+<div class="header">
+    <strong>FearConnect</strong> | Твой ID: <span id="my-id" onclick="copyID()">Загрузка...</span>
+</div>
 
-    <div id="main-box">
-        <div class="vids">
-            <video id="localV" autoplay muted playsinline></video>
-            <video id="remoteV" autoplay playsinline></video>
-        </div>
-        <div id="chat"></div>
-        <div class="bar">
-            <input type="text" id="targetID" placeholder="КОМУ (ID)" style="width:70px">
-            <input type="text" id="msgInput" placeholder="Сообщение..." style="flex:1">
-            <button onclick="sendMsg()" style="width:auto">➤</button>
-            <button onclick="makeCall()" style="width:auto">📞</button>
-        </div>
-    </div>
+<div class="video-box">
+    <video id="localVideo" autoplay muted playsinline></video>
+    <video id="remoteVideo" autoplay playsinline></video>
+</div>
 
-    <script>
-        // АВТОМАТИЧЕСКОЕ ОПРЕДЕЛЕНИЕ АДРЕСА
-        let ws;
-        function connect() {
-            let protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-            let host = window.location.host;
-            ws = new WebSocket(protocol + host);
+<div id="chat"></div>
 
-            ws.onopen = () => {
-                console.log("Connected!");
-                document.getElementById('conn-status').innerText = "✅ Онлайн";
-                document.getElementById('conn-status').style.color = "#00ff00";
-                document.getElementById('regBtn').disabled = false;
-                document.getElementById('loginBtn').disabled = false;
-            };
+<div class="footer">
+    <input type="text" id="friend-id" placeholder="ID друга" style="max-width: 100px;">
+    <input type="text" id="message-input" placeholder="Сообщение...">
+    <button onclick="sendMessage()">➤</button>
+    <button class="btn-call" onclick="makeCall()">📞</button>
+    <button onclick="clearHistory()" style="background: #555; font-size: 10px;">Очистить</button>
+</div>
 
-            ws.onclose = () => {
-                document.getElementById('conn-status').innerText = "❌ Офлайн (Переподключение...)";
-                document.getElementById('conn-status').style.color = "#ff4444";
-                setTimeout(connect, 2000);
-            };
+<script>
+    const peer = new Peer();
+    let conn;
+    let localStream;
+    const chatDiv = document.getElementById('chat');
 
-            ws.onmessage = async (e) => {
-                const d = JSON.parse(e.data);
-                if (d.type === 'auth_ok') {
-                    document.getElementById('auth-box').style.display = 'none';
-                    document.getElementById('main-box').style.display = 'flex';
-                    const stream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
-                    document.getElementById('localV').srcObject = stream;
-                    window.localStream = stream; // сохраняем для звонков
-                }
-                if (d.type === 'error') alert("Ошибка: " + d.msg);
-                if (d.type === 'new_msg') {
-                    const m = document.createElement('div');
-                    m.className = 'm' + (d.from === document.getElementById('loginInput').value ? ' my' : '');
-                    m.innerHTML = `<b>${d.from}:</b> ${d.text}`;
-                    document.getElementById('chat').appendChild(m);
-                }
-                // Логика звонка (упрощенно)
-                if (d.type === 'offer') {
-                    if(confirm("Звонит " + d.from)) { /* тут логика WebRTC из прошлого кода */ }
-                }
-            };
+    // 1. Загрузка истории из памяти браузера при старте
+    window.onload = () => {
+        const savedChat = localStorage.getItem('fear_chat_history');
+        if (savedChat) {
+            chatDiv.innerHTML = savedChat;
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+        }
+        
+        navigator.mediaDevices.getUserMedia({video: true, audio: true}).then(stream => {
+            localStream = stream;
+            document.getElementById('localVideo').srcObject = stream;
+        }).catch(e => console.log("Камера недоступна"));
+    };
+
+    // 2. Инициализация Peer
+    peer.on('open', id => document.getElementById('my-id').innerText = id);
+
+    // Слушаем входящие сообщения
+    peer.on('connection', connection => {
+        conn = connection;
+        setupConn();
+    });
+
+    // Слушаем входящие звонки
+    peer.on('call', call => {
+        if (confirm("Входящий видеозвонок! Принять?")) {
+            call.answer(localStream);
+            call.on('stream', stream => document.getElementById('remoteVideo').srcObject = stream);
+        }
+    });
+
+    function connectToFriend() {
+        const fId = document.getElementById('friend-id').value;
+        if (!fId) return alert("Введи ID!");
+        conn = peer.connect(fId);
+        setupConn();
+    }
+
+    function setupConn() {
+        conn.on('open', () => {
+            addMessage('Система', 'Связь установлена', 'incoming');
+            conn.on('data', data => addMessage('Друг', data, 'incoming'));
+        });
+    }
+
+    // 3. Сохранение в память
+    function addMessage(user, text, type) {
+        const mDiv = document.createElement('div');
+        mDiv.className = `msg ${type}`;
+        mDiv.innerHTML = `<small style="opacity:0.5">${user}</small><br>${text}`;
+        chatDiv.appendChild(mDiv);
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+
+        // Сохраняем весь HTML чата в localStorage
+        localStorage.setItem('fear_chat_history', chatDiv.innerHTML);
+    }
+
+    function sendMessage() {
+        const input = document.getElementById('message-input');
+        const text = input.value;
+        const fId = document.getElementById('friend-id').value;
+
+        if (!conn || !conn.open) {
+            connectToFriend();
+            setTimeout(() => { if(conn.open) send(); }, 1000);
+        } else {
+            send();
         }
 
-        function handleAuth(isReg) {
-            const login = document.getElementById('loginInput').value;
-            const pass = document.getElementById('passInput').value;
-            if(!login || !pass) return alert("Введи данные!");
-            ws.send(JSON.stringify({ type: 'auth', login, pass, isReg }));
+        function send() {
+            if (!text) return;
+            conn.send(text);
+            addMessage('Я', text, 'outgoing');
+            input.value = '';
         }
+    }
 
-        function sendMsg() {
-            const text = document.getElementById('msgInput').value;
-            const to = document.getElementById('targetID').value;
-            ws.send(JSON.stringify({ type: 'msg', to, text }));
-            document.getElementById('msgInput').value = '';
+    async function makeCall() {
+        const fId = document.getElementById('friend-id').value;
+        if (!fId) return alert("Введи ID друга для звонка!");
+        const call = peer.call(fId, localStream);
+        call.on('stream', stream => document.getElementById('remoteVideo').srcObject = stream);
+    }
+
+    function clearHistory() {
+        if (confirm("Удалить всю переписку из памяти?")) {
+            localStorage.removeItem('fear_chat_history');
+            chatDiv.innerHTML = '';
         }
+    }
 
-        connect(); // Запуск
-    </script>
+    function copyID() {
+        const id = document.getElementById('my-id').innerText;
+        navigator.clipboard.writeText(id);
+        alert("Твой ID скопирован: " + id);
+    }
+</script>
+
 </body>
 </html>
