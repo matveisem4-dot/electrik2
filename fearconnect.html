@@ -2,103 +2,253 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FearConnect Fix</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>FearConnect Elite</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #0b141a; color: white; font-family: sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        .box { background: #202c33; padding: 25px; border-radius: 20px; width: 85%; max-width: 350px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; border: none; background: #2a3942; color: white; }
-        button { width: 100%; padding: 15px; border-radius: 10px; border: none; background: #ff4444; color: white; font-weight: bold; cursor: pointer; }
-        #status-log { font-size: 11px; color: #ffaa00; margin-bottom: 10px; min-height: 14px; }
-        .screen { display: none; flex-direction: column; width: 100%; height: 100%; position: absolute; top: 0; left: 0; background: #0b141a; }
+        :root { 
+            --bg: #000000; 
+            --panel: #1c1c1e; 
+            --accent: #ff3b30; 
+            --text: #ffffff; 
+            --msg-in: #262629;
+            --msg-out: #ff3b30;
+        }
+
+        /* Полная блокировка скролла и выделения */
+        * { 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+            user-select: none; 
+            -webkit-user-select: none;
+            outline: none;
+        }
+
+        body, html { 
+            margin: 0; padding: 0; height: 100%; 
+            background: var(--bg); color: var(--text); 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden; position: fixed; width: 100%;
+        }
+
+        /* Убираем полосы прокрутки везде */
+        ::-webkit-scrollbar { display: none; }
+
+        .screen { 
+            position: absolute; inset: 0; 
+            display: none; flex-direction: column; 
+            background: var(--bg); 
+            padding-top: env(safe-area-inset-top);
+        }
         .screen.active { display: flex; }
-        .header { background: #202c33; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; }
+
+        /* Красивый Вход */
+        #login-screen { align-items: center; justify-content: center; background: radial-gradient(circle at center, #2c0000 0%, #000000 100%); }
+        .login-box { width: 85%; max-width: 320px; text-align: center; }
+        
+        input { 
+            width: 100%; background: #1c1c1e; border: 1px solid #333; 
+            padding: 16px; color: #fff; border-radius: 14px; 
+            margin-bottom: 12px; font-size: 16px; transition: 0.2s;
+            user-select: text !important; -webkit-user-select: text !important;
+        }
+        input:focus { border-color: var(--accent); }
+
+        button.main-btn { 
+            width: 100%; padding: 16px; background: var(--accent); 
+            border: none; color: white; border-radius: 14px; 
+            font-weight: 600; font-size: 16px; active { opacity: 0.8; }
+        }
+
+        /* Шапка */
+        .header { 
+            padding: 15px 20px; background: rgba(28, 28, 30, 0.8); 
+            backdrop-filter: blur(10px); display: flex; 
+            justify-content: space-between; align-items: center; 
+            border-bottom: 0.5px solid #333; height: 64px;
+        }
+
+        /* Список чатов */
+        .chat-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .chat-item { 
+            padding: 12px 20px; display: flex; align-items: center; 
+            gap: 15px; border-bottom: 0.5px solid #222;
+        }
+        .chat-item:active { background: #1c1c1e; }
+        .avatar { 
+            width: 52px; height: 52px; border-radius: 50%; 
+            background: linear-gradient(135deg, #ff3b30, #ff9500); 
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: bold; font-size: 20px;
+        }
+
+        /* Чат */
+        #messages { 
+            flex: 1; padding: 15px; overflow-y: auto; 
+            display: flex; flex-direction: column; gap: 8px;
+            background: #000;
+        }
+        .msg { 
+            padding: 10px 16px; border-radius: 20px; 
+            max-width: 75%; font-size: 15px; line-height: 1.4;
+        }
+        .msg.in { background: var(--msg-in); align-self: flex-start; border-bottom-left-radius: 5px; }
+        .msg.out { background: var(--msg-out); align-self: flex-end; border-bottom-right-radius: 5px; }
+
+        /* Ввод сообщения */
+        .input-area { 
+            padding: 10px 15px 30px; background: #1c1c1e; 
+            display: flex; gap: 10px; align-items: center;
+        }
+
+        .fab { 
+            position: fixed; bottom: 40px; right: 25px; 
+            width: 60px; height: 60px; background: var(--accent); 
+            border-radius: 50%; display: flex; align-items: center; 
+            justify-content: center; box-shadow: 0 8px 25px rgba(255,59,48,0.4);
+            border: none; color: white; font-size: 30px;
+        }
     </style>
 </head>
 <body>
 
-    <div id="login-screen" class="box">
-        <h2 style="color:#ff4444; margin:0 0 10px 0;">FearConnect</h2>
-        <div id="status-log">Ожидание ввода...</div>
-        <input type="text" id="my-id" placeholder="Любой ник (английскими)">
-        <input type="password" id="my-pass" placeholder="Любой пароль">
-        <button onclick="initApp()">ВОЙТИ</button>
-        <p style="font-size: 10px; opacity: 0.5; margin-top: 15px;">Если не заходит, попробуй выключить/включить интернет или сменить браузер.</p>
+    <div id="login-screen" class="screen active">
+        <div class="login-box">
+            <h1 style="font-size: 32px; margin-bottom: 5px;">FearConnect</h1>
+            <p style="opacity: 0.5; margin-bottom: 30px; font-size: 14px;">Next-Gen P2P Messenger</p>
+            <input type="text" id="my-id" placeholder="Никнейм">
+            <input type="password" id="my-pass" placeholder="Пароль">
+            <button class="main-btn" onclick="startApp()">Войти</button>
+        </div>
     </div>
 
     <div id="list-screen" class="screen">
-        <div class="header"><span>Чаты</span><span id="id-tag"></span></div>
-        <div id="chat-list" style="padding: 10px;"></div>
-        <div style="padding: 20px;">
+        <div class="header">
+            <span style="font-size: 22px; font-weight: 700;">Чаты</span>
+            <small id="me-id" style="color: var(--accent); font-weight: bold;"></small>
+        </div>
+        <div id="chat-list" class="chat-list"></div>
+        <button class="fab" onclick="showAdd(true)">+</button>
+    </div>
+
+    <div id="chat-screen" class="screen">
+        <div class="header">
+            <button onclick="goBack()" style="background:none; border:none; color:var(--accent); font-size:18px; font-weight:600;">Назад</button>
+            <b id="chat-title">Чат</b>
+            <div style="width:50px;"></div>
+        </div>
+        <div id="messages"></div>
+        <div class="input-area">
+            <input type="text" id="msg-input" placeholder="Сообщение" style="margin:0; border-radius: 25px; padding: 12px 20px;">
+            <button onclick="sendMsg()" style="background:var(--accent); border:none; width:44px; height:44px; border-radius:50%; color:white; flex-shrink:0;">➤</button>
+        </div>
+    </div>
+
+    <div id="add-modal" style="position:fixed; inset:0; background:rgba(0,0,0,0.9); display:none; align-items:center; justify-content:center; z-index:1000;">
+        <div class="login-box" style="background:#1c1c1e; padding:25px; border-radius:20px;">
+            <h3>Добавить друга</h3>
             <input type="text" id="f-id" placeholder="ID друга">
-            <button onclick="addFriend()">Добавить друга</button>
+            <input type="text" id="f-name" placeholder="Имя в списке">
+            <button class="main-btn" onclick="addFriend()">Добавить</button>
+            <button onclick="showAdd(false)" style="background:none; border:none; color:#666; margin-top:15px;">Закрыть</button>
         </div>
     </div>
 
 <script>
-    let peer;
-    const log = (msg) => document.getElementById('status-log').innerText = msg;
+    let peer, conn, targetId;
+    let chats = JSON.parse(localStorage.getItem('fc_elite_chats') || '{}');
 
-    function initApp() {
+    function startApp() {
         const id = document.getElementById('my-id').value.trim();
         const pass = document.getElementById('my-pass').value.trim();
+        if(!id || pass !== "1234") return alert("Ошибка! Пароль 1234");
 
-        if(!id) {
-            log("Ошибка: Введите ник!");
-            return;
-        }
+        if(peer) peer.destroy();
+        peer = new Peer(id, { config: {'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }]} });
 
-        log("Подключение к серверу...");
-
-        // Создаем Peer с более надежными настройками
-        peer = new Peer(id, {
-            host: '0.peerjs.com', // Явно указываем сервер
-            port: 443,
-            secure: true,
-            pingInterval: 5000,
-            config: {
-                'iceServers': [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' }
-                ]
-            }
+        peer.on('open', () => {
+            switchScreen('list-screen');
+            document.getElementById('me-id').innerText = id;
+            renderList();
         });
 
-        peer.on('open', (id) => {
-            log("Успех!");
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('list-screen').classList.add('active');
-            document.getElementById('id-tag').innerText = id;
-            localStorage.setItem('last_id', id);
+        peer.on('error', err => {
+            alert("Этот ID занят или ошибка сети. Попробуй другой.");
+            location.reload();
         });
 
-        peer.on('error', (err) => {
-            console.error(err.type);
-            if(err.type === 'unavailable-id') {
-                log("ID '" + id + "' занят. Попробуй другой!");
-            } else if(err.type === 'network') {
-                log("Ошибка сети! Проверь интернет.");
-            } else if(err.type === 'browser-incompatible') {
-                log("Браузер не поддерживает связь.");
-            } else {
-                log("Ошибка: " + err.type);
-            }
-            // Если ошибка, пробуем убить старый коннект через 2 сек
-            setTimeout(() => peer.destroy(), 2000);
+        peer.on('connection', c => {
+            c.on('data', d => handleData(c.peer, d));
         });
+    }
+
+    function switchScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
     }
 
     function addFriend() {
-        const fid = document.getElementById('f-id').value;
-        if(fid) {
-            const item = document.createElement('div');
-            item.style.padding = "15px";
-            item.style.borderBottom = "1px solid #333";
-            item.innerText = "Чат с " + fid;
-            document.getElementById('chat-list').appendChild(item);
+        const id = document.getElementById('f-id').value, name = document.getElementById('f-name').value;
+        if(id && name) {
+            chats[id] = name;
+            localStorage.setItem('fc_elite_chats', JSON.stringify(chats));
+            renderList();
+            showAdd(false);
         }
     }
+
+    function renderList() {
+        const l = document.getElementById('chat-list'); l.innerHTML = '';
+        for(let id in chats) {
+            const item = document.createElement('div');
+            item.className = 'chat-item';
+            item.onclick = () => openChat(id);
+            item.innerHTML = `
+                <div class="avatar">${chats[id][0].toUpperCase()}</div>
+                <div>
+                    <div style="font-weight:600; font-size:17px;">${chats[id]}</div>
+                    <div style="font-size:13px; opacity:0.5;">ID: ${id}</div>
+                </div>
+            `;
+            l.appendChild(item);
+        }
+    }
+
+    function openChat(id) {
+        targetId = id;
+        document.getElementById('chat-title').innerText = chats[id];
+        document.getElementById('messages').innerHTML = localStorage.getItem('eh_'+id) || '';
+        switchScreen('chat-screen');
+        conn = peer.connect(id);
+        conn.on('data', d => handleData(id, d));
+    }
+
+    function sendMsg() {
+        const i = document.getElementById('msg-input');
+        if(!i.value || !conn) return;
+        conn.send(i.value);
+        addMsgUI('Вы', i.value, 'out', targetId);
+        i.value = '';
+    }
+
+    function handleData(id, data) {
+        addMsgUI(chats[id] || id, data, 'in', id);
+    }
+
+    function addMsgUI(u, t, type, id) {
+        const m = document.createElement('div');
+        m.className = 'msg ' + type;
+        m.innerHTML = t;
+        const container = document.getElementById('messages');
+        container.appendChild(m);
+        container.scrollTop = container.scrollHeight;
+        localStorage.setItem('eh_'+id, container.innerHTML);
+    }
+
+    function goBack() { switchScreen('list-screen'); }
+    function showAdd(s) { document.getElementById('add-modal').style.display = s ? 'flex' : 'none'; }
 </script>
 </body>
 </html>
