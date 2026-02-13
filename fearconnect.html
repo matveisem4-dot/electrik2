@@ -3,239 +3,241 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>FearConnect Pro</title>
+    <title>FearConnect Iron</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --bg: #050505; --panel: #121212; --accent: #ff3b30; --text: #fff; --msg-out: #ff3b30; --msg-in: #1c1c1e; }
+        :root { --bg: #000; --panel: #1a1a1a; --accent: #ff3b30; --text: #fff; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; outline: none; }
-        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; overflow: hidden; position: fixed; width: 100%; }
         
-        /* Кастомные алерты */
-        #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--accent); padding: 12px 25px; border-radius: 20px; font-weight: bold; z-index: 10000; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        body, html { 
+            margin: 0; padding: 0; height: 100%; background: #111; color: var(--text); 
+            font-family: -apple-system, sans-serif; overflow: hidden;
+        }
+
+        /* Центрируем на компе, чтобы не растягивалось */
+        .app-container {
+            max-width: 500px; margin: 0 auto; height: 100%; background: var(--bg);
+            position: relative; overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
 
         .screen { position: absolute; inset: 0; display: none; flex-direction: column; background: var(--bg); }
         .screen.active { display: flex; }
 
-        /* Вход */
-        .login-box { width: 85%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; }
-        input { width: 100%; background: #1c1c1e; border: 1px solid #333; padding: 16px; color: #fff; border-radius: 15px; font-size: 16px; user-select: text !important; }
-
-        /* Список */
-        .header { padding: 50px 20px 15px; background: rgba(18,18,18,0.8); backdrop-filter: blur(20px); display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid #222; }
-        .chat-item { padding: 15px 20px; display: flex; align-items: center; gap: 15px; border-bottom: 0.5px solid #111; }
-        .avatar { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(45deg, #f00, #500); display: flex; align-items: center; justify-content: center; font-weight: bold; }
-
+        /* Шапка */
+        .header { padding: 40px 20px 15px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
+        
         /* Чат */
-        #messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 12px 16px; border-radius: 20px; max-width: 80%; font-size: 15px; line-height: 1.4; }
-        .msg.in { background: var(--msg-in); align-self: flex-start; border-bottom-left-radius: 4px; }
-        .msg.out { background: var(--msg-out); align-self: flex-end; border-bottom-right-radius: 4px; }
+        #messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #000; }
+        .msg { padding: 12px 16px; border-radius: 18px; max-width: 80%; font-size: 15px; line-height: 1.4; word-wrap: break-word; }
+        .msg.in { background: #262629; align-self: flex-start; }
+        .msg.out { background: var(--accent); align-self: flex-end; }
 
-        /* Звонок */
-        #call-ui { position: fixed; inset: 0; background: #000; z-index: 5000; display: none; flex-direction: column; }
-        .video-box { flex: 1; position: relative; }
+        /* Видео звонок */
+        #call-ui { position: absolute; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; }
         #remoteV { width: 100%; height: 100%; object-fit: cover; }
-        #localV { position: absolute; top: 20px; right: 20px; width: 30%; border-radius: 10px; border: 1px solid var(--accent); }
-        .call-controls { padding: 30px; display: flex; justify-content: center; gap: 15px; background: rgba(0,0,0,0.8); flex-wrap: wrap; }
-        .ctrl-btn { width: 55px; height: 55px; border-radius: 50%; border: none; background: #222; color: #fff; font-size: 20px; }
-        .ctrl-btn.off { background: var(--accent); }
-        .ctrl-btn.hangup { background: #ff3b30; width: 100px; border-radius: 30px; }
+        
+        /* Плавающее окно (твое видео) */
+        #local-container { 
+            position: absolute; top: 70px; right: 20px; width: 100px; height: 150px; 
+            border-radius: 12px; overflow: hidden; border: 2px solid var(--accent); 
+            z-index: 1001; cursor: move; touch-action: none; background: #222;
+        }
+        #localV { width: 100%; height: 100%; object-fit: cover; }
+
+        .controls { position: absolute; bottom: 30px; left: 0; right: 0; display: flex; justify-content: center; gap: 15px; padding: 0 20px; }
+        .btn { width: 55px; height: 55px; border-radius: 50%; border: none; background: rgba(255,255,255,0.1); color: #fff; font-size: 20px; backdrop-filter: blur(10px); }
+        .btn.red { background: var(--accent); width: 80px; border-radius: 20px; }
+        .btn.active { background: #fff; color: #000; }
+
+        /* Вход */
+        .input-group { width: 85%; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+        input { background: #222; border: 1px solid #333; padding: 15px; color: #fff; border-radius: 12px; font-size: 16px; user-select: text !important; }
+        
+        #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--accent); padding: 10px 20px; border-radius: 10px; z-index: 2000; display: none; }
     </style>
 </head>
 <body>
 
-    <div id="toast">Уведомление</div>
+<div class="app-container">
+    <div id="toast"></div>
 
-    <div id="login-screen" class="screen active" style="align-items:center; justify-content:center;">
-        <div class="login-box">
-            <h1 style="margin:0; font-size:35px; color:var(--accent);">FearConnect</h1>
-            <p style="opacity:0.5; margin-bottom:10px;">Придумайте ID и пароль</p>
-            <input type="text" id="my-id" placeholder="Ваш уникальный ID">
-            <input type="password" id="my-pass" placeholder="Ваш личный пароль">
-            <button onclick="startApp()" style="padding:16px; background:var(--accent); border:none; color:#fff; border-radius:15px; font-weight:bold;">ВОЙТИ / СОЗДАТЬ</button>
+    <div id="login-screen" class="screen active" style="justify-content:center;">
+        <div class="input-group">
+            <h1 style="text-align:center; color:var(--accent); margin:0;">FearConnect</h1>
+            <p style="text-align:center; opacity:0.5;">Придумайте данные</p>
+            <input type="text" id="my-id" placeholder="Ваш ID">
+            <input type="password" id="my-pass" placeholder="Придумайте пароль">
+            <button onclick="startApp()" style="padding:15px; background:var(--accent); border:none; color:#fff; border-radius:12px; font-weight:bold;">ВОЙТИ</button>
         </div>
     </div>
 
     <div id="list-screen" class="screen">
-        <div class="header">
-            <span style="font-size:25px; font-weight:800;">Чаты</span>
-            <b id="me-tag" style="color:var(--accent);"></b>
-        </div>
+        <div class="header"><h3>Чаты</h3><b id="me-tag" style="color:var(--accent)"></b></div>
         <div id="chat-list" style="flex:1; overflow-y:auto;"></div>
-        <button onclick="showAdd(true)" style="position:fixed; bottom:30px; right:25px; width:65px; height:65px; border-radius:50%; background:var(--accent); border:none; color:#fff; font-size:35px; box-shadow:0 10px 20px rgba(255,0,0,0.3);">+</button>
+        <button onclick="showAdd(true)" style="position:absolute; bottom:30px; right:20px; width:60px; height:60px; border-radius:50%; background:var(--accent); border:none; font-size:30px; color:#fff;">+</button>
     </div>
 
     <div id="chat-screen" class="screen">
         <div class="header">
-            <button onclick="goBack()" style="background:none; border:none; color:var(--accent); font-size:25px;">⬅</button>
+            <button onclick="goBack()" style="background:none; border:none; color:var(--accent); font-size:20px;">⬅</button>
             <b id="chat-title">Чат</b>
-            <button onclick="makeCall()" style="background:none; border:none; font-size:25px;">📞</button>
+            <button onclick="makeCall()" style="background:none; border:none; font-size:20px;">📞</button>
         </div>
         <div id="messages"></div>
-        <div style="padding:10px 15px 35px; background:#121212; display:flex; gap:10px;">
-            <input type="text" id="msg-input" style="margin:0; border-radius:25px;" placeholder="Сообщение...">
-            <button onclick="sendMsg()" style="background:var(--accent); border:none; width:50px; height:50px; border-radius:50%; color:#fff;">➤</button>
+        <div style="padding:10px 15px 30px; display:flex; gap:10px; background:var(--panel);">
+            <input type="text" id="msg-input" style="flex:1; border-radius:20px;" placeholder="Текст...">
+            <button onclick="sendMsg()" style="background:var(--accent); border:none; width:45px; height:45px; border-radius:50%; color:#fff;">➤</button>
         </div>
     </div>
 
     <div id="call-ui">
-        <div class="video-box">
-            <video id="remoteV" autoplay playsinline></video>
+        <video id="remoteV" autoplay playsinline></video>
+        <div id="local-container">
             <video id="localV" autoplay muted playsinline></video>
         </div>
-        <div class="call-controls">
-            <button id="btn-mic" class="ctrl-btn" onclick="toggleMic()">🎤</button>
-            <button id="btn-cam" class="ctrl-btn" onclick="toggleCam()">📷</button>
-            <button class="ctrl-btn hangup" onclick="location.reload()">📞 Сброс</button>
+        <div class="controls">
+            <button id="m-btn" class="btn" onclick="toggleTrack('audio')">🎤</button>
+            <button id="v-btn" class="btn" onclick="toggleTrack('video')">📷</button>
+            <button class="btn red" onclick="endCall()">СБРОС</button>
         </div>
     </div>
+</div>
 
-    <div id="add-modal" style="position:fixed; inset:0; background:rgba(0,0,0,0.9); display:none; align-items:center; justify-content:center; z-index:6000;">
-        <div class="login-box" style="background:#1c1c1e; padding:25px; border-radius:20px;">
-            <h3>Новый контакт</h3>
-            <input type="text" id="f-id" placeholder="ID друга">
-            <input type="text" id="f-name" placeholder="Имя">
-            <button onclick="addFriend()" style="padding:15px; background:var(--accent); border:none; color:#fff; border-radius:12px; font-weight:bold;">ДОБАВИТЬ</button>
-            <button onclick="showAdd(false)" style="margin-top:10px; background:none; border:none; color:#555;">Отмена</button>
-        </div>
+<div id="add-modal" style="position:fixed; inset:0; background:rgba(0,0,0,0.8); display:none; align-items:center; justify-content:center; z-index:5000;">
+    <div class="input-group" style="background:#222; padding:20px; border-radius:20px;">
+        <input type="text" id="f-id" placeholder="ID друга">
+        <input type="text" id="f-name" placeholder="Имя">
+        <button onclick="addFriend()" style="padding:15px; background:var(--accent); border:none; color:#fff; border-radius:12px;">ДОБАВИТЬ</button>
+        <button onclick="showAdd(false)" style="background:none; border:none; color:#555;">Отмена</button>
     </div>
+</div>
 
 <script>
-    let peer, conn, targetId, myStream;
-    let chats = JSON.parse(localStorage.getItem('fc_pro_chats') || '{}');
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let peer, conn, targetId, myStream, currentCall;
+    let chats = JSON.parse(localStorage.getItem('fc_v13_chats') || '{}');
 
-    // Кастомный Alert
-    function showToast(text) {
+    function notify(text) {
         const t = document.getElementById('toast');
-        t.innerText = text; t.display = 'block'; t.style.display = 'block';
+        t.innerText = text; t.style.display = 'block';
         setTimeout(() => t.style.display = 'none', 3000);
-    }
-
-    // Звуковой движок
-    function playTone(freq, type, dur) {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = type; osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + dur);
-    }
-
-    function sound(type) {
-        if(type === 'call') playTone(440, 'sine', 1); // Гудок
-        if(type === 'connect') { playTone(600, 'sine', 0.2); setTimeout(()=>playTone(800, 'sine', 0.2), 200); }
-        if(type === 'end') playTone(200, 'sawtooth', 0.5);
     }
 
     function startApp() {
         const id = document.getElementById('my-id').value.trim();
         const pass = document.getElementById('my-pass').value.trim();
-        if(!id || !pass) return showToast("Заполни все поля!");
+        if(!id || !pass) return notify("Заполните поля");
 
-        const savedPass = localStorage.getItem('pass_' + id);
-        if(savedPass && savedPass !== pass) return showToast("Неверный пароль для этого ID!");
-        localStorage.setItem('pass_' + id, pass);
+        const saved = localStorage.getItem('up_'+id);
+        if(saved && saved !== pass) return notify("Неверный пароль");
+        localStorage.setItem('up_'+id, pass);
 
-        peer = new Peer(id, { config: {'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }]} });
+        peer = new Peer(id, { 
+            config: { 'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }] },
+            debug: 1 
+        });
 
         peer.on('open', () => {
             switchScreen('list-screen');
             document.getElementById('me-tag').innerText = id;
             renderList();
-            navigator.mediaDevices.getUserMedia({video:true, audio:true}).then(s => myStream = s);
+            initMedia();
         });
 
         peer.on('connection', c => {
-            conn = c; 
-            sound('connect');
+            conn = c;
             c.on('data', d => handleData(c.peer, d));
         });
 
         peer.on('call', call => {
-            sound('call');
-            if(confirm("Входящий звонок! Ответить?")) {
+            if(confirm("Вам звонят! Ответить?")) {
+                currentCall = call;
                 call.answer(myStream);
                 document.getElementById('call-ui').style.display = 'flex';
-                call.on('stream', rs => document.getElementById('remoteV').srcObject = rs);
+                call.on('stream', rs => { document.getElementById('remoteV').srcObject = rs; });
             }
         });
 
-        peer.on('error', () => { showToast("Ошибка ID или сети"); });
+        peer.on('error', e => notify("Ошибка сети или ID занят"));
+    }
+
+    async function initMedia() {
+        try {
+            // Эхоподавление включается здесь
+            myStream = await navigator.mediaDevices.getUserMedia({
+                video: { width: 480, height: 640 },
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+            });
+            document.getElementById('localV').srcObject = myStream;
+        } catch(e) { notify("Камера недоступна"); }
     }
 
     function sendMsg() {
         const i = document.getElementById('msg-input');
         if(!i.value || !targetId) return;
-        
-        const transmit = () => {
-            conn.send(i.value);
-            addMsgUI('Вы', i.value, 'out', targetId);
-            i.value = '';
-        };
 
-        if(!conn || !conn.open) {
-            conn = peer.connect(targetId);
-            conn.on('open', transmit);
-        } else transmit();
+        const data = i.value;
+        const attemptSend = () => {
+            if(conn && conn.open) {
+                conn.send(data);
+                addMsgUI('Вы', data, 'out', targetId);
+                i.value = '';
+            } else {
+                conn = peer.connect(targetId);
+                conn.on('open', () => { conn.send(data); addMsgUI('Вы', data, 'out', targetId); i.value = ''; });
+            }
+        };
+        attemptSend();
     }
 
     function makeCall() {
-        if(!myStream) return showToast("Нет доступа к камере");
-        sound('call');
+        if(!myStream) return notify("Камера не готова");
         document.getElementById('call-ui').style.display = 'flex';
-        document.getElementById('localV').srcObject = myStream;
-        const call = peer.call(targetId, myStream);
-        call.on('stream', rs => document.getElementById('remoteV').srcObject = rs);
+        currentCall = peer.call(targetId, myStream);
+        currentCall.on('stream', rs => { document.getElementById('remoteV').srcObject = rs; });
     }
 
-    function toggleMic() {
-        const track = myStream.getAudioTracks()[0];
+    function toggleTrack(type) {
+        const track = type === 'video' ? myStream.getVideoTracks()[0] : myStream.getAudioTracks()[0];
         track.enabled = !track.enabled;
-        document.getElementById('btn-mic').classList.toggle('off', !track.enabled);
+        document.getElementById(type === 'video' ? 'v-btn' : 'm-btn').classList.toggle('active', !track.enabled);
     }
 
-    function toggleCam() {
-        const track = myStream.getVideoTracks()[0];
-        track.enabled = !track.enabled;
-        document.getElementById('btn-cam').classList.toggle('off', !track.enabled);
+    function endCall() {
+        if(currentCall) currentCall.close();
+        document.getElementById('call-ui').style.display = 'none';
+        // Не перезагружаем всё, а просто чистим видео
+        document.getElementById('remoteV').srcObject = null;
     }
 
-    function handleData(id, data) { addMsgUI(chats[id] || id, data, 'in', id); sound('connect'); }
+    // ЛОГИКА ПЕРЕМЕЩЕНИЯ ОКНА
+    const localCont = document.getElementById('local-container');
+    let isDragging = false, offset = [0,0];
 
+    localCont.onmousedown = (e) => { isDragging = true; offset = [localCont.offsetLeft - e.clientX, localCont.offsetTop - e.clientY]; };
+    document.onmousemove = (e) => { if(isDragging) { localCont.style.left = (e.clientX + offset[0]) + 'px'; localCont.style.top = (e.clientY + offset[1]) + 'px'; } };
+    document.onmouseup = () => { isDragging = false; };
+    
+    // Для мобилок
+    localCont.ontouchstart = (e) => { isDragging = true; let t = e.touches[0]; offset = [localCont.offsetLeft - t.clientX, localCont.offsetTop - t.clientY]; };
+    localCont.ontouchmove = (e) => { if(isDragging) { let t = e.touches[0]; localCont.style.left = (t.clientX + offset[0]) + 'px'; localCont.style.top = (t.clientY + offset[1]) + 'px'; } };
+
+    function handleData(id, data) { addMsgUI(chats[id] || id, data, 'in', id); }
     function addMsgUI(u, t, type, id) {
-        const m = document.createElement('div');
-        m.className = 'msg ' + type; m.innerText = t;
-        const c = document.getElementById('messages');
-        c.appendChild(m); c.scrollTop = c.scrollHeight;
+        const m = document.createElement('div'); m.className = 'msg ' + type; m.innerText = t;
+        const c = document.getElementById('messages'); c.appendChild(m); c.scrollTop = c.scrollHeight;
         localStorage.setItem('eh_'+id, c.innerHTML);
     }
-
     function renderList() {
         const l = document.getElementById('chat-list'); l.innerHTML = '';
         for(let id in chats) {
-            const d = document.createElement('div');
-            d.className = 'chat-item'; d.onclick = () => openChat(id);
-            d.innerHTML = `<div class="avatar">${chats[id][0]}</div><div><b>${chats[id]}</b><br><small style="opacity:0.3">ID: ${id}</small></div>`;
-            l.appendChild(d);
+            const d = document.createElement('div'); d.className = 'chat-item'; d.onclick = () => openChat(id);
+            d.innerHTML = `<b>${chats[id]}</b><br><small>ID: ${id}</small>`; l.appendChild(d);
         }
     }
-
-    function openChat(id) {
-        targetId = id;
-        document.getElementById('chat-title').innerText = chats[id];
-        document.getElementById('messages').innerHTML = localStorage.getItem('eh_'+id) || '';
-        switchScreen('chat-screen');
-        conn = peer.connect(id);
-    }
-
+    function openChat(id) { targetId = id; document.getElementById('chat-title').innerText = chats[id]; document.getElementById('messages').innerHTML = localStorage.getItem('eh_'+id) || ''; switchScreen('chat-screen'); conn = peer.connect(id); }
     function switchScreen(s) { document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active')); document.getElementById(s).classList.add('active'); }
     function showAdd(s) { document.getElementById('add-modal').style.display = s ? 'flex' : 'none'; }
-    function addFriend() {
-        const id = document.getElementById('f-id').value, n = document.getElementById('f-name').value;
-        if(id && n) { chats[id] = n; localStorage.setItem('fc_pro_chats', JSON.stringify(chats)); renderList(); showAdd(false); }
-    }
+    function addFriend() { const id = document.getElementById('f-id').value, n = document.getElementById('f-name').value; if(id && n) { chats[id] = n; localStorage.setItem('fc_v13_chats', JSON.stringify(chats)); renderList(); showAdd(false); } }
     function goBack() { switchScreen('list-screen'); }
 </script>
 </body>
