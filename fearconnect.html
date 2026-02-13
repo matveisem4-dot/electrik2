@@ -3,192 +3,244 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FearConnect Fix</title>
+    <title>FearConnect V21</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --bg: #000; --accent: #ff3b30; --panel: #111; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
-        body { font-family: sans-serif; background: var(--bg); color: #fff; height: 100vh; overflow: hidden; }
-        
-        .screen { position: absolute; inset: 0; display: none; flex-direction: column; }
+        :root { --bg: #09090b; --panel: #18181b; --accent: #3b82f6; --text: #f4f4f5; --red: #ef4444; --green: #22c55e; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        .screen { position: absolute; inset: 0; display: none; flex-direction: column; background: var(--bg); }
         .active { display: flex; }
+
+        /* Контакты */
+        .chat-card { background: var(--panel); margin: 8px 12px; padding: 15px; border-radius: 16px; display: flex; align-items: center; border: 1px solid #27272a; cursor: pointer; position: relative; }
+        .av-circle { width: 48px; height: 48px; background: #27272a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-right: 15px; border: 2px solid transparent; }
+        .av-circle.is-online { border-color: var(--green); }
         
-        input { background: #1a1a1a; border: 1px solid #333; padding: 15px; color: #fff; border-radius: 12px; width: 100%; margin-bottom: 10px; font-size: 16px; }
-        .btn { padding: 15px; background: var(--accent); border: none; color: #fff; border-radius: 12px; font-weight: bold; width: 100%; cursor: pointer; }
+        .info b { display: block; font-size: 16px; margin-bottom: 2px; }
+        .info span { font-size: 12px; color: #71717a; }
 
-        #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 10px 15px; border-radius: 15px; max-width: 80%; word-wrap: break-word; }
-        .msg.out { background: var(--accent); align-self: flex-end; }
-        .msg.in { background: #333; align-self: flex-start; }
+        /* Формы */
+        .input-area { padding: 20px; background: var(--panel); border-top: 1px solid #27272a; }
+        input { background: #09090b; border: 1px solid #27272a; color: #fff; padding: 12px 16px; width: 100%; border-radius: 10px; margin-bottom: 10px; font-size: 16px; }
+        .btn { background: var(--accent); color: #fff; border: none; padding: 14px; border-radius: 10px; font-weight: 600; width: 100%; cursor: pointer; transition: 0.2s; }
+        .btn:active { opacity: 0.7; transform: scale(0.98); }
 
-        #call-ui { position: fixed; inset: 0; background: #000; z-index: 9999; display: none; flex-direction: column; }
-        video { width: 100%; height: 50%; object-fit: cover; background: #111; }
-        .controls { padding: 20px; display: flex; justify-content: center; background: #000; }
+        /* Чат */
+        #msg-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .bubble { padding: 10px 16px; border-radius: 18px; max-width: 80%; font-size: 15px; line-height: 1.4; position: relative; }
+        .bubble.sent { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
+        .bubble.recv { background: #27272a; align-self: flex-start; border-bottom-left-radius: 4px; }
+
+        /* Модалки */
+        #overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal { background: var(--panel); padding: 25px; border-radius: 20px; width: 100%; max-width: 350px; border: 1px solid #27272a; }
+
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; background: #52525b; }
+        .status-dot.on { background: var(--green); box-shadow: 0 0 5px var(--green); }
     </style>
 </head>
 <body>
 
-    <div id="login-screen" class="screen active" style="justify-content:center; padding:40px;">
-        <h1 style="color:var(--accent); text-align:center; margin-bottom:20px;">FearConnect</h1>
-        <input type="text" id="my-id" placeholder="Ваш ID">
-        <input type="password" id="my-pass" placeholder="Пароль">
-        <button class="btn" onclick="connect()">ВОЙТИ</button>
+    <div id="login-s" class="screen active" style="justify-content:center; padding:40px;">
+        <h1 style="font-size:32px; text-align:center; margin-bottom:10px;">FearConnect</h1>
+        <p style="text-align:center; color:#71717a; margin-bottom:40px;">Локальная База V21</p>
+        
+        <div id="p-av" style="font-size:60px; text-align:center; margin-bottom:20px; cursor:pointer;" onclick="nextAv()">👤</div>
+        <input type="text" id="p-id" placeholder="Твой уникальный ID">
+        <button class="btn" onclick="login()">ВОЙТИ В СЕТЬ</button>
     </div>
 
-    <div id="list-screen" class="screen">
-        <div style="padding:40px 20px 10px; background:#111;"><h2>Чаты</h2></div>
-        <div id="chat-list" style="flex:1; overflow-y:auto;"></div>
-        <div style="padding:20px; display:flex; gap:10px;">
-            <input type="text" id="f-id" placeholder="ID друга" style="margin:0;">
-            <button class="btn" style="width:60px;" onclick="addFriend()">+</button>
+    <div id="list-s" class="screen">
+        <div style="padding:50px 20px 20px; display:flex; justify-content:space-between; align-items:center;">
+            <h2>Контакты</h2>
+            <div id="me-info" style="font-size:12px; background:#27272a; padding:5px 10px; border-radius:20px;"></div>
+        </div>
+        <div id="contacts-list" style="flex:1; overflow-y:auto;"></div>
+        <div class="input-area">
+            <button class="btn" onclick="openAdd()">+ Добавить по ID</button>
         </div>
     </div>
 
-    <div id="chat-screen" class="screen">
-        <div style="padding:40px 20px 10px; background:#111; display:flex; justify-content:space-between;">
-            <button onclick="switchScreen('list-screen')" style="background:none; border:none; color:var(--accent);">⬅ Назад</button>
-            <b id="chat-title">...</b>
-            <button onclick="startCall()" style="background:none; border:none; font-size:20px;">📞</button>
+    <div id="chat-s" class="screen">
+        <div style="padding:50px 20px 15px; background:var(--panel); display:flex; align-items:center; gap:15px; border-bottom:1px solid #27272a;">
+            <button onclick="toScreen('list-s')" style="background:none; border:none; color:var(--accent); font-size:20px;">⬅</button>
+            <div id="c-av-head" style="font-size:24px;">👤</div>
+            <div style="flex:1">
+                <b id="c-name">Имя</b><br>
+                <small id="c-status" style="color:#71717a">проверка связи...</small>
+            </div>
+            <button onclick="call()" style="background:none; border:none; font-size:22px;">📞</button>
         </div>
-        <div id="messages"></div>
-        <div style="padding:15px; display:flex; gap:10px; background:#111;">
-            <input type="text" id="msg-input" style="margin:0;" placeholder="Сообщение...">
-            <button onclick="send()" class="btn" style="width:60px;">➤</button>
-        </div>
-    </div>
-
-    <div id="call-ui">
-        <video id="v-remote" autoplay playsinline></video>
-        <video id="v-local" autoplay muted playsinline style="height:30%; border-top: 2px solid var(--accent);"></video>
-        <div class="controls">
-            <button class="btn" style="width:150px; border-radius:30px;" onclick="hangup()">ЗАВЕРШИТЬ</button>
+        <div id="msg-box"></div>
+        <div class="input-area" style="display:flex; gap:10px; padding:10px 15px 30px;">
+            <input type="text" id="m-input" placeholder="Сообщение..." style="margin:0;">
+            <button class="btn" style="width:60px;" onclick="send()">➤</button>
         </div>
     </div>
 
-<script>
-    let peer, conn, myStream, targetId;
-    let chats = JSON.parse(localStorage.getItem('fc_chats') || '{}');
+    <div id="overlay">
+        <div class="modal">
+            <h3 style="margin-bottom:15px;">Новый контакт</h3>
+            <input type="text" id="f-id" placeholder="ID пользователя">
+            <input type="text" id="f-name" placeholder="Имя (например: Брат)">
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="btn" style="background:#27272a;" onclick="closeAdd()">Отмена</button>
+                <button class="btn" onclick="confirmAdd()">Найти</button>
+            </div>
+        </div>
+    </div>
 
-    // 1. ПОДКЛЮЧЕНИЕ
-    function connect() {
-        const id = document.getElementById('my-id').value;
-        const pass = document.getElementById('my-pass').value;
-        if(!id || !pass) return alert("Введите данные!");
+    <script>
+        let peer, myId, myAv = '👤', targetId;
+        let db = JSON.parse(localStorage.getItem('fc_db') || '{}');
+        const avs = ['👤','💀','🤖','👽','👻','🐱','🐶','🦊','🐻','🦁'];
 
-        // Прячем старые сессии
-        if(peer) peer.destroy();
+        function nextAv() {
+            myAv = avs[(avs.indexOf(myAv) + 1) % avs.length];
+            document.getElementById('p-av').innerText = myAv;
+        }
 
-        peer = new Peer(id, {
-            config: {'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }]},
-            debug: 1
-        });
-
-        peer.on('open', () => {
-            switchScreen('list-screen');
-            renderList();
-            // Сразу запрашиваем камеру, чтобы потом не тупило
-            navigator.mediaDevices.getUserMedia({video:true, audio:true})
-                .then(s => { myStream = s; document.getElementById('v-local').srcObject = s; })
-                .catch(e => alert("Камера недоступна!"));
-        });
-
-        peer.on('connection', c => {
-            conn = c;
-            setupConn();
-        });
-
-        peer.on('call', call => {
-            if(confirm("Звонок! Ответить?")) {
-                call.answer(myStream);
-                showCall(true);
-                call.on('stream', s => document.getElementById('v-remote').srcObject = s);
-            }
-        });
-    }
-
-    // 2. РАБОТА С СООБЩЕНИЯМИ
-    function setupConn() {
-        conn.on('data', data => {
-            if(data === 'END_CALL') showCall(false);
-            else showMsg(conn.peer, data, 'in');
-        });
-    }
-
-    function send() {
-        const i = document.getElementById('msg-input');
-        if(!i.value) return;
-
-        // Если связи нет — переподключаемся "на лету"
-        if(!conn || !conn.open) {
-            conn = peer.connect(targetId);
-            conn.on('open', () => {
-                conn.send(i.value);
-                showMsg('Вы', i.value, 'out');
-                i.value = '';
+        function login() {
+            myId = document.getElementById('p-id').value.trim().toLowerCase();
+            if(!myId) return;
+            
+            peer = new Peer(myId, { config: {'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }]} });
+            
+            peer.on('open', (id) => {
+                document.getElementById('me-info').innerText = myAv + " " + id;
+                toScreen('list-s');
+                render();
+                setInterval(checkOnline, 5000);
             });
-        } else {
-            conn.send(i.value);
-            showMsg('Вы', i.value, 'out');
-            i.value = '';
+
+            peer.on('connection', c => {
+                c.on('data', d => {
+                    if(d.type === 'msg') {
+                        saveMsg(c.peer, d.txt, 'recv');
+                        if(targetId === c.peer) renderMsgs(c.peer);
+                    }
+                    if(d.type === 'info') {
+                        if(db[c.peer]) {
+                            db[c.peer].av = d.av;
+                            save(); render();
+                        }
+                    }
+                });
+            });
         }
-    }
 
-    // 3. ЗВОНКИ
-    function startCall() {
-        showCall(true);
-        const call = peer.call(targetId, myStream);
-        call.on('stream', s => document.getElementById('v-remote').srcObject = s);
-    }
+        // --- БАЗА ДАННЫХ: ПОИСК И ПРОВЕРКА ---
+        function confirmAdd() {
+            const id = document.getElementById('f-id').value.trim().toLowerCase();
+            const name = document.getElementById('f-name').value.trim() || id;
+            
+            if(!id || id === myId) return alert("Ошибка ID");
 
-    function hangup() {
-        if(conn) conn.send('END_CALL');
-        showCall(false);
-        location.reload(); // Жесткая очистка памяти
-    }
+            // Наша "Базовая База" проверяет существование через PeerJS
+            const conn = peer.connect(id);
+            let found = false;
 
-    // 4. ИНТЕРФЕЙС
-    function showMsg(u, t, type) {
-        const m = document.createElement('div');
-        m.className = 'msg ' + type;
-        m.innerText = t;
-        document.getElementById('messages').appendChild(m);
-        const box = document.getElementById('messages');
-        box.scrollTop = box.scrollHeight;
-    }
+            // Если за 3 секунды не подключились - значит ID не в сети или не существует
+            const timeout = setTimeout(() => {
+                if(!found) alert("Пользователь не найден в сети. Но мы добавили его в список ожидания.");
+                saveContact(id, name, '👤');
+                closeAdd();
+            }, 3000);
 
-    function renderList() {
-        const l = document.getElementById('chat-list'); l.innerHTML = '';
-        for(let id in chats) {
-            const d = document.createElement('div');
-            d.style.padding = '20px'; d.style.borderBottom = '1px solid #222';
-            d.innerHTML = `<b>${chats[id]}</b><br><small>ID: ${id}</small>`;
-            d.onclick = () => {
-                targetId = id;
-                document.getElementById('chat-title').innerText = chats[id];
-                document.getElementById('messages').innerHTML = '';
-                switchScreen('chat-screen');
-                conn = peer.connect(id);
-                conn.on('open', setupConn);
-            };
-            l.appendChild(d);
+            conn.on('open', () => {
+                found = true;
+                clearTimeout(timeout);
+                saveContact(id, name, '👤');
+                conn.send({type: 'info', av: myAv}); // Просим данные
+                closeAdd();
+            });
         }
-    }
 
-    function addFriend() {
-        const id = document.getElementById('f-id').value;
-        if(id) {
-            chats[id] = "Друг " + id;
-            localStorage.setItem('fc_chats', JSON.stringify(chats));
-            renderList();
+        function saveContact(id, name, av) {
+            db[id] = { name, av, online: false };
+            save(); render();
         }
-    }
 
-    function switchScreen(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-    }
+        function checkOnline() {
+            Object.keys(db).forEach(id => {
+                const c = peer.connect(id);
+                c.on('open', () => { 
+                    db[id].online = true; 
+                    render(); 
+                    c.send({type: 'info', av: myAv}); 
+                    c.close(); 
+                });
+                setTimeout(() => { if(!c.open) { db[id].online = false; render(); } }, 2000);
+            });
+        }
 
-    function showCall(v) { document.getElementById('call-ui').style.display = v ? 'flex' : 'none'; }
-</script>
+        // --- ИНТЕРФЕЙС ---
+        function render() {
+            const list = document.getElementById('contacts-list');
+            list.innerHTML = '';
+            for(let id in db) {
+                const u = db[id];
+                list.innerHTML += `
+                    <div class="chat-card" onclick="openChat('${id}')">
+                        <div class="av-circle ${u.online ? 'is-online' : ''}">${u.av}</div>
+                        <div class="info">
+                            <b>${u.name}</b>
+                            <span>${u.online ? 'В сети' : 'Офлайн'} | ID: ${id}</span>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function openChat(id) {
+            targetId = id;
+            document.getElementById('c-name').innerText = db[id].name;
+            document.getElementById('c-av-head').innerText = db[id].av;
+            document.getElementById('c-status').innerText = db[id].online ? 'в сети' : 'офлайн';
+            renderMsgs(id);
+            toScreen('chat-s');
+        }
+
+        function send() {
+            const inp = document.getElementById('m-input');
+            if(!inp.value) return;
+            const txt = inp.value;
+
+            const c = peer.connect(targetId);
+            c.on('open', () => {
+                c.send({type: 'msg', txt: txt});
+                saveMsg(targetId, txt, 'sent');
+                renderMsgs(targetId);
+                inp.value = '';
+            });
+        }
+
+        function saveMsg(id, txt, dir) {
+            let h = JSON.parse(localStorage.getItem('msgs_'+id) || '[]');
+            h.push({txt, dir});
+            localStorage.setItem('msgs_'+id, JSON.stringify(h));
+        }
+
+        function renderMsgs(id) {
+            const box = document.getElementById('msg-box');
+            box.innerHTML = '';
+            let h = JSON.parse(localStorage.getItem('msgs_'+id) || '[]');
+            h.forEach(m => {
+                box.innerHTML += `<div class="bubble ${m.dir}">${m.txt}</div>`;
+            });
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function toScreen(s) {
+            document.querySelectorAll('.screen').forEach(x => x.classList.remove('active'));
+            document.getElementById(s).classList.add('active');
+        }
+
+        function openAdd() { document.getElementById('overlay').style.display = 'flex'; }
+        function closeAdd() { document.getElementById('overlay').style.display = 'none'; }
+        function save() { localStorage.setItem('fc_db', JSON.stringify(db)); }
+    </script>
 </body>
 </html>
