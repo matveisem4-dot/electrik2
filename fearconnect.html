@@ -3,233 +3,234 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FearConnect X</title>
+    <title>FearConnect Stealth</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --bg: #0b141a; --side: #111b21; --panel: #202c33; --accent: #ff4444; --text: #e9edef; --msg-out: #005c4b; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
+        :root { --bg: #0b141a; --panel: #202c33; --accent: #ff4444; --text: #e9edef; --msg-out: #005c4b; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
 
-        /* Экраны */
-        .screen { position: absolute; inset: 0; width: 100%; height: 100%; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); background: var(--bg); display: flex; flex-direction: column; }
-        #chat-screen { z-index: 30; transform: translateX(100%); }
-        #chat-screen.active { transform: translateX(0); }
+        .screen { position: absolute; inset: 0; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); background: var(--bg); visibility: hidden; display: flex; flex-direction: column; }
+        .screen.active { visibility: visible; transform: translateX(0); }
+        .screen.hidden-left { transform: translateX(-100%); }
+        .screen.hidden-right { transform: translateX(100%); }
 
-        /* Вход */
-        #login-screen { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .login-box { background: var(--panel); padding: 30px; border-radius: 25px; text-align: center; width: 100%; max-width: 320px; box-shadow: 0 15px 40px rgba(0,0,0,0.5); }
+        #login-screen { z-index: 1000; visibility: visible; display: flex; align-items: center; justify-content: center; }
+        .box { background: var(--panel); padding: 30px; border-radius: 25px; width: 90%; max-width: 350px; text-align: center; border: 1px solid #333; }
 
-        .header { padding: 10px 15px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; height: 60px; flex-shrink: 0; z-index: 10; }
+        .header { padding: 10px 15px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; height: 60px; }
+        
+        .chat-item { padding: 15px; border-bottom: 1px solid #1c262d; display: flex; align-items: center; gap: 15px; cursor: pointer; position: relative; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #555; position: absolute; right: 20px; }
+        .status-dot.online { background: #00a884; box-shadow: 0 0 10px #00a884; }
 
-        /* Список чатов */
-        .chat-list { flex: 1; overflow-y: auto; padding-top: 5px; }
-        .chat-item { padding: 15px; border-bottom: 1px solid #1c262d; cursor: pointer; display: flex; align-items: center; gap: 15px; }
-        .avatar { width: 50px; height: 50px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; }
+        #messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay; background-color: #0b141a; }
+        .msg { padding: 10px; border-radius: 12px; max-width: 80%; font-size: 15px; position: relative; }
+        .msg.in { background: var(--panel); align-self: flex-start; }
+        .msg.out { background: var(--msg-out); align-self: flex-end; }
+        .msg.pending { opacity: 0.7; }
+        .msg.pending::after { content: ' 🕒'; font-size: 10px; }
 
-        /* Плавающая кнопка + */
-        .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; color: white; border: none; box-shadow: 0 5px 15px rgba(255,68,68,0.4); z-index: 25; cursor: pointer; }
-
-        /* Модалка добавления */
-        #add-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: none; align-items: flex-end; }
-        .modal-content { background: var(--panel); width: 100%; padding: 30px; border-radius: 25px 25px 0 0; animation: slideUp 0.3s ease; }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-        /* Чат */
-        #messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: #080e12; }
-        .msg { padding: 10px 14px; border-radius: 15px; max-width: 80%; font-size: 16px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-        .msg.in { background: var(--panel); align-self: flex-start; border-bottom-left-radius: 2px; }
-        .msg.out { background: var(--msg-out); align-self: flex-end; border-bottom-right-radius: 2px; }
-        .sticker { width: 120px; height: 120px; object-fit: contain; }
-
-        /* Панель стикеров */
-        #sticker-panel { display: none; height: 150px; background: var(--panel); overflow-x: auto; padding: 10px; gap: 15px; border-top: 1px solid #333; white-space: nowrap; }
-        .sticker-btn { width: 80px; height: 80px; cursor: pointer; transition: 0.2s; }
-        .sticker-btn:active { transform: scale(0.9); }
-
-        /* Звонок */
-        #call-layer { position: absolute; inset: 0; background: #000; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: space-around; }
-        .v-box { width: 100%; height: 50%; position: relative; overflow: hidden; }
-        video { width: 100%; height: 100%; object-fit: cover; }
-        .call-controls { position: absolute; bottom: 40px; display: flex; gap: 20px; z-index: 110; }
-        .c-btn { width: 60px; height: 60px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; cursor: pointer; }
-
-        input { background: #2a3942; border: none; padding: 15px; color: #fff; border-radius: 15px; width: 100%; font-size: 16px; margin-bottom: 10px; }
-        .send-row { padding: 10px; background: var(--panel); display: flex; gap: 10px; align-items: center; }
+        input { background: #2a3942; border: none; padding: 12px; color: #fff; border-radius: 10px; width: 100%; margin-bottom: 10px; }
+        .fab { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background: var(--accent); border-radius: 50%; border: none; color: #fff; font-size: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        
+        #call-ui { position: fixed; inset: 0; background: #000; z-index: 2000; display: none; flex-direction: column; }
+        video { width: 100%; height: 50%; object-fit: cover; }
     </style>
 </head>
 <body>
 
-    <div id="login-screen">
-        <div class="login-box">
-            <h1 style="color:var(--accent); margin-bottom:20px;">FearConnect X</h1>
-            <input type="text" id="my-id" placeholder="Ваш ник">
-            <button onclick="start()" style="width:100%; padding:15px; background:var(--accent); border:none; color:white; border-radius:15px; font-weight:bold;">ВОЙТИ</button>
+    <div id="login-screen" class="screen">
+        <div class="box">
+            <h2 style="color:var(--accent); margin:0">FearConnect</h2>
+            <p style="font-size:12px; opacity:0.5; margin-bottom:20px">Private P2P Network</p>
+            <input type="text" id="my-id" placeholder="ID / Номер">
+            <input type="password" id="my-pass" placeholder="Пароль">
+            <button onclick="initApp()" style="width:100%; padding:15px; background:var(--accent); border:none; color:#fff; border-radius:12px; font-weight:bold;">ВОЙТИ</button>
         </div>
     </div>
 
-    <div id="main-screen" class="screen">
-        <div class="header"><b>FearConnect</b><span id="my-tag" style="opacity:0.5; font-size:12px"></span></div>
-        <div class="chat-list" id="chat-list"></div>
-        <button class="fab" onclick="toggleModal(true)">+</button>
+    <div id="list-screen" class="screen hidden-left">
+        <div class="header"><b>Мессенджер</b><b id="my-id-tag" style="font-size:10px; color:var(--accent)"></b></div>
+        <div id="chat-list"></div>
+        <button class="fab" onclick="document.getElementById('add-modal').style.display='flex'">+</button>
     </div>
 
-    <div id="chat-screen" class="screen">
+    <div id="chat-screen" class="screen hidden-right">
         <div class="header">
-            <button onclick="back()" style="background:none; border:none; color:var(--accent); font-size:24px;">⬅</button>
-            <b id="chat-title">Друг</b>
-            <button onclick="call()" style="background:#28a745; border:none; width:40px; height:40px; border-radius:50%; color:white;">📞</button>
+            <button onclick="goBack()" style="background:none; border:none; color:var(--accent); font-size:24px;">⬅</button>
+            <div style="flex:1; margin-left:15px"><b id="chat-title">Друг</b><br><small id="online-status" style="font-size:10px; opacity:0.5">оффлайн</small></div>
+            <button onclick="makeCall()" style="background:none; border:none; font-size:20px">📞</button>
         </div>
         <div id="messages"></div>
-        <div id="sticker-panel"></div>
-        <div class="send-row">
-            <button onclick="toggleStickers()" style="background:none; border:none; font-size:24px;">😊</button>
+        <div style="padding:10px; background:var(--panel); display:flex; gap:10px;">
             <input type="text" id="msg-input" placeholder="Сообщение..." style="margin:0">
-            <button onclick="sendMsg()" style="background:var(--accent); border:none; width:45px; height:45px; border-radius:50%; color:white;">➤</button>
+            <button onclick="sendMsg()" style="background:var(--accent); border:none; padding:10px 15px; border-radius:10px; color:#fff;">➤</button>
         </div>
     </div>
 
-    <div id="add-modal" onclick="toggleModal(false)">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <h3 style="margin-top:0">Добавить контакт</h3>
-            <input type="text" id="f-id" placeholder="ID (Ник) друга">
-            <input type="text" id="f-name" placeholder="Имя для списка">
-            <button onclick="addChat()" style="width:100%; padding:15px; background:var(--accent); border:none; color:white; border-radius:15px;">СОЗДАТЬ ЧАТ</button>
+    <div id="add-modal" style="position:fixed; inset:0; background:rgba(0,0,0,0.8); display:none; align-items:center; justify-content:center; z-index:3000;">
+        <div class="box">
+            <h3>Добавить друга</h3>
+            <input type="text" id="f-id" placeholder="ID">
+            <input type="text" id="f-name" placeholder="Имя">
+            <button onclick="addFriend()" style="width:100%; padding:12px; background:var(--accent); border:none; color:#fff; border-radius:10px;">ОК</button>
         </div>
     </div>
 
-    <div id="call-layer">
-        <div class="v-box"><video id="remoteV" autoplay playsinline></video></div>
-        <div class="v-box" style="height:30%; border-top:2px solid var(--accent);"><video id="localV" autoplay muted playsinline></video></div>
-        <div class="call-controls">
-            <button onclick="toggleMute('audio')" id="m-btn" class="c-btn" style="background:#444">🎤</button>
-            <button onclick="endCall()" class="c-btn" style="background:#ff3b30">📞</button>
-            <button onclick="toggleMute('video')" id="v-btn" class="c-btn" style="background:#444">📷</button>
-        </div>
+    <div id="call-ui">
+        <video id="remoteV" autoplay playsinline></video>
+        <video id="localV" autoplay muted playsinline style="height:25%; position:absolute; top:10px; right:10px; width:30%; border:2px solid var(--accent); border-radius:10px"></video>
+        <button onclick="location.reload()" style="position:absolute; bottom:40px; left:50%; transform:translateX(-50%); background:#ff3b30; border:none; padding:15px 40px; border-radius:30px; color:#fff; font-weight:bold;">ЗАВЕРШИТЬ</button>
     </div>
 
 <script>
-    let peer, conn, stream, currentCall, targetId;
-    let chats = JSON.parse(localStorage.getItem('fear_x_chats') || '{}');
-    const stickers = [
-        'https://cdn-icons-png.flaticon.com/512/2274/2274543.png',
-        'https://cdn-icons-png.flaticon.com/512/2274/2274556.png',
-        'https://cdn-icons-png.flaticon.com/512/2274/2274551.png',
-        'https://cdn-icons-png.flaticon.com/512/924/924911.png',
-        'https://cdn-icons-png.flaticon.com/512/4392/4392465.png'
-    ];
+    let peer, conn, stream, targetId;
+    let chats = JSON.parse(localStorage.getItem('fc_v7_chats') || '{}');
+    let pendingMessages = JSON.parse(localStorage.getItem('fc_pending') || '[]');
 
-    async function start() {
+    function initApp() {
         const id = document.getElementById('my-id').value;
-        if(!id) return;
+        const pass = document.getElementById('my-pass').value;
+        if(!id || pass !== "1234") return alert("Ошибка! Пароль должен быть 1234");
 
-        // Конфигурация для обхода блокировок (STUN-серверы Google)
-        peer = new Peer(id, {
-            config: {'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }, { 'urls': 'stun:stun1.l.google.com:19302' }]}
-        });
+        peer = new Peer(id, { config: {'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }]} });
 
         peer.on('open', () => {
             document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('my-tag').innerText = "Твой ID: " + id;
-            initCam();
-            render();
+            document.getElementById('list-screen').classList.add('active');
+            document.getElementById('my-id-tag').innerText = id;
+            renderList();
+            initMedia();
+            setInterval(processPending, 3000); // Фоновая проверка очереди
         });
 
-        peer.on('connection', c => { conn = c; targetId = c.peer; setup(); back(); select(c.peer); });
-        peer.on('call', c => {
-            if(confirm("Входящий звонок!")) {
-                currentCall = c;
-                c.answer(stream);
-                document.getElementById('call-layer').style.display = 'flex';
-                c.on('stream', s => document.getElementById('remoteV').srcObject = s);
+        peer.on('connection', c => {
+            c.on('open', () => { updateOnlineStatus(c.peer, true); });
+            c.on('data', data => handleData(c.peer, data));
+            c.on('close', () => { updateOnlineStatus(c.peer, false); });
+        });
+
+        peer.on('call', call => {
+            if(confirm("Звонок! Ответить?")) {
+                call.answer(stream);
+                document.getElementById('call-ui').style.display = 'flex';
+                call.on('stream', rs => document.getElementById('remoteV').srcObject = rs);
             }
         });
     }
 
-    async function initCam() {
-        stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
+    async function initMedia() {
+        stream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
         document.getElementById('localV').srcObject = stream;
     }
 
-    function addChat() {
+    function addFriend() {
         const id = document.getElementById('f-id').value, name = document.getElementById('f-name').value;
-        if(id && name) { chats[id] = name; localStorage.setItem('fear_x_chats', JSON.stringify(chats)); render(); toggleModal(false); }
-    }
-
-    function render() {
-        const l = document.getElementById('chat-list'); l.innerHTML = '';
-        for(let id in chats) {
-            let d = document.createElement('div'); d.className = 'chat-item';
-            d.innerHTML = `<div class="avatar">${chats[id][0]}</div><div><b>${chats[id]}</b><br><small style="opacity:0.5">Online</small></div>`;
-            d.onclick = () => select(id);
-            l.appendChild(d);
+        if(id && name) {
+            chats[id] = name;
+            localStorage.setItem('fc_v7_chats', JSON.stringify(chats));
+            renderList();
+            document.getElementById('add-modal').style.display = 'none';
         }
     }
 
-    function select(id) {
-        targetId = id;
-        document.getElementById('chat-title').innerText = chats[id] || id;
-        document.getElementById('messages').innerHTML = localStorage.getItem('mx_'+id) || '';
-        document.getElementById('chat-screen').classList.add('active');
-        conn = peer.connect(id);
-        setup();
+    function renderList() {
+        const l = document.getElementById('chat-list'); l.innerHTML = '';
+        for(let id in chats) {
+            l.innerHTML += `<div class="chat-item" onclick="openChat('${id}')">
+                <div style="width:45px; height:45px; background:var(--panel); border-radius:50%; display:flex; align-items:center; justify-content:center; border:1px solid var(--accent)">${chats[id][0]}</div>
+                <div style="margin-left:15px"><b>${chats[id]}</b><br><small style="opacity:0.5">${id}</small></div>
+                <div id="dot-${id}" class="status-dot"></div>
+            </div>`;
+        }
     }
 
-    function setup() {
-        conn.on('data', d => {
-            if(d.type === 'sticker') addMsg(chats[conn.peer]||conn.peer, `<img src="${d.src}" class="sticker">`, 'in');
-            else addMsg(chats[conn.peer]||conn.peer, d, 'in');
-        });
+    function openChat(id) {
+        targetId = id;
+        document.getElementById('chat-title').innerText = chats[id];
+        document.getElementById('messages').innerHTML = localStorage.getItem('h7_'+id) || '';
+        document.getElementById('list-screen').classList.add('hidden-left');
+        document.getElementById('chat-screen').classList.add('active');
+        tryConnect();
+    }
+
+    function tryConnect() {
+        if(!targetId) return;
+        if(!conn || !conn.open) {
+            conn = peer.connect(targetId);
+            conn.on('open', () => {
+                document.getElementById('online-status').innerText = "в сети";
+                document.getElementById('online-status').style.color = "#00a884";
+                processPending();
+            });
+        }
     }
 
     function sendMsg() {
-        const i = document.getElementById('msg-input');
-        if(i.value && conn && conn.open) { conn.send(i.value); addMsg('Я', i.value, 'out'); i.value = ''; }
+        const val = document.getElementById('msg-input').value;
+        if(!val) return;
+
+        // Показываем сообщение сразу (как будто оно ушло)
+        addMsgUI('Я', val, 'out', targetId, true);
+        document.getElementById('msg-input').value = '';
+
+        if(conn && conn.open) {
+            conn.send(val);
+        } else {
+            // Если оффлайн - в очередь
+            pendingMessages.push({ to: targetId, msg: val, time: Date.now() });
+            localStorage.setItem('fc_pending', JSON.stringify(pendingMessages));
+            tryConnect(); // Пытаемся незаметно переподключиться
+        }
     }
 
-    function addMsg(u, t, type) {
-        let m = document.createElement('div'); m.className = `msg ${type}`;
-        m.innerHTML = `<small style="font-size:10px; opacity:0.5">${u}</small><br>${t}`;
+    function processPending() {
+        if(!conn || !conn.open) return;
+        const toSend = pendingMessages.filter(m => m.to === conn.peer);
+        if(toSend.length > 0) {
+            toSend.forEach(m => conn.send(m.msg));
+            // Очищаем очередь для этого контакта
+            pendingMessages = pendingMessages.filter(m => m.to !== conn.peer);
+            localStorage.setItem('fc_pending', JSON.stringify(pendingMessages));
+            // Убираем значок «ожидания» с UI (опционально)
+            refreshChatUI();
+        }
+    }
+
+    function handleData(fromId, data) {
+        addMsgUI(chats[fromId] || fromId, data, 'in', fromId);
+    }
+
+    function addMsgUI(u, t, type, id, isPending = false) {
+        const m = document.createElement('div');
+        m.className = `msg ${type} ${isPending ? 'pending' : ''}`;
+        m.innerHTML = `<small style="font-size:9px;opacity:0.5">${u}</small><br>${t}`;
         document.getElementById('messages').appendChild(m);
         document.getElementById('messages').scrollTop = 99999;
-        localStorage.setItem('mx_'+targetId, document.getElementById('messages').innerHTML);
+        localStorage.setItem('h7_'+id, document.getElementById('messages').innerHTML);
     }
 
-    function call() {
-        document.getElementById('call-layer').style.display = 'flex';
-        currentCall = peer.call(targetId, stream);
-        currentCall.on('stream', s => document.getElementById('remoteV').srcObject = s);
+    function refreshChatUI() {
+        const msgs = document.querySelectorAll('.msg.pending');
+        msgs.forEach(m => m.classList.remove('pending'));
+        localStorage.setItem('h7_'+targetId, document.getElementById('messages').innerHTML);
     }
 
-    function endCall() { currentCall.close(); document.getElementById('call-layer').style.display = 'none'; }
-
-    function toggleMute(type) {
-        if(type === 'audio') {
-            stream.getAudioTracks()[0].enabled = !stream.getAudioTracks()[0].enabled;
-            document.getElementById('m-btn').style.background = stream.getAudioTracks()[0].enabled ? '#444' : '#ff3b30';
-        } else {
-            stream.getVideoTracks()[0].enabled = !stream.getVideoTracks()[0].enabled;
-            document.getElementById('v-btn').style.background = stream.getVideoTracks()[0].enabled ? '#444' : '#ff3b30';
-        }
+    function goBack() {
+        document.getElementById('chat-screen').classList.remove('active');
+        document.getElementById('list-screen').classList.remove('hidden-left');
     }
 
-    function toggleModal(s) { document.getElementById('add-modal').style.display = s ? 'flex' : 'none'; }
-    function back() { document.getElementById('chat-screen').classList.remove('active'); }
-    
-    function toggleStickers() {
-        const p = document.getElementById('sticker-panel');
-        p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
-        if(p.innerHTML === '') {
-            stickers.forEach(src => {
-                let img = document.createElement('img'); img.src = src; img.className = 'sticker-btn';
-                img.onclick = () => {
-                    if(conn && conn.open) {
-                        conn.send({type: 'sticker', src: src});
-                        addMsg('Я', `<img src="${src}" class="sticker">`, 'out');
-                    }
-                };
-                p.appendChild(img);
-            });
-        }
+    function updateOnlineStatus(id, isOnline) {
+        const dot = document.getElementById('dot-' + id);
+        if(dot) dot.classList.toggle('online', isOnline);
+    }
+
+    function makeCall() {
+        document.getElementById('call-ui').style.display = 'flex';
+        const call = peer.call(targetId, stream);
+        call.on('stream', rs => document.getElementById('remoteV').srcObject = rs);
     }
 </script>
 </body>
