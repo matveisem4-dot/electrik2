@@ -2,80 +2,139 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>FearConnect WS Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sber Terminal Messanger</title>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .card { background: #111; padding: 30px; border-radius: 20px; width: 300px; border: 1px solid #333; }
-        input { width: 100%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #444; color: #fff; border-radius: 8px; }
-        button { width: 100%; padding: 12px; background: #ff3b30; border: none; color: #fff; font-weight: bold; border-radius: 8px; cursor: pointer; }
-        #status { font-size: 12px; margin-top: 10px; color: orange; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0b141a; color: #e9edef; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        #auth-box { margin: auto; background: #202c33; padding: 30px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); text-align: center; }
+        input { padding: 12px; margin: 5px; border-radius: 5px; border: none; background: #2a3942; color: white; width: 200px; }
+        button { padding: 12px 20px; border-radius: 5px; border: none; background: #00a884; color: white; cursor: pointer; font-weight: bold; }
+        button:hover { background: #008069; }
+        
+        #main-box { display: none; flex-direction: column; height: 100%; }
+        .video-container { display: flex; justify-content: center; flex-wrap: wrap; background: #000; padding: 10px; }
+        video { width: 45%; max-width: 300px; border-radius: 10px; margin: 5px; border: 2px solid #00a884; }
+        
+        #chat { flex: 1; overflow-y: auto; padding: 20px; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
+        .msg { background: #202c33; padding: 10px; border-radius: 10px; margin-bottom: 10px; width: fit-content; max-width: 80%; }
+        .my-msg { background: #005c4b; margin-left: auto; }
+        
+        .controls { background: #202c33; padding: 15px; display: flex; align-items: center; }
+        #typing-status { position: absolute; bottom: 70px; left: 20px; color: #00a884; font-size: 0.8em; }
     </style>
 </head>
 <body>
 
-<div id="auth-screen" class="card">
-    <h2>FEAR WS</h2>
-    <input type="text" id="log-in" placeholder="ID Агента">
-    <input type="password" id="pass-in" placeholder="Пароль">
-    <button onclick="doAuth(true)">СОЗДАТЬ АККАУНТ</button>
-    <button onclick="doAuth(false)" style="background:none; border:1px solid #333; margin-top:5px;">ВОЙТИ</button>
-    <div id="status">Подключение...</div>
-</div>
+    <div id="auth-box">
+        <h2>Sber Terminal v2.0</h2>
+        <input type="text" id="login" placeholder="Придумай ID"> <br>
+        <input type="password" id="pass" placeholder="Пароль"> <br>
+        <button onclick="auth(true)">Регистрация</button>
+        <button onclick="auth(false)">Вход</button>
+    </div>
 
-<div id="chat-screen" style="display:none; width: 100%; max-width: 400px;">
-    <div id="msgs" style="height: 300px; overflow-y: auto; background: #111; padding: 20px; border-radius: 10px; margin-bottom: 10px;"></div>
-    <input type="text" id="msg-to" placeholder="Кому (ID)">
-    <input type="text" id="msg-text" placeholder="Сообщение...">
-    <button onclick="send()">ОТПРАВИТЬ</button>
-</div>
+    <div id="main-box">
+        <div class="video-container">
+            <video id="localVideo" autoplay muted playsinline></video>
+            <video id="remoteVideo" autoplay playsinline></video>
+        </div>
 
-<script>
-    // МЕНЯЕМ https:// на wss:// для библиотеки WS [cite: 2026-02-06]
-    const S_URL = "wss://matvey228552858258489842494-fearconnect.hf.space";
-    let ws;
+        <div id="chat"></div>
+        <div id="typing-status"></div>
 
-    function connect() {
-        ws = new WebSocket(S_URL);
+        <div class="controls">
+            <input type="text" id="target" placeholder="Кому (ID)" style="width: 80px;">
+            <input type="text" id="msgText" placeholder="Сообщение..." style="flex: 1;" oninput="notifyTyping()">
+            <button onclick="sendMsg()">➤</button>
+            <button onclick="startCall()" style="margin-left: 10px;">📞</button>
+        </div>
+    </div>
 
-        ws.onopen = () => {
-            document.getElementById('status').innerText = "Статус: В сети";
-            document.getElementById('status').style.color = "green";
-        };
+    <script>
+        let protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+        let ws = new WebSocket(protocol + window.location.host);
+        let myLogin = '', pc, localStream, typingTimer;
 
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'auth_success') {
-                document.getElementById('auth-screen').style.display = 'none';
-                document.getElementById('chat-screen').style.display = 'block';
+        const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+        ws.onmessage = async (e) => {
+            const data = JSON.parse(e.data);
+
+            if (data.type === 'auth_ok') {
+                myLogin = data.login;
+                document.getElementById('auth-box').style.display = 'none';
+                document.getElementById('main-box').style.display = 'flex';
+                localStream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
+                document.getElementById('localVideo').srcObject = localStream;
             }
-            if (data.type === 'auth_error') alert(data.error);
+
             if (data.type === 'new_msg') {
                 const div = document.createElement('div');
-                div.innerText = `${data.from}: ${data.text}`;
-                document.getElementById('msgs').appendChild(div);
+                div.className = 'msg' + (data.from === myLogin ? ' my-msg' : '');
+                div.innerHTML = `<b>${data.from}</b>: ${data.text}`;
+                document.getElementById('chat').appendChild(div);
+                document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
             }
+
+            if (data.type === 'typing') {
+                document.getElementById('typing-status').innerText = `${data.from} печатает...`;
+            }
+
+            if (data.type === 'stop_typing') {
+                document.getElementById('typing-status').innerText = '';
+            }
+
+            // WebRTC
+            if (data.type === 'offer') {
+                if(confirm("Звонок от " + data.from)) {
+                    createPeer(data.from);
+                    await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+                    ws.send(JSON.stringify({ type: 'answer', to: data.from, answer }));
+                }
+            }
+            if (data.type === 'answer') await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+            if (data.type === 'candidate') await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
         };
 
-        ws.onclose = () => {
-            document.getElementById('status').innerText = "Статус: Разрыв. Переподключение...";
-            setTimeout(connect, 3000);
-        };
-    }
+        function auth(isReg) {
+            const login = document.getElementById('login').value;
+            const pass = document.getElementById('pass').value;
+            ws.send(JSON.stringify({ type: 'auth', login, pass, isReg }));
+        }
 
-    function doAuth(isReg) {
-        const login = document.getElementById('log-in').value;
-        const pass = document.getElementById('pass-in').value;
-        ws.send(JSON.stringify({ type: 'auth', login, pass, isReg }));
-    }
+        function sendMsg() {
+            const text = document.getElementById('msgText').value;
+            const to = document.getElementById('target').value;
+            if(!to) return alert("Введите ID получателя");
+            ws.send(JSON.stringify({ type: 'msg', to, text }));
+            document.getElementById('msgText').value = '';
+        }
 
-    function send() {
-        const to = document.getElementById('msg-to').value;
-        const text = document.getElementById('msg-text').value;
-        ws.send(JSON.stringify({ type: 'msg', to, text }));
-        document.getElementById('msg-text').value = "";
-    }
+        function notifyTyping() {
+            const to = document.getElementById('target').value;
+            if(!to) return;
+            ws.send(JSON.stringify({ type: 'typing', to }));
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => ws.send(JSON.stringify({ type: 'stop_typing', to })), 2000);
+        }
 
-    connect();
-</script>
+        async function startCall() {
+            const to = document.getElementById('target').value;
+            if(!to) return alert("Кому звонить?");
+            createPeer(to);
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            ws.send(JSON.stringify({ type: 'offer', to, offer }));
+        }
+
+        function createPeer(targetId) {
+            pc = new RTCPeerConnection(config);
+            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            pc.onicecandidate = (e) => e.candidate && ws.send(JSON.stringify({ type: 'candidate', to: targetId, candidate: e.candidate }));
+            pc.ontrack = (e) => document.getElementById('remoteVideo').srcObject = e.streams[0];
+        }
+    </script>
 </body>
 </html>
