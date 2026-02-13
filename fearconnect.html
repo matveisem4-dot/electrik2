@@ -3,192 +3,225 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FearConnect P2P Pro</title>
+    <title>FearConnect Messenger</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --main-color: #ff4444; --bg: #0b141a; --panel: #202c33; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; margin: 0; overflow: hidden; height: 100vh; }
+        :root { --bg: #0b141a; --side: #111b21; --chat-bg: #0b141a; --panel: #202c33; --accent: #ff4444; --text: #e9edef; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
         
-        /* Стили страницы входа */
-        #login-screen { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; align-items: center; justify-content: center; flex-direction: column; }
-        .login-card { background: var(--panel); padding: 30px; border-radius: 20px; width: 300px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        
-        /* Кастомные алерты */
-        #custom-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; }
-        .modal-box { background: var(--panel); padding: 20px; border-radius: 15px; width: 280px; text-align: center; border: 1px solid var(--main-color); }
+        /* Экран входа */
+        #login-screen { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .login-box { background: var(--panel); padding: 30px; border-radius: 20px; text-align: center; width: 300px; box-shadow: 0 10px 50px rgba(0,0,0,0.5); }
+        input { background: #2a3942; border: none; padding: 12px; color: #fff; border-radius: 8px; width: 90%; margin-bottom: 15px; outline: none; }
+        button { background: var(--accent); border: none; padding: 12px 20px; color: #fff; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
 
         /* Основной интерфейс */
-        #main-app { display: none; flex-direction: column; height: 100vh; }
-        .header { background: var(--panel); padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .app-container { display: flex; height: 100vh; width: 100vw; }
         
-        .video-container { display: flex; background: #000; height: 180px; gap: 5px; padding: 5px; }
-        video { flex: 1; background: #111; border-radius: 10px; object-fit: cover; border: 1px solid #333; }
-        
-        #chat { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 10px 15px; border-radius: 15px; max-width: 75%; font-size: 15px; line-height: 1.4; }
-        .in { background: var(--panel); align-self: flex-start; border-bottom-left-radius: 2px; }
-        .out { background: #005c4b; align-self: flex-end; border-bottom-right-radius: 2px; }
+        /* Боковая панель */
+        .sidebar { width: 300px; background: var(--side); border-right: 1px solid #333; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 15px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; }
+        .chat-list { flex: 1; overflow-y: auto; }
+        .chat-item { padding: 15px; border-bottom: 1px solid #222; cursor: pointer; display: flex; flex-direction: column; }
+        .chat-item:hover { background: #202c33; }
+        .chat-item b { color: var(--accent); }
 
-        input, button { padding: 12px; border-radius: 10px; border: none; outline: none; }
-        input { background: #2a3942; color: #fff; width: 80%; margin-bottom: 10px; }
-        button { background: var(--main-color); color: #fff; font-weight: bold; cursor: pointer; }
-        button:active { transform: scale(0.95); }
+        /* Основное окно чата */
+        .chat-window { flex: 1; display: flex; flex-direction: column; position: relative; }
+        .chat-header { padding: 10px 20px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; }
         
-        .google-btn { background: #fff; color: #000; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
-        
-        .bottom-bar { background: var(--panel); padding: 15px; display: flex; gap: 10px; }
+        .video-container { position: absolute; top: 70px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 100; }
+        video { width: 150px; border-radius: 10px; background: #000; border: 2px solid var(--accent); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        #remoteV { width: 300px; }
+
+        #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
+        .msg { padding: 8px 15px; border-radius: 10px; max-width: 70%; word-wrap: break-word; }
+        .msg.in { background: var(--panel); align-self: flex-start; }
+        .msg.out { background: #005c4b; align-self: flex-end; }
+
+        .input-area { padding: 15px; background: var(--panel); display: flex; gap: 10px; }
+
+        /* Модалка настроек */
+        #settings-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
-    <div id="custom-modal">
-        <div class="modal-box">
-            <h3 id="modal-title">Уведомление</h3>
-            <p id="modal-text"></p>
-            <div id="modal-buttons" style="display: flex; gap: 10px; justify-content: center;">
-                <button onclick="closeModal()">OK</button>
+    <div id="login-screen">
+        <div class="login-box">
+            <h2 id="lang-welcome">FearConnect</h2>
+            <input type="text" id="my-id-inp" placeholder="Ваш ID">
+            <button onclick="login()" id="lang-login-btn">Войти</button>
+        </div>
+    </div>
+
+    <div id="settings-modal">
+        <div class="login-box">
+            <h3 id="lang-settings-title">Настройки</h3>
+            <select id="lang-select" onchange="changeLang()" style="width: 100%; padding: 10px; border-radius: 5px; background: #2a3942; color: #fff;">
+                <option value="ru">Русский</option>
+                <option value="en">English</option>
+            </select>
+            <br><br>
+            <button onclick="closeSettings()">OK</button>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <span id="user-name-display"></span>
+                <button onclick="openSettings()" style="width: auto; padding: 5px;">⚙️</button>
+            </div>
+            <div style="padding: 10px;">
+                <input type="text" id="new-friend-id" placeholder="ID друга" style="width: 80%; margin: 0;">
+                <input type="text" id="new-friend-name" placeholder="Имя" style="width: 80%; margin: 5px 0;">
+                <button onclick="addChat()" style="font-size: 12px;">+ Добавить чат</button>
+            </div>
+            <div class="chat-list" id="chat-list"></div>
+        </div>
+
+        <div class="chat-window">
+            <div class="chat-header">
+                <h3 id="current-chat-name">Выберите чат</h3>
+                <div>
+                    <button onclick="startCall()" style="width: auto; background: #28a745;">📞 Звонок</button>
+                </div>
+            </div>
+
+            <div class="video-container">
+                <video id="localV" autoplay muted playsinline></video>
+                <video id="remoteV" autoplay playsinline></video>
+            </div>
+
+            <div id="messages"></div>
+
+            <div class="input-area">
+                <input type="text" id="msg-inp" placeholder="Сообщение..." style="margin: 0;">
+                <button onclick="sendMsg()" style="width: auto;">➤</button>
             </div>
         </div>
     </div>
 
-    <div id="login-screen">
-        <div class="login-card">
-            <h1 style="color: var(--main-color); margin-bottom: 5px;">FearConnect</h1>
-            <p style="font-size: 12px; opacity: 0.6;">Придумай свой уникальный ID</p>
-            <input type="text" id="my-id-input" placeholder="Например: fear-master">
-            <button onclick="startApp()" style="width: 100%;">ВОЙТИ ПО ID</button>
-            <button class="google-btn" onclick="showModal('Google Login', 'В разработке для Египта! 🇪🇬')">
-                <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" width="18"> Google
-            </button>
-        </div>
-    </div>
-
-    <div id="main-app">
-        <div class="header">
-            <div style="font-size: 14px;">Привет, <b id="display-id" style="color:var(--main-color)"></b></div>
-            <button onclick="location.reload()" style="padding: 5px 10px; font-size: 10px; background: #444;">ВЫХОД</button>
-        </div>
-
-        <div class="video-container">
-            <video id="localV" autoplay muted playsinline></video>
-            <video id="remoteV" autoplay playsinline></video>
-        </div>
-
-        <div id="chat"></div>
-
-        <div class="bottom-bar">
-            <input type="text" id="target-id" placeholder="ID друга" style="width: 80px; margin: 0;">
-            <input type="text" id="msg-input" placeholder="Сообщение..." style="margin: 0;">
-            <button onclick="sendMessage()">➤</button>
-            <button onclick="makeCall()" style="background: #28a745;">📞</button>
-        </div>
-    </div>
-
     <script>
-        let peer, conn, localStream;
-        const chatDiv = document.getElementById('chat');
+        let peer, conn, localStream, currentTargetId;
+        let chats = JSON.parse(localStorage.getItem('fear_chats') || '{}');
+        let config = JSON.parse(localStorage.getItem('fear_config') || '{"lang":"ru"}');
 
-        // МОДАЛЬНЫЕ ОКНА
-        function showModal(title, text, confirmCallback = null) {
-            document.getElementById('modal-title').innerText = title;
-            document.getElementById('modal-text').innerText = text;
-            const btnBox = document.getElementById('modal-buttons');
-            btnBox.innerHTML = '';
-            
-            if (confirmCallback) {
-                const yesBtn = document.createElement('button');
-                yesBtn.innerText = "ДА";
-                yesBtn.onclick = () => { confirmCallback(); closeModal(); };
-                const noBtn = document.createElement('button');
-                noBtn.innerText = "НЕТ";
-                noBtn.style.background = "#555";
-                noBtn.onclick = closeModal;
-                btnBox.append(yesBtn, noBtn);
-            } else {
-                const okBtn = document.createElement('button');
-                okBtn.innerText = "ПОНЯЛ";
-                okBtn.onclick = closeModal;
-                btnBox.append(okBtn);
-            }
-            document.getElementById('custom-modal').style.display = 'flex';
+        const i18n = {
+            ru: { welcome: "Вход", login: "Войти", settings: "Настройки", select_chat: "Выберите чат", call: "Звонок", friend_id: "ID друга", name: "Имя" },
+            en: { welcome: "Login", login: "Login", settings: "Settings", select_chat: "Select chat", call: "Call", friend_id: "Friend ID", name: "Name" }
+        };
+
+        function updateLang() {
+            const l = i18n[config.lang];
+            document.getElementById('lang-welcome').innerText = l.welcome;
+            document.getElementById('lang-login-btn').innerText = l.login;
+            document.getElementById('lang-settings-title').innerText = l.settings;
+            document.getElementById('current-chat-name').innerText = l.select_chat;
+            document.getElementById('new-friend-id').placeholder = l.friend_id;
+            document.getElementById('new-friend-name').placeholder = l.name;
         }
 
-        function closeModal() { document.getElementById('custom-modal').style.display = 'none'; }
-
-        // ЛОГИКА ПРИЛОЖЕНИЯ
-        async function startApp() {
-            const myID = document.getElementById('my-id-input').value;
-            if (!myID) return showModal('Ошибка', 'Введи свой ID!');
-
-            peer = new Peer(myID); // Твой кастомный ID!
-
-            peer.on('open', () => {
+        async function login() {
+            const myID = document.getElementById('my-id-inp').value;
+            if (!myID) return;
+            peer = new Peer(myID);
+            peer.on('open', (id) => {
                 document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('main-app').style.display = 'flex';
-                document.getElementById('display-id').innerText = myID;
-                loadHistory();
-                initCamera();
+                document.getElementById('user-name-display').innerText = id;
+                initMedia();
+                renderChats();
+                updateLang();
             });
-
-            peer.on('error', (err) => {
-                if(err.type === 'unavailable-id') showModal('Упс!', 'Этот ID уже занят другим пользователем.');
-                else showModal('Ошибка', 'Что-то пошло не так...');
+            peer.on('connection', c => {
+                conn = c;
+                currentTargetId = c.peer;
+                setupConn();
             });
-
-            peer.on('connection', c => { conn = c; setupConn(); });
             peer.on('call', call => {
-                showModal('Входящий вызов', 'Тебе звонит ' + call.peer, () => {
+                if(confirm("Звонок от " + (chats[call.peer] || call.peer))) {
                     call.answer(localStream);
                     call.on('stream', s => document.getElementById('remoteV').srcObject = s);
-                });
+                }
             });
         }
 
-        async function initCamera() {
-            localStream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
-            document.getElementById('localV').srcObject = localStream;
+        async function initMedia() {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
+                document.getElementById('localV').srcObject = localStream;
+            } catch(e) { console.error("Камера недоступна"); }
+        }
+
+        function addChat() {
+            const id = document.getElementById('new-friend-id').value;
+            const name = document.getElementById('new-friend-name').value;
+            if(!id || !name) return;
+            chats[id] = name;
+            localStorage.setItem('fear_chats', JSON.stringify(chats));
+            renderChats();
+        }
+
+        function renderChats() {
+            const list = document.getElementById('chat-list');
+            list.innerHTML = '';
+            for (let id in chats) {
+                const item = document.createElement('div');
+                item.className = 'chat-item';
+                item.innerHTML = `<b>${chats[id]}</b><small>${id}</small>`;
+                item.onclick = () => selectChat(id);
+                list.appendChild(item);
+            }
+        }
+
+        function selectChat(id) {
+            currentTargetId = id;
+            document.getElementById('current-chat-name').innerText = chats[id];
+            document.getElementById('messages').innerHTML = localStorage.getItem('hist_' + id) || '';
+            conn = peer.connect(id);
+            setupConn();
         }
 
         function setupConn() {
-            conn.on('data', data => addMessage('Друг', data, 'in'));
-            conn.on('open', () => addMessage('Система', 'Связь установлена!', 'in'));
+            conn.on('data', data => addMsg(chats[conn.peer] || conn.peer, data, 'in'));
         }
 
-        function sendMessage() {
-            const text = document.getElementById('msg-input').value;
-            const target = document.getElementById('target-id').value;
-            if (!text || !target) return;
-
-            if (!conn || conn.peer !== target) {
-                conn = peer.connect(target);
-                setupConn();
-                setTimeout(sendMessage, 500);
-            } else {
+        function sendMsg() {
+            const text = document.getElementById('msg-inp').value;
+            if(!text || !currentTargetId) return;
+            if(conn && conn.open) {
                 conn.send(text);
-                addMessage('Я', text, 'out');
-                document.getElementById('msg-input').value = '';
+                addMsg('Я', text, 'out');
+                document.getElementById('msg-inp').value = '';
             }
         }
 
-        async function makeCall() {
-            const target = document.getElementById('target-id').value;
-            const call = peer.call(target, localStream);
+        function addMsg(user, text, type) {
+            const m = document.createElement('div');
+            m.className = `msg ${type}`;
+            m.innerHTML = `<small>${user}</small><br>${text}`;
+            const box = document.getElementById('messages');
+            box.appendChild(m);
+            box.scrollTop = box.scrollHeight;
+            localStorage.setItem('hist_' + currentTargetId, box.innerHTML);
+        }
+
+        function startCall() {
+            const call = peer.call(currentTargetId, localStream);
             call.on('stream', s => document.getElementById('remoteV').srcObject = s);
         }
 
-        function addMessage(user, text, type) {
-            const m = document.createElement('div');
-            m.className = `msg ${type}`;
-            m.innerHTML = `<small style="opacity:0.5">${user}</small><br>${text}`;
-            chatDiv.appendChild(m);
-            chatDiv.scrollTop = chatDiv.scrollHeight;
-            localStorage.setItem('fear_chat_' + document.getElementById('display-id').innerText, chatDiv.innerHTML);
+        function openSettings() { document.getElementById('settings-modal').style.display = 'flex'; }
+        function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; }
+        
+        function changeLang() {
+            config.lang = document.getElementById('lang-select').value;
+            localStorage.setItem('fear_config', JSON.stringify(config));
+            updateLang();
         }
 
-        function loadHistory() {
-            const hist = localStorage.getItem('fear_chat_' + document.getElementById('display-id').innerText);
-            if (hist) chatDiv.innerHTML = hist;
-        }
+        updateLang();
     </script>
 </body>
 </html>
