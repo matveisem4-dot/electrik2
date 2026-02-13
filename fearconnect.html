@@ -3,233 +3,233 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FearConnect Messenger</title>
+    <title>FearConnect X</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --bg: #0b141a; --side: #111b21; --panel: #202c33; --accent: #ff4444; --text: #e9edef; --msg-out: #005c4b; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
 
-        /* Экраны Telegram-style */
+        /* Экраны */
         .screen { position: absolute; inset: 0; width: 100%; height: 100%; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); background: var(--bg); display: flex; flex-direction: column; }
-        #sidebar { z-index: 20; }
-        #chat-screen { z-index: 30; transform: translateX(100%); border-left: 1px solid #333; }
+        #chat-screen { z-index: 30; transform: translateX(100%); }
         #chat-screen.active { transform: translateX(0); }
 
+        /* Вход */
         #login-screen { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .login-box { background: var(--panel); padding: 30px; border-radius: 20px; text-align: center; width: 100%; max-width: 350px; border: 1px solid #444; }
+        .login-box { background: var(--panel); padding: 30px; border-radius: 25px; text-align: center; width: 100%; max-width: 320px; box-shadow: 0 15px 40px rgba(0,0,0,0.5); }
 
-        .header { padding: 10px 15px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; height: 60px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        
-        /* Панель управления звонком */
-        #call-ui { 
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
-            background: rgba(11, 20, 26, 0.95); z-index: 100; 
-            display: none; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
-        }
-        .video-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; padding: 20px; }
-        video { width: 45%; max-width: 200px; border-radius: 15px; background: #000; border: 2px solid var(--accent); object-fit: cover; }
-        #remoteV { border-color: #00a884; }
-
-        .controls { display: flex; gap: 15px; margin-top: 20px; }
-        .ctrl-btn { 
-            width: 50px; height: 50px; border-radius: 50%; border: none; cursor: pointer; 
-            display: flex; align-items: center; justify-content: center; font-size: 20px; transition: 0.2s;
-        }
-        .btn-off { background: #555 !important; opacity: 0.7; }
-        .btn-mic { background: #2f3b43; color: white; }
-        .btn-cam { background: #2f3b43; color: white; }
-        .btn-hangup { background: #ff3b30; color: white; width: 65px; height: 65px; font-size: 24px; }
+        .header { padding: 10px 15px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; height: 60px; flex-shrink: 0; z-index: 10; }
 
         /* Список чатов */
-        .chat-list { flex: 1; overflow-y: auto; }
-        .chat-item { padding: 15px; border-bottom: 1px solid #1c262d; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .chat-item:active { background: #202c33; }
+        .chat-list { flex: 1; overflow-y: auto; padding-top: 5px; }
+        .chat-item { padding: 15px; border-bottom: 1px solid #1c262d; cursor: pointer; display: flex; align-items: center; gap: 15px; }
+        .avatar { width: 50px; height: 50px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; }
 
-        #messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: rgba(0,0,0,0.1); }
-        .msg { padding: 10px 14px; border-radius: 15px; max-width: 80%; font-size: 15px; position: relative; }
+        /* Плавающая кнопка + */
+        .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; color: white; border: none; box-shadow: 0 5px 15px rgba(255,68,68,0.4); z-index: 25; cursor: pointer; }
+
+        /* Модалка добавления */
+        #add-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: none; align-items: flex-end; }
+        .modal-content { background: var(--panel); width: 100%; padding: 30px; border-radius: 25px 25px 0 0; animation: slideUp 0.3s ease; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        /* Чат */
+        #messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; background: #080e12; }
+        .msg { padding: 10px 14px; border-radius: 15px; max-width: 80%; font-size: 16px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
         .msg.in { background: var(--panel); align-self: flex-start; border-bottom-left-radius: 2px; }
         .msg.out { background: var(--msg-out); align-self: flex-end; border-bottom-right-radius: 2px; }
+        .sticker { width: 120px; height: 120px; object-fit: contain; }
 
-        .input-area { padding: 12px; background: var(--panel); display: flex; gap: 10px; align-items: center; }
-        input { background: #2a3942; border: none; padding: 12px 18px; color: #fff; border-radius: 25px; flex: 1; outline: none; font-size: 16px; }
-        .send-btn { background: var(--accent); border: none; width: 45px; height: 45px; border-radius: 50%; color: white; font-size: 20px; }
+        /* Панель стикеров */
+        #sticker-panel { display: none; height: 150px; background: var(--panel); overflow-x: auto; padding: 10px; gap: 15px; border-top: 1px solid #333; white-space: nowrap; }
+        .sticker-btn { width: 80px; height: 80px; cursor: pointer; transition: 0.2s; }
+        .sticker-btn:active { transform: scale(0.9); }
+
+        /* Звонок */
+        #call-layer { position: absolute; inset: 0; background: #000; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: space-around; }
+        .v-box { width: 100%; height: 50%; position: relative; overflow: hidden; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        .call-controls { position: absolute; bottom: 40px; display: flex; gap: 20px; z-index: 110; }
+        .c-btn { width: 60px; height: 60px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; cursor: pointer; }
+
+        input { background: #2a3942; border: none; padding: 15px; color: #fff; border-radius: 15px; width: 100%; font-size: 16px; margin-bottom: 10px; }
+        .send-row { padding: 10px; background: var(--panel); display: flex; gap: 10px; align-items: center; }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
         <div class="login-box">
-            <h1 style="color:var(--accent); margin:0;">FearConnect</h1>
-            <p style="opacity:0.6">P2P Messenger</p>
-            <input type="text" id="my-id-inp" placeholder="Придумай свой ID (ник)">
-            <button onclick="login()" style="width:100%; padding:15px; border-radius:12px; border:none; background:var(--accent); color:white; font-weight:bold;">ВОЙТИ</button>
+            <h1 style="color:var(--accent); margin-bottom:20px;">FearConnect X</h1>
+            <input type="text" id="my-id" placeholder="Ваш ник">
+            <button onclick="start()" style="width:100%; padding:15px; background:var(--accent); border:none; color:white; border-radius:15px; font-weight:bold;">ВОЙТИ</button>
         </div>
     </div>
 
-    <div id="sidebar" class="screen">
-        <div class="header">
-            <b>Чаты</b>
-            <span id="my-id-tag" style="font-size:12px; opacity:0.5"></span>
-        </div>
-        <div style="padding: 15px; background: var(--side);">
-            <input type="text" id="f-id" placeholder="ID друга" style="width:100%; margin-bottom:8px">
-            <input type="text" id="f-name" placeholder="Имя" style="width:100%; margin-bottom:8px">
-            <button onclick="addChat()" style="width:100%; background:#3a444a; border:none; color:white; padding:10px; border-radius:10px;">+ Создать чат</button>
-        </div>
+    <div id="main-screen" class="screen">
+        <div class="header"><b>FearConnect</b><span id="my-tag" style="opacity:0.5; font-size:12px"></span></div>
         <div class="chat-list" id="chat-list"></div>
+        <button class="fab" onclick="toggleModal(true)">+</button>
     </div>
 
     <div id="chat-screen" class="screen">
         <div class="header">
-            <button onclick="closeChat()" style="background:none; border:none; color:var(--accent); font-size:24px;">⬅</button>
-            <b id="chat-title">Диалог</b>
-            <button onclick="startCall()" style="background:#28a745; border:none; border-radius:50%; width:40px; height:40px; color:white;">📞</button>
+            <button onclick="back()" style="background:none; border:none; color:var(--accent); font-size:24px;">⬅</button>
+            <b id="chat-title">Друг</b>
+            <button onclick="call()" style="background:#28a745; border:none; width:40px; height:40px; border-radius:50%; color:white;">📞</button>
         </div>
-
-        <div id="call-ui">
-            <div class="video-container">
-                <video id="localV" autoplay muted playsinline></video>
-                <video id="remoteV" autoplay playsinline></video>
-            </div>
-            <div class="controls">
-                <button id="btn-mic" class="ctrl-btn btn-mic" onclick="toggleMic()">🎤</button>
-                <button class="ctrl-btn btn-hangup" onclick="hangUp()">📞</button>
-                <button id="btn-cam" class="ctrl-btn btn-cam" onclick="toggleCam()">📷</button>
-            </div>
-            <p id="call-status" style="font-size:12px; opacity:0.6">Соединение...</p>
-        </div>
-
         <div id="messages"></div>
+        <div id="sticker-panel"></div>
+        <div class="send-row">
+            <button onclick="toggleStickers()" style="background:none; border:none; font-size:24px;">😊</button>
+            <input type="text" id="msg-input" placeholder="Сообщение..." style="margin:0">
+            <button onclick="sendMsg()" style="background:var(--accent); border:none; width:45px; height:45px; border-radius:50%; color:white;">➤</button>
+        </div>
+    </div>
 
-        <div class="input-area">
-            <input type="text" id="msg-inp" placeholder="Сообщение...">
-            <button class="send-btn" onclick="sendMsg()">➤</button>
+    <div id="add-modal" onclick="toggleModal(false)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3 style="margin-top:0">Добавить контакт</h3>
+            <input type="text" id="f-id" placeholder="ID (Ник) друга">
+            <input type="text" id="f-name" placeholder="Имя для списка">
+            <button onclick="addChat()" style="width:100%; padding:15px; background:var(--accent); border:none; color:white; border-radius:15px;">СОЗДАТЬ ЧАТ</button>
+        </div>
+    </div>
+
+    <div id="call-layer">
+        <div class="v-box"><video id="remoteV" autoplay playsinline></video></div>
+        <div class="v-box" style="height:30%; border-top:2px solid var(--accent);"><video id="localV" autoplay muted playsinline></video></div>
+        <div class="call-controls">
+            <button onclick="toggleMute('audio')" id="m-btn" class="c-btn" style="background:#444">🎤</button>
+            <button onclick="endCall()" class="c-btn" style="background:#ff3b30">📞</button>
+            <button onclick="toggleMute('video')" id="v-btn" class="c-btn" style="background:#444">📷</button>
         </div>
     </div>
 
 <script>
-    let peer, conn, localStream, currentCall, currentId;
-    let chats = JSON.parse(localStorage.getItem('fear_v5_chats') || '{}');
-    let micEnabled = true, camEnabled = true;
+    let peer, conn, stream, currentCall, targetId;
+    let chats = JSON.parse(localStorage.getItem('fear_x_chats') || '{}');
+    const stickers = [
+        'https://cdn-icons-png.flaticon.com/512/2274/2274543.png',
+        'https://cdn-icons-png.flaticon.com/512/2274/2274556.png',
+        'https://cdn-icons-png.flaticon.com/512/2274/2274551.png',
+        'https://cdn-icons-png.flaticon.com/512/924/924911.png',
+        'https://cdn-icons-png.flaticon.com/512/4392/4392465.png'
+    ];
 
-    async function initMedia() {
-        try {
-            localStream = await navigator.mediaDevices.getUserMedia({
-                video: true, 
-                audio: { echoCancellation: true, noiseSuppression: true }
-            });
-            document.getElementById('localV').srcObject = localStream;
-        } catch(e) { console.error("Media error:", e); }
-    }
-
-    function login() {
-        const id = document.getElementById('my-id-inp').value;
+    async function start() {
+        const id = document.getElementById('my-id').value;
         if(!id) return;
-        peer = new Peer(id);
+
+        // Конфигурация для обхода блокировок (STUN-серверы Google)
+        peer = new Peer(id, {
+            config: {'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }, { 'urls': 'stun:stun1.l.google.com:19302' }]}
+        });
+
         peer.on('open', () => {
             document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('my-id-tag').innerText = "Твой ID: " + id;
-            initMedia();
-            renderChats();
+            document.getElementById('my-tag').innerText = "Твой ID: " + id;
+            initCam();
+            render();
         });
-        peer.on('call', call => {
-            if(confirm("Входящий вызов! Ответить?")) {
-                currentCall = call;
-                call.answer(localStream);
-                showCallUI(true);
-                call.on('stream', s => {
-                    document.getElementById('remoteV').srcObject = s;
-                    document.getElementById('remoteV').style.display = 'block';
-                });
+
+        peer.on('connection', c => { conn = c; targetId = c.peer; setup(); back(); select(c.peer); });
+        peer.on('call', c => {
+            if(confirm("Входящий звонок!")) {
+                currentCall = c;
+                c.answer(stream);
+                document.getElementById('call-layer').style.display = 'flex';
+                c.on('stream', s => document.getElementById('remoteV').srcObject = s);
             }
         });
-        peer.on('connection', c => { conn = c; currentId = c.peer; setupConn(); openChatUI(c.peer); });
     }
 
-    // УПРАВЛЕНИЕ МУЛЬТИМЕДИА
-    function toggleMic() {
-        micEnabled = !micEnabled;
-        localStream.getAudioTracks()[0].enabled = micEnabled;
-        document.getElementById('btn-mic').classList.toggle('btn-off', !micEnabled);
-        document.getElementById('btn-mic').innerText = micEnabled ? '🎤' : '🔇';
+    async function initCam() {
+        stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
+        document.getElementById('localV').srcObject = stream;
     }
 
-    function toggleCam() {
-        camEnabled = !camEnabled;
-        localStream.getVideoTracks()[0].enabled = camEnabled;
-        document.getElementById('btn-cam').classList.toggle('btn-off', !camEnabled);
-        document.getElementById('btn-cam').innerText = camEnabled ? '📷' : '❌';
-    }
-
-    function hangUp() {
-        if(currentCall) currentCall.close();
-        document.getElementById('call-ui').style.display = 'none';
-        document.getElementById('remoteV').srcObject = null;
-    }
-
-    function startCall() {
-        showCallUI(true);
-        currentCall = peer.call(currentId, localStream);
-        currentCall.on('stream', s => {
-            document.getElementById('remoteV').srcObject = s;
-            document.getElementById('remoteV').style.display = 'block';
-        });
-    }
-
-    function showCallUI(show) {
-        document.getElementById('call-ui').style.display = show ? 'flex' : 'none';
-    }
-
-    // ЛОГИКА ЧАТА
     function addChat() {
-        const id = document.getElementById('f-id').value;
-        const name = document.getElementById('f-name').value;
-        if(id && name) { chats[id] = name; localStorage.setItem('fear_v5_chats', JSON.stringify(chats)); renderChats(); }
+        const id = document.getElementById('f-id').value, name = document.getElementById('f-name').value;
+        if(id && name) { chats[id] = name; localStorage.setItem('fear_x_chats', JSON.stringify(chats)); render(); toggleModal(false); }
     }
 
-    function renderChats() {
-        const list = document.getElementById('chat-list');
-        list.innerHTML = '';
+    function render() {
+        const l = document.getElementById('chat-list'); l.innerHTML = '';
         for(let id in chats) {
-            let d = document.createElement('div');
-            d.className = 'chat-item';
-            d.innerHTML = `<div><b>${chats[id]}</b><br><small style="opacity:0.4">${id}</small></div>`;
-            d.onclick = () => { currentId = id; openChatUI(id); };
-            list.appendChild(d);
+            let d = document.createElement('div'); d.className = 'chat-item';
+            d.innerHTML = `<div class="avatar">${chats[id][0]}</div><div><b>${chats[id]}</b><br><small style="opacity:0.5">Online</small></div>`;
+            d.onclick = () => select(id);
+            l.appendChild(d);
         }
     }
 
-    function openChatUI(id) {
+    function select(id) {
+        targetId = id;
         document.getElementById('chat-title').innerText = chats[id] || id;
-        document.getElementById('messages').innerHTML = localStorage.getItem('h5_'+id) || '';
+        document.getElementById('messages').innerHTML = localStorage.getItem('mx_'+id) || '';
         document.getElementById('chat-screen').classList.add('active');
-        if(!conn || conn.peer !== id) { conn = peer.connect(id); setupConn(); }
+        conn = peer.connect(id);
+        setup();
     }
 
-    function closeChat() { document.getElementById('chat-screen').classList.remove('active'); }
-
-    function setupConn() {
-        conn.on('data', d => addMsg(chats[conn.peer] || conn.peer, d, 'in'));
+    function setup() {
+        conn.on('data', d => {
+            if(d.type === 'sticker') addMsg(chats[conn.peer]||conn.peer, `<img src="${d.src}" class="sticker">`, 'in');
+            else addMsg(chats[conn.peer]||conn.peer, d, 'in');
+        });
     }
 
     function sendMsg() {
-        const i = document.getElementById('msg-inp');
-        if(i.value && conn && conn.open) {
-            conn.send(i.value);
-            addMsg('Я', i.value, 'out');
-            i.value = '';
-        }
+        const i = document.getElementById('msg-input');
+        if(i.value && conn && conn.open) { conn.send(i.value); addMsg('Я', i.value, 'out'); i.value = ''; }
     }
 
     function addMsg(u, t, type) {
-        let m = document.createElement('div');
-        m.className = `msg ${type}`;
+        let m = document.createElement('div'); m.className = `msg ${type}`;
         m.innerHTML = `<small style="font-size:10px; opacity:0.5">${u}</small><br>${t}`;
-        const b = document.getElementById('messages');
-        b.appendChild(m);
-        b.scrollTop = b.scrollHeight;
-        localStorage.setItem('h5_'+currentId, b.innerHTML);
+        document.getElementById('messages').appendChild(m);
+        document.getElementById('messages').scrollTop = 99999;
+        localStorage.setItem('mx_'+targetId, document.getElementById('messages').innerHTML);
+    }
+
+    function call() {
+        document.getElementById('call-layer').style.display = 'flex';
+        currentCall = peer.call(targetId, stream);
+        currentCall.on('stream', s => document.getElementById('remoteV').srcObject = s);
+    }
+
+    function endCall() { currentCall.close(); document.getElementById('call-layer').style.display = 'none'; }
+
+    function toggleMute(type) {
+        if(type === 'audio') {
+            stream.getAudioTracks()[0].enabled = !stream.getAudioTracks()[0].enabled;
+            document.getElementById('m-btn').style.background = stream.getAudioTracks()[0].enabled ? '#444' : '#ff3b30';
+        } else {
+            stream.getVideoTracks()[0].enabled = !stream.getVideoTracks()[0].enabled;
+            document.getElementById('v-btn').style.background = stream.getVideoTracks()[0].enabled ? '#444' : '#ff3b30';
+        }
+    }
+
+    function toggleModal(s) { document.getElementById('add-modal').style.display = s ? 'flex' : 'none'; }
+    function back() { document.getElementById('chat-screen').classList.remove('active'); }
+    
+    function toggleStickers() {
+        const p = document.getElementById('sticker-panel');
+        p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+        if(p.innerHTML === '') {
+            stickers.forEach(src => {
+                let img = document.createElement('img'); img.src = src; img.className = 'sticker-btn';
+                img.onclick = () => {
+                    if(conn && conn.open) {
+                        conn.send({type: 'sticker', src: src});
+                        addMsg('Я', `<img src="${src}" class="sticker">`, 'out');
+                    }
+                };
+                p.appendChild(img);
+            });
+        }
     }
 </script>
 </body>
