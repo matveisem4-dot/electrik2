@@ -3,59 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FEAR CONNECT - EXECUTIONER</title>
+    <title>FEAR CONNECT PRO</title>
     <style>
-        body { background: #000; color: #f00; font-family: 'Courier New', monospace; text-align: center; padding: 20px; }
-        .box { border: 5px solid #f00; padding: 20px; border-radius: 10px; box-shadow: 0 0 50px #f00; }
-        h1 { font-size: 2rem; text-shadow: 0 0 10px #f00; }
-        #log { margin-top: 20px; color: #fff; font-size: 0.8rem; height: 100px; overflow: hidden; border: 1px solid #333; padding: 10px; }
-        button { background: #f00; color: #000; border: none; padding: 25px; width: 100%; font-size: 1.5rem; font-weight: 900; cursor: pointer; margin-top: 20px; }
+        body { background: #000; color: #0f0; font-family: monospace; text-align: center; padding: 20px; }
+        .terminal { border: 3px solid #0f0; padding: 20px; border-radius: 10px; box-shadow: 0 0 20px #0f0; }
+        .btn { border: none; padding: 20px; width: 100%; font-weight: bold; margin-top: 15px; cursor: pointer; text-transform: uppercase; }
+        #hack-btn { background: #f00; color: #000; font-size: 1.2rem; }
+        #reset-btn { background: #555; color: #fff; font-size: 0.9rem; }
+        #log { margin-top: 15px; font-size: 0.8rem; color: #88ff88; min-height: 50px; border-top: 1px solid #333; padding-top: 10px; }
     </style>
 </head>
 <body>
 
-<div class="box">
-    <h1>UNIT: OVERKILL</h1>
-    <div id="log">ОТРЯД ГОТОВ К ВЫСАДКЕ...</div>
-    <button onclick="executionerHack()">ЛИКВИДИРОВАТЬ ЛИМИТЫ</button>
+<div class="terminal">
+    <h1>FEAR CONNECT v7.0</h1>
+    <div id="log">СТАТУС: ОЖИДАНИЕ ПРИКАЗА...</div>
+    
+    <button id="hack-btn" class="btn" onclick="runOperation('HACK')">ШТУРМ (РАЗГОН 30 КМ/Ч)</button>
+    <button id="reset-btn" class="btn" onclick="runOperation('RESET')">ВЕРНУТЬ ЗАВОД (20 КМ/Ч)</button>
 </div>
 
 <script>
-async function executionerHack() {
+async function runOperation(type) {
     const log = document.getElementById('log');
-    const writeLog = (msg) => { log.innerHTML += msg + "<br>"; log.scrollTop = log.scrollHeight; };
-
     try {
-        writeLog("ПОИСК ЖЕРТВЫ (GD32)...");
+        log.innerText = "ПОИСК ЦЕЛИ...";
         const device = await navigator.bluetooth.requestDevice({
             acceptAllDevices: true,
-            optionalServices: ['00001a00-0000-1000-8000-00805f9b34fb', '0000fe95-0000-1000-8000-00805f9b34fb']
+            optionalServices: ['00001a00-0000-1000-8000-00805f9b34fb']
         });
 
+        log.innerText = "ВТОРЖЕНИЕ...";
         const server = await device.gatt.connect();
-        writeLog("ВТОРЖЕНИЕ В СИСТЕМУ...");
-        
         const service = await server.getPrimaryService('00001a00-0000-1000-8000-00805f9b34fb');
         const char = await service.getCharacteristic('00001a01-0000-1000-8000-00805f9b34fb');
 
-        // ОТРЯД КОМАНД: "ВЫПОЛНЯЙ ИЛИ УМРИ"
-        const commands = [
-            [0x55, 0xAA, 0x03, 0x22, 0x01, 0x02, 0x14, 0x01, 0xC3], // Смена региона (Global)
-            [0x55, 0xAA, 0x03, 0x20, 0x01, 0x01, 0x00, 0x00, 0xDB], // Принудительный режим SPORT
-            [0x55, 0xAA, 0x03, 0x22, 0x01, 0x02, 0x1E, 0x01, 0xB9]  // Максимальная скорость 30км/ч
-        ];
-
-        for (let cmd of commands) {
-            writeLog("УГРОЗА ОТПРАВЛЕНА: " + cmd[5]);
-            await char.writeValue(new Uint8Array(cmd));
-            await new Promise(r => setTimeout(r, 50)); // Процессор не успеет опомниться
+        if (type === 'HACK') {
+            log.innerText = "ВЫЛАМЫВАЕМ ДВЕРЬ: 30 КМ/Ч!";
+            // Команда: Регион Global + Макс. скорость
+            const cmd = new Uint8Array([0x55, 0xAA, 0x03, 0x22, 0x01, 0x02, 0x14, 0x01, 0xC3]);
+            await char.writeValue(cmd);
+            alert("ПРОЦЕССОР СДАЛСЯ! Теперь ты летишь!");
+        } else {
+            log.innerText = "ОТКАТ: ВОЗВРАЩАЕМ 20 КМ/Ч...";
+            // Команда: Регион Europe + Лимит 20 км/ч
+            const cmd = new Uint8Array([0x55, 0xAA, 0x03, 0x22, 0x01, 0x02, 0x0F, 0x01, 0xC8]);
+            await char.writeValue(cmd);
+            alert("ЗАВОДСКИЕ НАСТРОЙКИ ВЕРНУТЫ. Самокат снова медленный.");
         }
-
-        writeLog("ПРОЦЕССОР ПАРАЛИЗОВАН. ЛИМИТЫ СНЯТЫ.");
-        alert("ПРОЦЕССОР СДАЛСЯ! Если сейчас не поедет 25км/ч — значит он в коме. Перезагружай!");
-
+        
+        log.innerText = "ОПЕРАЦИЯ ЗАВЕРШЕНА. ПЕРЕЗАГРУЗИ САМОКАТ.";
     } catch (e) {
-        writeLog("ОШИБКА ШТУРМА: " + e.message);
+        log.innerText = "ОШИБКА: " + e.message;
     }
 }
 </script>
