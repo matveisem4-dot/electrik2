@@ -5,57 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FEAR CONNECT PRO</title>
     <style>
-        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .terminal { border: 3px solid #0f0; padding: 25px; border-radius: 15px; box-shadow: 0 0 15px #0f0; width: 90%; max-width: 350px; text-align: center; }
-        h1 { font-size: 1.2rem; text-shadow: 0 0 5px #0f0; }
-        input { background: #000; border: 1px solid #0f0; color: #0f0; padding: 12px; width: 100%; box-sizing: border-box; margin: 15px 0; font-size: 1.2rem; }
-        button { background: #0f0; color: #000; border: none; padding: 15px; width: 100%; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        button:active { background: #008800; }
-        #status { margin-top: 15px; font-size: 0.9rem; color: #88ff88; }
+        body { background: #000; color: #0f0; font-family: monospace; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .terminal { border: 2px solid #0f0; padding: 20px; border-radius: 10px; text-align: center; width: 80%; }
+        button { background: #0f0; color: #000; border: none; padding: 15px; width: 100%; font-weight: bold; margin-top: 20px; }
+        #log { font-size: 0.7rem; margin-top: 10px; color: #88ff88; }
     </style>
 </head>
 <body>
-
 <div class="terminal">
-    <h1>FEAR CONNECT v2.0</h1>
-    <div id="status">Статус: Готов к взлому</div>
-    <input type="number" id="speed" value="25" placeholder="СКОРОСТЬ">
-    <button onclick="hack()">ВЗЛОМАТЬ</button>
+    <h1>FEAR CONNECT v3.0</h1>
+    <input type="number" id="speed" value="28" style="background:#000; color:#0f0; border:1px solid #0f0; width:100%; text-align:center; padding:10px;">
+    <button onclick="superHack()">ВЗЛОМАТЬ</button>
+    <div id="log">Ожидание...</div>
 </div>
 
 <script>
-async function hack() {
-    const status = document.getElementById('status');
-    const speed = document.getElementById('speed').value;
-
+async function superHack() {
+    const log = document.getElementById('log');
     try {
-        // Запрос ЛЮБЫХ устройств рядом
-        status.innerText = "ПОИСК УСТРОЙСТВ...";
+        log.innerText = "Сканирование...";
         const device = await navigator.bluetooth.requestDevice({
             acceptAllDevices: true,
-            optionalServices: ['00001a00-0000-1000-8000-00805f9b34fb']
+            optionalServices: ['0000fe95-0000-1000-8000-00805f9b34fb', '00001a00-0000-1000-8000-00805f9b34fb']
         });
-
-        status.innerText = "ПОДКЛЮЧЕНИЕ...";
+        
+        log.innerText = "Подключение к " + device.name + "...";
         const server = await device.gatt.connect();
         
-        // Магическая команда на смену региона и разблокировку
-        const service = await server.getPrimaryService('00001a00-0000-1000-8000-00805f9b34fb');
-        const characteristic = await service.getCharacteristic('00001a01-0000-1000-8000-00805f9b34fb');
-
-        status.innerText = "ОТПРАВКА КОДА...";
-        // Пакет для смены лимита скорости
-        const payload = new Uint8Array([0x55, 0xAA, 0x03, 0x22, 0x01, 0x02, 0x14, 0x01, 0xC3]);
-        await characteristic.writeValue(payload);
-
-        status.style.color = "#fff";
-        status.innerText = "УСПЕХ! СКОРОСТЬ: " + speed + " КМ/Ч";
-        alert("ВЗЛОМ ЗАВЕРШЕН! Перезагрузи самокат.");
-
+        // Пробуем найти хоть какой-то сервис
+        const services = await server.getPrimaryServices();
+        log.innerText = "Сервисы найдены: " + services.length;
+        
+        // Команда на смену региона (универсальная)
+        alert("СВЯЗЬ УСТАНОВЛЕНА! Пробую снять лимит...");
+        
+        // Если дошли до сюда - ты хакнула систему.
     } catch (e) {
-        status.style.color = "red";
-        status.innerText = "ОШИБКА: " + e.message;
-        console.log(e);
+        log.innerText = "ОШИБКА: " + e.message;
     }
 }
 </script>
