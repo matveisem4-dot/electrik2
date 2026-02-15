@@ -3,70 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FEAR CONNECT - TOTAL OVERRIDE</title>
+    <title>FEAR CONNECT - EXECUTIONER</title>
     <style>
-        body { background: #000; color: #f00; font-family: 'Courier New', monospace; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .terminal { border: 5px double #f00; padding: 30px; border-radius: 5px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 0 30px #f00; }
-        #status { margin: 20px 0; font-size: 1.2rem; font-weight: bold; color: #ff0; text-transform: uppercase; }
-        button { background: #f00; color: #000; border: none; padding: 20px; width: 100%; font-size: 1.5rem; font-weight: 900; cursor: pointer; }
-        button:active { transform: scale(0.95); background: #fff; }
+        body { background: #000; color: #f00; font-family: 'Courier New', monospace; text-align: center; padding: 20px; }
+        .box { border: 5px solid #f00; padding: 20px; border-radius: 10px; box-shadow: 0 0 50px #f00; }
+        h1 { font-size: 2rem; text-shadow: 0 0 10px #f00; }
+        #log { margin-top: 20px; color: #fff; font-size: 0.8rem; height: 100px; overflow: hidden; border: 1px solid #333; padding: 10px; }
+        button { background: #f00; color: #000; border: none; padding: 25px; width: 100%; font-size: 1.5rem; font-weight: 900; cursor: pointer; margin-top: 20px; }
     </style>
 </head>
 <body>
 
-<div class="terminal">
-    <h1>UNIT: BREAKER v5.0</h1>
-    <div id="status">ЦЕЛЬ: GD32 (DRV 245)</div>
-    <button onclick="totalOverride()">ШТУРМ ПРОЦЕССОРА</button>
+<div class="box">
+    <h1>UNIT: OVERKILL</h1>
+    <div id="log">ОТРЯД ГОТОВ К ВЫСАДКЕ...</div>
+    <button onclick="executionerHack()">ЛИКВИДИРОВАТЬ ЛИМИТЫ</button>
 </div>
 
 <script>
-async function totalOverride() {
-    const status = document.getElementById('status');
+async function executionerHack() {
+    const log = document.getElementById('log');
+    const writeLog = (msg) => { log.innerHTML += msg + "<br>"; log.scrollTop = log.scrollHeight; };
+
     try {
-        status.innerText = "ВЗЛОМ ЗАЩИТЫ...";
-        // Мы не просим конкретный UUID, мы берем ВСЁ
+        writeLog("ПОИСК ЖЕРТВЫ (GD32)...");
         const device = await navigator.bluetooth.requestDevice({
             acceptAllDevices: true,
-            optionalServices: [
-                '00001a00-0000-1000-8000-00805f9b34fb',
-                '0000fe95-0000-1000-8000-00805f9b34fb',
-                '0000180a-0000-1000-8000-00805f9b34fb'
-            ]
+            optionalServices: ['00001a00-0000-1000-8000-00805f9b34fb', '0000fe95-0000-1000-8000-00805f9b34fb']
         });
 
-        status.innerText = "ЗАХВАТ КАНАЛА...";
         const server = await device.gatt.connect();
+        writeLog("ВТОРЖЕНИЕ В СИСТЕМУ...");
         
-        // Пытаемся найти любой подходящий сервис, даже если он скрыт
-        const services = await server.getPrimaryServices();
-        let targetChar = null;
+        const service = await server.getPrimaryService('00001a00-0000-1000-8000-00805f9b34fb');
+        const char = await service.getCharacteristic('00001a01-0000-1000-8000-00805f9b34fb');
 
-        for (const service of services) {
-            const chars = await service.getCharacteristics();
-            for (const char of chars) {
-                // Ищем характеристику, которая принимает команды записи
-                if (char.properties.write || char.properties.writeWithoutResponse) {
-                    targetChar = char;
-                    break;
-                }
-            }
+        // ОТРЯД КОМАНД: "ВЫПОЛНЯЙ ИЛИ УМРИ"
+        const commands = [
+            [0x55, 0xAA, 0x03, 0x22, 0x01, 0x02, 0x14, 0x01, 0xC3], // Смена региона (Global)
+            [0x55, 0xAA, 0x03, 0x20, 0x01, 0x01, 0x00, 0x00, 0xDB], // Принудительный режим SPORT
+            [0x55, 0xAA, 0x03, 0x22, 0x01, 0x02, 0x1E, 0x01, 0xB9]  // Максимальная скорость 30км/ч
+        ];
+
+        for (let cmd of commands) {
+            writeLog("УГРОЗА ОТПРАВЛЕНА: " + cmd[5]);
+            await char.writeValue(new Uint8Array(cmd));
+            await new Promise(r => setTimeout(r, 50)); // Процессор не успеет опомниться
         }
 
-        if (!targetChar) throw new Error("ПРОЦЕССОР ЗАБАРРИКАДИРОВАЛСЯ!");
-
-        status.innerText = "ПРИНУДИТЕЛЬНЫЙ ПРИКАЗ!";
-        // Команда-детонатор: сброс лимитов + установка региона
-        const bomb = new Uint8Array([0x55, 0xAA, 0x03, 0x22, 0x01, 0x02, 0x14, 0x01, 0xC3]);
-        await targetChar.writeValue(bomb);
-
-        status.style.color = "#0f0";
-        status.innerText = "ДВЕРЬ ВЫЛОМАНА! СИСТЕМА МОЯ!";
-        alert("ПРОЦЕССОР СЛОМЛЕН! Перезагрузи самокат — теперь он полетит!");
+        writeLog("ПРОЦЕССОР ПАРАЛИЗОВАН. ЛИМИТЫ СНЯТЫ.");
+        alert("ПРОЦЕССОР СДАЛСЯ! Если сейчас не поедет 25км/ч — значит он в коме. Перезагружай!");
 
     } catch (e) {
-        status.style.color = "#f0f";
-        status.innerText = "ОТКАЗ: " + e.message;
+        writeLog("ОШИБКА ШТУРМА: " + e.message);
     }
 }
 </script>
