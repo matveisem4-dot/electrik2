@@ -3,68 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FEAR CONNECT - BREAKER MODE</title>
+    <title>FEAR CONNECT - TOTAL OVERRIDE</title>
     <style>
-        body { background: #000; color: #f00; font-family: 'Courier New', monospace; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-shadow: 0 0 5px #f00; }
-        .terminal { border: 4px solid #f00; padding: 25px; border-radius: 5px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 0 20px #f00; }
-        h1 { font-size: 1.5rem; letter-spacing: 3px; }
-        #status { margin: 20px 0; font-weight: bold; min-height: 50px; color: #ff0; }
-        button { background: #f00; color: #000; border: none; padding: 20px; width: 100%; font-size: 1.2rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:hover { background: #fff; box-shadow: 0 0 15px #fff; }
-        .danger { color: #fff; background: #500; font-size: 0.7rem; padding: 5px; margin-top: 10px; }
+        body { background: #000; color: #f00; font-family: 'Courier New', monospace; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .terminal { border: 5px double #f00; padding: 30px; border-radius: 5px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 0 30px #f00; }
+        #status { margin: 20px 0; font-size: 1.2rem; font-weight: bold; color: #ff0; text-transform: uppercase; }
+        button { background: #f00; color: #000; border: none; padding: 20px; width: 100%; font-size: 1.5rem; font-weight: 900; cursor: pointer; }
+        button:active { transform: scale(0.95); background: #fff; }
     </style>
 </head>
 <body>
 
 <div class="terminal">
-    <h1>UNIT: BREAKER v4.0</h1>
-    <div id="status">СТАТУС: ОРУЖИЕ ЗАРЯЖЕНО</div>
-    
-    <button onclick="bruteForce()">ВЫЛОМАТЬ ДВЕРЬ (HACK)</button>
-    
-    <div class="danger">ВНИМАНИЕ: ПРЯМОЕ ВТОРЖЕНИЕ В ПРОЦЕССОР GD32</div>
+    <h1>UNIT: BREAKER v5.0</h1>
+    <div id="status">ЦЕЛЬ: GD32 (DRV 245)</div>
+    <button onclick="totalOverride()">ШТУРМ ПРОЦЕССОРА</button>
 </div>
 
 <script>
-async function bruteForce() {
+async function totalOverride() {
     const status = document.getElementById('status');
     try {
-        status.innerText = "ШТУРМ: ПОИСК ЦЕЛИ...";
-        
-        // Запрашиваем устройство с полным доступом
+        status.innerText = "ВЗЛОМ ЗАЩИТЫ...";
+        // Мы не просим конкретный UUID, мы берем ВСЁ
         const device = await navigator.bluetooth.requestDevice({
             acceptAllDevices: true,
-            optionalServices: ['00001a00-0000-1000-8000-00805f9b34fb']
+            optionalServices: [
+                '00001a00-0000-1000-8000-00805f9b34fb',
+                '0000fe95-0000-1000-8000-00805f9b34fb',
+                '0000180a-0000-1000-8000-00805f9b34fb'
+            ]
         });
 
-        status.innerText = "ВЫШИБАЕМ ДВЕРЬ (GATT CONNECT)...";
+        status.innerText = "ЗАХВАТ КАНАЛА...";
         const server = await device.gatt.connect();
         
-        // Заходим в сервис управления напрямую
-        const service = await server.getPrimaryService('00001a00-0000-1000-8000-00805f9b34fb');
-        const rx = await service.getCharacteristic('00001a01-0000-1000-8000-00805f9b34fb');
+        // Пытаемся найти любой подходящий сервис, даже если он скрыт
+        const services = await server.getPrimaryServices();
+        let targetChar = null;
 
-        status.innerText = "ПРИКАЗ ПРОЦЕССОРУ: СНЯТЬ ЛИМИТЫ!";
+        for (const service of services) {
+            const chars = await service.getCharacteristics();
+            for (const char of chars) {
+                // Ищем характеристику, которая принимает команды записи
+                if (char.properties.write || char.properties.writeWithoutResponse) {
+                    targetChar = char;
+                    break;
+                }
+            }
+        }
 
-        // Пакет 1: Смена региона на Global (США) — 30 км/ч
-        const cmd1 = new Uint8Array([0x55, 0xAA, 0x03, 0x22, 0x01, 0x02, 0x14, 0x01, 0xC3]);
-        // Пакет 2: Форсированный режим Sport
-        const cmd2 = new Uint8Array([0x55, 0xAA, 0x03, 0x22, 0x01, 0x02, 0x1E, 0x01, 0xB9]);
+        if (!targetChar) throw new Error("ПРОЦЕССОР ЗАБАРРИКАДИРОВАЛСЯ!");
 
-        // "Стреляем" командами без очереди
-        await rx.writeValue(cmd1);
-        await new Promise(r => setTimeout(r, 150)); // Пауза на перезарядку
-        await rx.writeValue(cmd2);
+        status.innerText = "ПРИНУДИТЕЛЬНЫЙ ПРИКАЗ!";
+        // Команда-детонатор: сброс лимитов + установка региона
+        const bomb = new Uint8Array([0x55, 0xAA, 0x03, 0x22, 0x01, 0x02, 0x14, 0x01, 0xC3]);
+        await targetChar.writeValue(bomb);
 
         status.style.color = "#0f0";
-        status.innerText = "ПРОЦЕССОР СЛОМАН. ЛИМИТЫ УДАЛЕНЫ.";
-        
-        alert("УСПЕХ! Самокат теперь подчиняется тебе. ВЫКЛЮЧИ И ВКЛЮЧИ его, чтобы он осознал свою новую силу!");
+        status.innerText = "ДВЕРЬ ВЫЛОМАНА! СИСТЕМА МОЯ!";
+        alert("ПРОЦЕССОР СЛОМЛЕН! Перезагрузи самокат — теперь он полетит!");
 
     } catch (e) {
         status.style.color = "#f0f";
         status.innerText = "ОТКАЗ: " + e.message;
-        console.error(e);
     }
 }
 </script>
