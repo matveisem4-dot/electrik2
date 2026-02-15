@@ -3,58 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FEAR CONNECT PRO</title>
+    <title>FEAR CONNECT - DOOMSDAY</title>
     <style>
-        body { background: #000; color: #0f0; font-family: monospace; text-align: center; padding: 20px; }
-        .terminal { border: 3px solid #0f0; padding: 20px; border-radius: 10px; box-shadow: 0 0 20px #0f0; }
-        .btn { border: none; padding: 20px; width: 100%; font-weight: bold; margin-top: 15px; cursor: pointer; text-transform: uppercase; }
-        #hack-btn { background: #f00; color: #000; font-size: 1.2rem; }
-        #reset-btn { background: #555; color: #fff; font-size: 0.9rem; }
-        #log { margin-top: 15px; font-size: 0.8rem; color: #88ff88; min-height: 50px; border-top: 1px solid #333; padding-top: 10px; }
+        body { background: #000; color: #f00; font-family: 'Courier New', monospace; text-align: center; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .terminal { border: 10px double #f00; padding: 30px; width: 90%; max-width: 500px; box-shadow: 0 0 50px #f00; background: rgba(20,0,0,0.9); }
+        h1 { font-size: 2.5rem; text-transform: uppercase; margin: 0; }
+        #status { color: #fff; margin: 20px 0; font-size: 1.1rem; text-shadow: 0 0 10px #f00; }
+        .btn-group { display: flex; flex-direction: column; gap: 15px; }
+        button { padding: 25px; font-size: 1.5rem; font-weight: 900; cursor: pointer; border: none; text-transform: uppercase; }
+        .hack { background: #f00; color: #000; }
+        .reset { background: #444; color: #fff; font-size: 1rem; }
+        #console { font-size: 0.7rem; color: #0f0; text-align: left; margin-top: 20px; height: 80px; overflow: hidden; border: 1px solid #333; padding: 5px; }
     </style>
 </head>
 <body>
 
 <div class="terminal">
-    <h1>FEAR CONNECT v7.0</h1>
-    <div id="log">СТАТУС: ОЖИДАНИЕ ПРИКАЗА...</div>
+    <h1>DOOMSDAY v8.0</h1>
+    <div id="status">ЦЕЛЬ: TOTAL SYSTEM OVERRIDE</div>
     
-    <button id="hack-btn" class="btn" onclick="runOperation('HACK')">ШТУРМ (РАЗГОН 30 КМ/Ч)</button>
-    <button id="reset-btn" class="btn" onclick="runOperation('RESET')">ВЕРНУТЬ ЗАВОД (20 КМ/Ч)</button>
+    <div class="btn-group">
+        <button class="hack" onclick="doomsday('HACK')">ВЫЖЕЧЬ ЛИМИТЫ (30 КМ/Ч)</button>
+        <button class="reset" onclick="doomsday('RESET')">ОТКАТИТЬ В СТОК (20 КМ/Ч)</button>
+    </div>
+
+    <div id="console">ОЖИДАНИЕ УДАРА...</div>
 </div>
 
 <script>
-async function runOperation(type) {
-    const log = document.getElementById('log');
+async function doomsday(mode) {
+    const con = document.getElementById('console');
+    const log = (m) => { con.innerHTML += "> " + m + "<br>"; con.scrollTop = con.scrollHeight; };
+    
     try {
-        log.innerText = "ПОИСК ЦЕЛИ...";
+        log("ЗАПУСК ЦИКЛА ВЗЛОМА...");
+        // Запрашиваем ВСЁ. Без исключений.
         const device = await navigator.bluetooth.requestDevice({
             acceptAllDevices: true,
-            optionalServices: ['00001a00-0000-1000-8000-00805f9b34fb']
+            optionalServices: [
+                '00001a00-0000-1000-8000-00805f9b34fb', 
+                '0000fe95-0000-1000-8000-00805f9b34fb',
+                '0000180a-0000-1000-8000-00805f9b34fb',
+                '00001800-0000-1000-8000-00805f9b34fb'
+            ]
         });
 
-        log.innerText = "ВТОРЖЕНИЕ...";
+        log("ВТОРЖЕНИЕ В ЯДРО...");
         const server = await device.gatt.connect();
-        const service = await server.getPrimaryService('00001a00-0000-1000-8000-00805f9b34fb');
-        const char = await service.getCharacteristic('00001a01-0000-1000-8000-00805f9b34fb');
-
-        if (type === 'HACK') {
-            log.innerText = "ВЫЛАМЫВАЕМ ДВЕРЬ: 30 КМ/Ч!";
-            // Команда: Регион Global + Макс. скорость
-            const cmd = new Uint8Array([0x55, 0xAA, 0x03, 0x22, 0x01, 0x02, 0x14, 0x01, 0xC3]);
-            await char.writeValue(cmd);
-            alert("ПРОЦЕССОР СДАЛСЯ! Теперь ты летишь!");
-        } else {
-            log.innerText = "ОТКАТ: ВОЗВРАЩАЕМ 20 КМ/Ч...";
-            // Команда: Регион Europe + Лимит 20 км/ч
-            const cmd = new Uint8Array([0x55, 0xAA, 0x03, 0x22, 0x01, 0x02, 0x0F, 0x01, 0xC8]);
-            await char.writeValue(cmd);
-            alert("ЗАВОДСКИЕ НАСТРОЙКИ ВЕРНУТЫ. Самокат снова медленный.");
-        }
         
-        log.innerText = "ОПЕРАЦИЯ ЗАВЕРШЕНА. ПЕРЕЗАГРУЗИ САМОКАТ.";
+        // Массированный поиск любой лазейки
+        const services = await server.getPrimaryServices();
+        log("НАЙДЕНО КАНАЛОВ: " + services.length);
+
+        const data = mode === 'HACK' 
+            ? new Uint8Array([0x55, 0xAA, 0x03, 0x22, 0x01, 0x02, 0x14, 0x01, 0xC3]) 
+            : new Uint8Array([0x55, 0xAA, 0x03, 0x22, 0x01, 0x02, 0x0F, 0x01, 0xC8]);
+
+        for (const s of services) {
+            try {
+                const chars = await s.getCharacteristics();
+                for (const c of chars) {
+                    if (c.properties.write || c.properties.writeWithoutResponse) {
+                        log("УДАР ПО СЕКТОРУ: " + c.uuid.substring(0,4));
+                        await c.writeValue(data).catch(() => {});
+                    }
+                }
+            } catch (e) { continue; }
+        }
+
+        log("СИСТЕМА ПЕРЕГРУЖЕНА. ПРИКАЗ ПРИНЯТ.");
+        alert("ГОТОВО! Если процессор выжил — он теперь твой раб. Перезагрузи самокат!");
+
     } catch (e) {
-        log.innerText = "ОШИБКА: " + e.message;
+        log("КРИТИЧЕСКАЯ ОШИБКА: " + e.message);
     }
 }
 </script>
