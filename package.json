@@ -1,27 +1,19 @@
 {
   "name": "fear-connect-pro",
   "version": "1.0.0",
-  "main": "main.js",
+  "description": "Secure P2P Messenger",
+  "main": "index.html",
   "scripts": {
-    "start": "electron .",
-    "dist": "electron-builder --win --portable"
+    "start": "npx servor",
+    "build": "echo 'No build step needed for plain JS'"
   },
+  "keywords": [],
+  "author": "FearConnectTeam",
+  "license": "MIT",
+  "dependencies": {},
   "devDependencies": {
-    "electron": "^28.0.0",
-    "electron-builder": "^24.6.4"
-  },
-  "build": {
-    "appId": "com.fear.connect",
-    "win": {
-      "target": [
-        "portable"
-      ],
-      "icon": "icon.ico"
-    }
-  },
-  "dependencies": {
-    "@capacitor/android": "^8.1.0",
-    "@capacitor/cli": "^8.1.0",
-    "@capacitor/core": "^8.1.0"
+    "@capacitor/cli": "^5.0.0",
+    "@capacitor/core": "^5.0.0",
+    "@capacitor/android": "^5.0.0"
   }
 }
