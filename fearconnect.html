@@ -2,245 +2,236 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FearConnect V21</title>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        :root { --bg: #09090b; --panel: #18181b; --accent: #3b82f6; --text: #f4f4f5; --red: #ef4444; --green: #22c55e; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        body { background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        :root { --bg: #07090e; --panel: #11141a; --accent: #00f2ff; --text: #e1e8ef; --danger: #ff3333; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
 
-        .screen { position: absolute; inset: 0; display: none; flex-direction: column; background: var(--bg); }
+        /* TOAST */
+        #toast { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #000; padding: 12px 30px; border-radius: 25px; font-weight: bold; z-index: 10000; display: none; box-shadow: 0 0 20px rgba(0,242,255,0.4); }
+
+        /* TITLEBAR */
+        .title-bar { height: 32px; background: #000; display: flex; justify-content: space-between; align-items: center; -webkit-app-region: drag; border-bottom: 1px solid #111; }
+        .win-controls { -webkit-app-region: no-drag; display: flex; }
+        .win-btn { width: 45px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .win-btn:hover { background: #333; }
+
+        /* SCREENS */
+        .screen { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: none; align-items: center; justify-content: center; flex-direction: column; }
         .active { display: flex; }
-
-        /* Контакты */
-        .chat-card { background: var(--panel); margin: 8px 12px; padding: 15px; border-radius: 16px; display: flex; align-items: center; border: 1px solid #27272a; cursor: pointer; position: relative; }
-        .av-circle { width: 48px; height: 48px; background: #27272a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-right: 15px; border: 2px solid transparent; }
-        .av-circle.is-online { border-color: var(--green); }
+        .card { background: var(--panel); padding: 30px; border-radius: 24px; width: 90%; max-width: 380px; text-align: center; border: 1px solid #ffffff05; }
         
-        .info b { display: block; font-size: 16px; margin-bottom: 2px; }
-        .info span { font-size: 12px; color: #71717a; }
+        input { width: 100%; padding: 14px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; border-radius: 12px; outline: none; }
+        .btn { width: 100%; padding: 14px; background: var(--accent); color: #000; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-secondary { background: #222; color: #fff; border: 1px solid #333; }
 
-        /* Формы */
-        .input-area { padding: 20px; background: var(--panel); border-top: 1px solid #27272a; }
-        input { background: #09090b; border: 1px solid #27272a; color: #fff; padding: 12px 16px; width: 100%; border-radius: 10px; margin-bottom: 10px; font-size: 16px; }
-        .btn { background: var(--accent); color: #fff; border: none; padding: 14px; border-radius: 10px; font-weight: 600; width: 100%; cursor: pointer; transition: 0.2s; }
-        .btn:active { opacity: 0.7; transform: scale(0.98); }
-
-        /* Чат */
-        #msg-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .bubble { padding: 10px 16px; border-radius: 18px; max-width: 80%; font-size: 15px; line-height: 1.4; position: relative; }
-        .bubble.sent { background: var(--accent); align-self: flex-end; border-bottom-right-radius: 4px; }
-        .bubble.recv { background: #27272a; align-self: flex-start; border-bottom-left-radius: 4px; }
-
-        /* Модалки */
-        #overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .modal { background: var(--panel); padding: 25px; border-radius: 20px; width: 100%; max-width: 350px; border: 1px solid #27272a; }
-
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; background: #52525b; }
-        .status-dot.on { background: var(--green); box-shadow: 0 0 5px var(--green); }
+        /* MAIN */
+        .app-main { display: flex; flex: 1; height: calc(100vh - 32px); }
+        .sidebar { width: 280px; background: var(--panel); border-right: 1px solid #000; display: flex; flex-direction: column; }
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: #090c10; }
+        #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        
+        .contact-item { padding: 15px; border-bottom: 1px solid #111; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .contact-item:hover { background: #1a1f26; }
+        
+        /* MODALS */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; }
+        .modal-content { background: var(--panel); padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; border: 1px solid #333; }
     </style>
 </head>
 <body>
 
-    <div id="login-s" class="screen active" style="justify-content:center; padding:40px;">
-        <h1 style="font-size:32px; text-align:center; margin-bottom:10px;">FearConnect</h1>
-        <p style="text-align:center; color:#71717a; margin-bottom:40px;">Локальная База V21</p>
-        
-        <div id="p-av" style="font-size:60px; text-align:center; margin-bottom:20px; cursor:pointer;" onclick="nextAv()">👤</div>
-        <input type="text" id="p-id" placeholder="Твой уникальный ID">
-        <button class="btn" onclick="login()">ВОЙТИ В СЕТЬ</button>
-    </div>
+    <div id="toast"></div>
 
-    <div id="list-s" class="screen">
-        <div style="padding:50px 20px 20px; display:flex; justify-content:space-between; align-items:center;">
-            <h2>Контакты</h2>
-            <div id="me-info" style="font-size:12px; background:#27272a; padding:5px 10px; border-radius:20px;"></div>
-        </div>
-        <div id="contacts-list" style="flex:1; overflow-y:auto;"></div>
-        <div class="input-area">
-            <button class="btn" onclick="openAdd()">+ Добавить по ID</button>
+    <div class="title-bar" id="drag-bar">
+        <div style="padding-left:15px; font-size:10px; color:var(--accent); font-weight:bold;">FEAR CONNECT</div>
+        <div class="win-controls">
+            <div class="win-btn" onclick="winAction('win-minimize')">－</div>
+            <div class="win-btn" onclick="winAction('win-close')">✕</div>
         </div>
     </div>
 
-    <div id="chat-s" class="screen">
-        <div style="padding:50px 20px 15px; background:var(--panel); display:flex; align-items:center; gap:15px; border-bottom:1px solid #27272a;">
-            <button onclick="toScreen('list-s')" style="background:none; border:none; color:var(--accent); font-size:20px;">⬅</button>
-            <div id="c-av-head" style="font-size:24px;">👤</div>
-            <div style="flex:1">
-                <b id="c-name">Имя</b><br>
-                <small id="c-status" style="color:#71717a">проверка связи...</small>
+    <div id="screen-auth" class="screen active">
+        <div class="card">
+            <h2 id="auth-t">Регистрация</h2>
+            <input type="text" id="in-id" placeholder="Ваш ID">
+            <input type="password" id="in-ps" placeholder="Пароль">
+            <button class="btn" onclick="handleAuth()">ДАЛЕЕ</button>
+            <p onclick="toggleLogin()" style="cursor:pointer; margin-top:15px; color:var(--accent); font-size:12px;">Уже есть аккаунт?</p>
+        </div>
+    </div>
+
+    <div id="screen-lang" class="screen">
+        <div class="card">
+            <h2>Выберите язык</h2>
+            <button class="btn btn-secondary" onclick="setLang('RU')">Русский</button>
+            <button class="btn btn-secondary" onclick="setLang('EN')">English</button>
+        </div>
+    </div>
+
+    <div id="screen-phone" class="screen">
+        <div class="card">
+            <h2>Ваш номер</h2>
+            <input type="text" id="in-phone" placeholder="+7 900 000 00 00">
+            <button class="btn" onclick="savePhone()">СОХРАНИТЬ</button>
+            <button class="btn btn-secondary" onclick="nextScreen('app')">ПРОПУСТИТЬ</button>
+        </div>
+    </div>
+
+    <div class="app-main">
+        <div class="sidebar">
+            <div style="padding:15px; display:flex; gap:10px;">
+                <button class="btn" style="flex:1" onclick="openM('add-m')">＋ ЧАТ</button>
+                <button class="btn" style="width:50px" onclick="openM('set-m')">⚙️</button>
             </div>
-            <button onclick="call()" style="background:none; border:none; font-size:22px;">📞</button>
+            <div id="contact-list" style="flex:1; overflow-y:auto;"></div>
+            <div id="my-info" style="padding:10px; font-size:10px; text-align:center; background:#000;">ID: ---</div>
         </div>
-        <div id="msg-box"></div>
-        <div class="input-area" style="display:flex; gap:10px; padding:10px 15px 30px;">
-            <input type="text" id="m-input" placeholder="Сообщение..." style="margin:0;">
-            <button class="btn" style="width:60px;" onclick="send()">➤</button>
-        </div>
-    </div>
-
-    <div id="overlay">
-        <div class="modal">
-            <h3 style="margin-bottom:15px;">Новый контакт</h3>
-            <input type="text" id="f-id" placeholder="ID пользователя">
-            <input type="text" id="f-name" placeholder="Имя (например: Брат)">
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <button class="btn" style="background:#27272a;" onclick="closeAdd()">Отмена</button>
-                <button class="btn" onclick="confirmAdd()">Найти</button>
+        <div class="chat-area">
+            <div id="chat-header" style="padding:15px; background:var(--panel); border-bottom:1px solid #000; display:none; justify-content:space-between; align-items:center;">
+                <b id="active-user-name">Чат</b>
+                <button class="btn" id="call-btn" style="width:auto; padding:5px 15px; margin:0; background:#28a745; color:white;">📞 Позвонить</button>
+            </div>
+            <div id="messages"></div>
+            <div id="input-area" style="padding:15px; display:none; gap:10px; background:var(--panel);">
+                <input type="text" id="m-input" placeholder="Сообщение..." style="margin:0">
+                <button class="btn" style="width:60px; margin:0" onclick="sendMsg()">➤</button>
             </div>
         </div>
     </div>
 
+    <div id="set-m" class="modal">
+        <div class="modal-content">
+            <h3>Настройки профиля</h3>
+            <div style="margin:15px 0;">
+                <label style="font-size:12px; color:#666;">Ваш номер телефона:</label>
+                <input type="text" id="set-phone-val" placeholder="Не указан">
+                <button class="btn" onclick="updateProfile()">ОБНОВИТЬ</button>
+            </div>
+            <button class="btn btn-secondary" onclick="closeM('set-m')">ЗАКРЫТЬ</button>
+        </div>
+    </div>
+
+    <div id="add-m" class="modal">
+        <div class="modal-content">
+            <h3>Новый контакт</h3>
+            <input type="text" id="target-id" placeholder="ID друга">
+            <input type="text" id="target-phone" placeholder="Номер (если есть)">
+            <button class="btn" onclick="addContact()">ДОБАВИТЬ</button>
+            <button class="btn btn-secondary" onclick="closeM('add-m')">ОТМЕНА</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script>
-        let peer, myId, myAv = '👤', targetId;
-        let db = JSON.parse(localStorage.getItem('fc_db') || '{}');
-        const avs = ['👤','💀','🤖','👽','👻','🐱','🐶','🦊','🐻','🦁'];
+        let peer, activeChatId, activeChatPhone, isLogin = false;
 
-        function nextAv() {
-            myAv = avs[(avs.indexOf(myAv) + 1) % avs.length];
-            document.getElementById('p-av').innerText = myAv;
+        function showToast(t) {
+            const el = document.getElementById('toast');
+            el.innerText = t; el.style.display='block';
+            setTimeout(()=> el.style.display='none', 2500);
         }
 
-        function login() {
-            myId = document.getElementById('p-id').value.trim().toLowerCase();
-            if(!myId) return;
-            
-            peer = new Peer(myId, { config: {'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }]} });
-            
-            peer.on('open', (id) => {
-                document.getElementById('me-info').innerText = myAv + " " + id;
-                toScreen('list-s');
-                render();
-                setInterval(checkOnline, 5000);
-            });
-
-            peer.on('connection', c => {
-                c.on('data', d => {
-                    if(d.type === 'msg') {
-                        saveMsg(c.peer, d.txt, 'recv');
-                        if(targetId === c.peer) renderMsgs(c.peer);
-                    }
-                    if(d.type === 'info') {
-                        if(db[c.peer]) {
-                            db[c.peer].av = d.av;
-                            save(); render();
-                        }
-                    }
-                });
-            });
+        function nextScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            if(id !== 'app') document.getElementById('screen-'+id).classList.add('active');
         }
 
-        // --- БАЗА ДАННЫХ: ПОИСК И ПРОВЕРКА ---
-        function confirmAdd() {
-            const id = document.getElementById('f-id').value.trim().toLowerCase();
-            const name = document.getElementById('f-name').value.trim() || id;
-            
-            if(!id || id === myId) return alert("Ошибка ID");
-
-            // Наша "Базовая База" проверяет существование через PeerJS
-            const conn = peer.connect(id);
-            let found = false;
-
-            // Если за 3 секунды не подключились - значит ID не в сети или не существует
-            const timeout = setTimeout(() => {
-                if(!found) alert("Пользователь не найден в сети. Но мы добавили его в список ожидания.");
-                saveContact(id, name, '👤');
-                closeAdd();
-            }, 3000);
-
-            conn.on('open', () => {
-                found = true;
-                clearTimeout(timeout);
-                saveContact(id, name, '👤');
-                conn.send({type: 'info', av: myAv}); // Просим данные
-                closeAdd();
-            });
+        function toggleLogin() {
+            isLogin = !isLogin;
+            document.getElementById('auth-t').innerText = isLogin ? "Вход" : "Регистрация";
         }
 
-        function saveContact(id, name, av) {
-            db[id] = { name, av, online: false };
-            save(); render();
-        }
+        function handleAuth() {
+            const id = document.getElementById('in-id').value;
+            const ps = document.getElementById('in-ps').value;
+            if(!id || !ps) return showToast("Заполни поля!");
 
-        function checkOnline() {
-            Object.keys(db).forEach(id => {
-                const c = peer.connect(id);
-                c.on('open', () => { 
-                    db[id].online = true; 
-                    render(); 
-                    c.send({type: 'info', av: myAv}); 
-                    c.close(); 
-                });
-                setTimeout(() => { if(!c.open) { db[id].online = false; render(); } }, 2000);
-            });
-        }
-
-        // --- ИНТЕРФЕЙС ---
-        function render() {
-            const list = document.getElementById('contacts-list');
-            list.innerHTML = '';
-            for(let id in db) {
-                const u = db[id];
-                list.innerHTML += `
-                    <div class="chat-card" onclick="openChat('${id}')">
-                        <div class="av-circle ${u.online ? 'is-online' : ''}">${u.av}</div>
-                        <div class="info">
-                            <b>${u.name}</b>
-                            <span>${u.online ? 'В сети' : 'Офлайн'} | ID: ${id}</span>
-                        </div>
-                    </div>
-                `;
+            if(!isLogin) {
+                localStorage.setItem('f_id', id);
+                localStorage.setItem('f_ps', ps);
+                nextScreen('lang');
+            } else {
+                if(id === localStorage.getItem('f_id') && ps === localStorage.getItem('f_ps')) {
+                    startPeer(id);
+                    nextScreen('app');
+                } else showToast("Ошибка входа!");
             }
         }
 
-        function openChat(id) {
-            targetId = id;
-            document.getElementById('c-name').innerText = db[id].name;
-            document.getElementById('c-av-head').innerText = db[id].av;
-            document.getElementById('c-status').innerText = db[id].online ? 'в сети' : 'офлайн';
-            renderMsgs(id);
-            toScreen('chat-s');
+        function savePhone() {
+            localStorage.setItem('f_phone', document.getElementById('in-phone').value);
+            nextScreen('app');
+            startPeer(localStorage.getItem('f_id'));
         }
 
-        function send() {
-            const inp = document.getElementById('m-input');
-            if(!inp.value) return;
-            const txt = inp.value;
+        function startPeer(id) {
+            peer = new Peer(id);
+            document.getElementById('my-info').innerText = "ONLINE: " + id;
+            document.getElementById('set-phone-val').value = localStorage.getItem('f_phone') || "";
+            peer.on('connection', c => {
+                c.on('data', d => { if(activeChatId === c.peer) render(d, 'msg-in'); });
+            });
+        }
 
-            const c = peer.connect(targetId);
+        function addContact() {
+            const id = document.getElementById('target-id').value;
+            const phone = document.getElementById('target-phone').value;
+            if(!id) return;
+            const list = document.getElementById('contact-list');
+            list.innerHTML += `<div class="contact-item" onclick="selectChat('${id}', '${phone}')">
+                <span>👤 ${id}</span>
+                <small style="color:#444">${phone}</small>
+            </div>`;
+            closeM('add-m');
+        }
+
+        function selectChat(id, phone) {
+            activeChatId = id; activeChatPhone = phone;
+            document.getElementById('chat-header').style.display = 'flex';
+            document.getElementById('input-area').style.display = 'flex';
+            document.getElementById('active-user-name').innerText = id;
+            document.getElementById('messages').innerHTML = "";
+            
+            // Если номер есть, настраиваем кнопку звонка
+            const cBtn = document.getElementById('call-btn');
+            if(phone && phone.trim() !== "") {
+                cBtn.style.display = 'block';
+                cBtn.onclick = () => window.open(`tel:${phone}`);
+            } else {
+                cBtn.style.display = 'none';
+            }
+        }
+
+        function sendMsg() {
+            const m = document.getElementById('m-input').value;
+            if(!activeChatId || !m) return;
+            const c = peer.connect(activeChatId);
             c.on('open', () => {
-                c.send({type: 'msg', txt: txt});
-                saveMsg(targetId, txt, 'sent');
-                renderMsgs(targetId);
-                inp.value = '';
+                c.send(m); render(m, 'msg-out');
+                document.getElementById('m-input').value = "";
             });
         }
 
-        function saveMsg(id, txt, dir) {
-            let h = JSON.parse(localStorage.getItem('msgs_'+id) || '[]');
-            h.push({txt, dir});
-            localStorage.setItem('msgs_'+id, JSON.stringify(h));
+        function render(t, s) {
+            const b = document.getElementById('messages');
+            b.innerHTML += `<div style="padding:10px; border-radius:10px; margin:5px; max-width:70%; background:${s==='msg-out'?'#004d5e':'#1a1f26'}; align-self:${s==='msg-out'?'flex-end':'flex-start'}">${t}</div>`;
+            b.scrollTop = b.scrollHeight;
         }
 
-        function renderMsgs(id) {
-            const box = document.getElementById('msg-box');
-            box.innerHTML = '';
-            let h = JSON.parse(localStorage.getItem('msgs_'+id) || '[]');
-            h.forEach(m => {
-                box.innerHTML += `<div class="bubble ${m.dir}">${m.txt}</div>`;
-            });
-            box.scrollTop = box.scrollHeight;
+        function updateProfile() {
+            localStorage.setItem('f_phone', document.getElementById('set-phone-val').value);
+            showToast("Профиль обновлен!");
+            closeM('set-m');
         }
 
-        function toScreen(s) {
-            document.querySelectorAll('.screen').forEach(x => x.classList.remove('active'));
-            document.getElementById(s).classList.add('active');
+        function openM(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeM(id) { document.getElementById(id).style.display = 'none'; }
+        
+        function winAction(act) {
+            try { require('electron').ipcRenderer.send(act); } catch(e) {}
         }
-
-        function openAdd() { document.getElementById('overlay').style.display = 'flex'; }
-        function closeAdd() { document.getElementById('overlay').style.display = 'none'; }
-        function save() { localStorage.setItem('fc_db', JSON.stringify(db)); }
     </script>
 </body>
 </html>
