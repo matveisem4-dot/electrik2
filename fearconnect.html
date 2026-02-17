@@ -3,100 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberGram Ultra</title>
+    <title>CyberGram OS Fix</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        :root { 
-            --bg: #080a0c; --panel: #111418; --accent: #0088cc; 
-            --text: #ffffff; --danger: #ff3b30; --success: #4cd964; 
-        }
-        body, html { 
-            margin: 0; padding: 0; background: var(--bg); color: var(--text); 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            height: 100vh; overflow: hidden; 
-        }
-        canvas { position: fixed; inset: 0; z-index: -1; opacity: 0.2; }
-
-        #lock-screen, #app, #chat-screen, #call-screen { position: fixed; inset: 0; display: none; flex-direction: column; }
-        #lock-screen { display: flex; z-index: 10000; background: var(--bg); align-items: center; justify-content: center; }
-        
+        :root { --bg: #080a0c; --panel: #111418; --accent: #0088cc; --text: #ffffff; --danger: #ff3b30; --success: #4cd964; }
+        body, html { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: sans-serif; height: 100vh; overflow: hidden; }
+        .screen { position: fixed; inset: 0; display: none; flex-direction: column; background: var(--bg); }
         header { padding: 15px 20px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; }
+        .list { flex: 1; overflow-y: auto; padding: 15px; }
+        .card { background: var(--panel); padding: 15px; border-radius: 18px; margin-bottom: 10px; display: flex; align-items: center; border: 1px solid #222; }
+        .avatar { width: 45px; height: 45px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-weight: bold; }
+        .btn { padding: 10px 15px; border-radius: 12px; border: none; cursor: pointer; font-weight: bold; color: white; }
+        .btn-accent { background: var(--accent); }
+        .btn-danger { background: var(--danger); }
+        .btn-success { background: var(--success); }
+        .chat-box { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
+        .msg { max-width: 75%; padding: 10px 14px; border-radius: 16px; font-size: 14px; }
+        .msg.me { align-self: flex-end; background: var(--accent); }
+        .msg.them { align-self: flex-start; background: var(--panel); }
         
-        .contact-list { flex: 1; overflow-y: auto; padding: 15px; }
-        .contact-card { 
-            background: var(--panel); padding: 15px; border-radius: 18px; 
-            margin-bottom: 10px; display: flex; align-items: center; 
-            border: 1px solid #222; cursor: pointer; transition: 0.2s;
-        }
-        .contact-card:active { transform: scale(0.97); }
-        .avatar { 
-            width: 48px; height: 48px; background: var(--accent); border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; 
-            font-weight: bold; margin-right: 15px; font-size: 20px;
-        }
-
-        #chat-screen { background: var(--bg); z-index: 500; }
-        .chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .msg { max-width: 75%; padding: 10px 14px; border-radius: 16px; font-size: 15px; word-wrap: break-word; }
-        .msg.me { align-self: flex-end; background: var(--accent); border-bottom-right-radius: 4px; }
-        .msg.them { align-self: flex-start; background: var(--panel); border-bottom-left-radius: 4px; }
-        
-        .input-area { padding: 15px; background: var(--panel); display: flex; gap: 10px; border-top: 1px solid #222; }
-        input[type="text"], input[type="password"], input[type="number"] { 
-            flex: 1; background: #000; border: 1px solid #333; color: white; 
-            padding: 12px; border-radius: 12px; outline: none; 
-        }
-
-        #call-screen { background: #000; z-index: 2000; }
-        #remote-video { width: 100%; height: 100%; object-fit: cover; }
-        #local-video { 
-            position: absolute; top: 20px; right: 20px; width: 100px; 
-            aspect-ratio: 3/4; border-radius: 12px; border: 2px solid var(--accent); 
-            object-fit: cover; transform: scaleX(-1); 
-        }
-        .call-ui { position: absolute; bottom: 40px; width: 100%; display: flex; justify-content: center; gap: 30px; }
+        /* Исправленный экран звонка */
+        #call-screen { background: #000; z-index: 20000; }
+        #remote-video { width: 100%; height: 100%; object-fit: cover; background: #111; }
+        #local-video { position: absolute; top: 20px; right: 20px; width: 100px; aspect-ratio: 3/4; border-radius: 12px; border: 2px solid var(--accent); object-fit: cover; transform: scaleX(-1); z-index: 21; }
+        .call-ui { position: absolute; bottom: 40px; width: 100%; display: flex; justify-content: center; gap: 30px; z-index: 22; }
         .btn-round { width: 70px; height: 70px; border-radius: 50%; border: none; color: white; font-size: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-
-        #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 11000; display: none; align-items: center; justify-content: center; }
-        .modal-box { background: var(--panel); padding: 25px; border-radius: 24px; width: 85%; max-width: 320px; text-align: center; border: 1px solid var(--accent); }
-
-        .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--accent); border-radius: 50%; border: none; color: white; font-size: 35px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
+        
+        #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 30000; display: none; align-items: center; justify-content: center; }
+        .modal-box { background: var(--panel); padding: 25px; border-radius: 20px; width: 80%; max-width: 300px; text-align: center; border: 1px solid var(--accent); }
+        .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--accent); border-radius: 50%; border: none; color: white; font-size: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
-<canvas id="canvas"></canvas>
 
-<div id="lock-screen">
-    <h1 style="color:var(--accent); letter-spacing:4px;">CYBERGRAM</h1>
-    <input type="password" id="pin" placeholder="PIN" maxlength="4" style="text-align:center; font-size:24px; width:140px;">
-    <button onclick="auth()" style="margin-top:20px; color:var(--accent); background:none; border:none; font-weight:bold; cursor:pointer;">CONNECT TO NODE</button>
+<div id="lock-screen" class="screen" style="display: flex;">
+    <h1 style="color:var(--accent)">CYBERGRAM</h1>
+    <input type="password" id="pin" placeholder="PIN" maxlength="4" style="background:var(--panel); border:1px solid var(--accent); color:white; padding:15px; border-radius:10px; text-align:center; font-size:20px; width:120px;">
+    <button onclick="auth()" style="margin-top:20px; background:none; border:none; color:var(--accent); font-weight:bold; cursor:pointer;">CONNECT</button>
 </div>
 
-<div id="app">
+<div id="app" class="screen">
     <header>
-        <div><b>ID: <span id="my-id-text">0000</span></b></div>
-        <button onclick="location.reload()" style="background:none; border:none; color:#555;">EXIT</button>
+        <div><b>ID: <span id="my-id-label">0000</span></b></div>
+        <div onclick="location.reload()">🚪</div>
     </header>
-    <div class="contact-list" id="contact-list"></div>
+    <div class="list" id="contact-list"></div>
     <button class="fab" onclick="showAddModal()">+</button>
 </div>
 
-<div id="chat-screen">
+<div id="chat-screen" class="screen">
     <header>
         <button onclick="closeChat()" style="background:none; border:none; color:var(--accent); font-size:24px;">←</button>
-        <b id="chat-name">Чат</b>
-        <button onclick="callContact(activeId)" style="background:none; border:none; font-size:22px;">📞</button>
+        <b id="chat-title">Чат</b>
+        <button onclick="callContact(activeId)" style="background:none; border:none; font-size:20px;">📞</button>
     </header>
-    <div class="chat-messages" id="chat-box"></div>
-    <div class="input-area">
-        <input type="text" id="chat-input" placeholder="Написать...">
-        <button onclick="sendMessage()" style="background:var(--accent); border:none; color:white; padding:10px 18px; border-radius:12px; font-weight:bold;">➜</button>
+    <div class="chat-box" id="msg-container"></div>
+    <div class="input-area" style="padding:15px; background:var(--panel); display:flex; gap:10px;">
+        <input type="text" id="m-inp" placeholder="..." style="flex:1; background:#000; border:1px solid #333; color:white; padding:10px; border-radius:10px;">
+        <button onclick="sendMsg()" class="btn btn-accent">➜</button>
     </div>
 </div>
 
-<div id="call-screen">
+<div id="call-screen" class="screen">
     <video id="remote-video" autoplay playsinline></video>
-    <video id="local-video" autoplay muted playsinline></video>
+    <video id="local-video" autoplay playsinline muted></video>
     <div class="call-ui">
         <button id="btn-accept" class="btn-round" style="background:var(--success); display:none;" onclick="acceptCall()">✔</button>
         <button class="btn-round" style="background:var(--danger);" onclick="hangup(true)">🛑</button>
@@ -106,12 +76,12 @@
 
 <div id="modal">
     <div class="modal-box">
-        <h3>Новый контакт</h3>
-        <input type="text" id="add-name" placeholder="Имя" style="width:90%; margin-bottom:10px;">
-        <input type="number" id="add-id" placeholder="ID" style="width:90%;">
+        <h3>Добавить</h3>
+        <input type="text" id="in-name" placeholder="Имя" style="width:90%; padding:10px; margin-bottom:10px; border-radius:8px;">
+        <input type="number" id="in-id" placeholder="ID" style="width:90%; padding:10px; border-radius:8px;">
         <div style="display:flex; gap:10px; margin-top:20px;">
-            <button onclick="hideAddModal()" style="flex:1; background:#222; border:none; color:#fff; padding:12px; border-radius:12px;">Отмена</button>
-            <button onclick="addContact()" style="flex:1; background:var(--accent); border:none; color:#fff; padding:12px; border-radius:12px;">ОК</button>
+            <button onclick="closeModal()" class="btn btn-ghost" style="flex:1; background:#333;">Отмена</button>
+            <button onclick="saveContact()" class="btn btn-accent" style="flex:1">OK</button>
         </div>
     </div>
 </div>
@@ -119,11 +89,11 @@
 <script>
     const MY_PIN = "1234";
     const myId = Math.floor(1000 + Math.random() * 9000).toString();
-    document.getElementById('my-id-text').innerText = myId;
+    document.getElementById('my-id-label').innerText = myId;
 
-    let friends = JSON.parse(localStorage.getItem('friends') || '[]');
-    let chatLog = {}; 
-    let client, pc, localStream, activeId;
+    let friends = JSON.parse(localStorage.getItem('f_v4') || '[]');
+    let chatLog = {};
+    let activeId, client, pc, localStream;
 
     function auth() {
         if(document.getElementById('pin').value === MY_PIN) {
@@ -135,140 +105,130 @@
 
     function setupMQTT() {
         client = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
-        client.on('connect', () => client.subscribe(`cyber/call/${myId}`));
+        client.on('connect', () => client.subscribe(`cyber/v4/${myId}`));
         client.on('message', async (topic, msg) => {
             const data = JSON.parse(msg.toString());
-            if (data.type === 'msg') {
-                handleIncomingMsg(data.from, data.text);
+            if(data.type === 'msg') {
+                if(!chatLog[data.from]) chatLog[data.from] = [];
+                chatLog[data.from].push({side:'them', text:data.text});
+                if(activeId === data.from) updateChatUI();
             } else if (data.type === 'offer') {
-                activeId = data.from; window.incomingOffer = data.offer;
-                checkAndAdd(data.from);
+                activeId = data.from;
+                window.incomingOffer = data.offer;
                 document.getElementById('call-screen').style.display = 'flex';
                 document.getElementById('btn-accept').style.display = 'flex';
                 document.getElementById('ring').play();
             } else if (data.type === 'answer') {
-                await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                if(pc) await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
             } else if (data.type === 'ice') {
-                if(pc) pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+                if(pc) await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
             } else if (data.type === 'hangup') { location.reload(); }
         });
     }
 
-    function renderFriends() {
-        const list = document.getElementById('contact-list');
-        list.innerHTML = friends.length ? '' : '<p style="text-align:center; opacity:0.3; margin-top:40px;">Пусто</p>';
-        friends.forEach(f => {
-            const el = document.createElement('div');
-            el.className = 'contact-card';
-            el.onclick = () => openChat(f.id, f.name);
-            el.innerHTML = `<div class="avatar">${f.name[0]}</div><div style="flex:1"><b>${f.name}</b><br><small>ID: ${f.id}</small></div>`;
-            list.appendChild(el);
+    async function startMedia() {
+        // Запрашиваем и видео, и аудио
+        localStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { width: 640, height: 480 }, 
+            audio: true 
         });
+        document.getElementById('local-video').srcObject = localStream;
+        return localStream;
     }
 
-    function openChat(id, name) {
-        activeId = id;
-        document.getElementById('chat-name').innerText = name;
-        document.getElementById('chat-screen').style.display = 'flex';
-        updateChatUI();
-    }
-    function closeChat() { document.getElementById('chat-screen').style.display = 'none'; }
-    
-    function sendMessage() {
-        const inp = document.getElementById('chat-input');
-        if(!inp.value) return;
-        client.publish(`cyber/call/${activeId}`, JSON.stringify({type:'msg', from:myId, text:inp.value}));
-        if(!chatLog[activeId]) chatLog[activeId] = [];
-        chatLog[activeId].push({side:'me', text:inp.value});
-        inp.value = ""; updateChatUI();
-    }
+    function createPC() {
+        pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+        
+        // Добавляем треки в соединение
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
-    function handleIncomingMsg(from, text) {
-        checkAndAdd(from);
-        if(!chatLog[from]) chatLog[from] = [];
-        chatLog[from].push({side:'them', text:text});
-        if(document.getElementById('chat-screen').style.display === 'flex' && activeId === from) updateChatUI();
-    }
+        pc.onicecandidate = e => {
+            if(e.candidate) client.publish(`cyber/v4/${activeId}`, JSON.stringify({type:'ice', candidate: e.candidate}));
+        };
 
-    function updateChatUI() {
-        const box = document.getElementById('chat-box'); box.innerHTML = "";
-        (chatLog[activeId] || []).forEach(m => {
-            const d = document.createElement('div'); d.className = `msg ${m.side}`;
-            d.innerText = m.text; box.appendChild(d);
-        });
-        box.scrollTop = box.scrollHeight;
-    }
-
-    function checkAndAdd(id) {
-        if(!friends.find(f => f.id === id.toString())) {
-            friends.push({name: "Неизвестный", id: id.toString()});
-            localStorage.setItem('friends', JSON.stringify(friends));
-            renderFriends();
-        }
+        pc.ontrack = e => {
+            const remoteVid = document.getElementById('remote-video');
+            if (remoteVid.srcObject !== e.streams[0]) {
+                remoteVid.srcObject = e.streams[0];
+            }
+        };
     }
 
     async function callContact(id) {
-        activeId = id; document.getElementById('call-screen').style.display = 'flex';
-        await startWebRTC(true);
-    }
-
-    async function startWebRTC(isOffer) {
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        document.getElementById('local-video').srcObject = localStream;
-        pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-        localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-        pc.onicecandidate = e => e.candidate && client.publish(`cyber/call/${activeId}`, JSON.stringify({type:'ice', candidate:e.candidate}));
-        pc.ontrack = e => document.getElementById('remote-video').srcObject = e.streams[0];
-        if(isOffer) {
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            client.publish(`cyber/call/${activeId}`, JSON.stringify({type:'offer', offer:offer, from:myId}));
-        }
+        activeId = id;
+        document.getElementById('call-screen').style.display = 'flex';
+        await startMedia();
+        createPC();
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        client.publish(`cyber/v4/${activeId}`, JSON.stringify({type:'offer', offer: offer, from: myId}));
     }
 
     async function acceptCall() {
         document.getElementById('ring').pause();
         document.getElementById('btn-accept').style.display = 'none';
-        await startWebRTC(false);
+        await startMedia();
+        createPC();
         await pc.setRemoteDescription(new RTCSessionDescription(window.incomingOffer));
-        const ans = await pc.createAnswer();
-        await pc.setLocalDescription(ans);
-        client.publish(`cyber/call/${activeId}`, JSON.stringify({type:'answer', answer:ans}));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        client.publish(`cyber/v4/${activeId}`, JSON.stringify({type:'answer', answer: answer, from: myId}));
     }
 
     function hangup(notify) {
-        if(notify && activeId) client.publish(`cyber/call/${activeId}`, JSON.stringify({type:'hangup'}));
+        if(notify) client.publish(`cyber/v4/${activeId}`, JSON.stringify({type:'hangup'}));
         location.reload();
     }
 
-    function showAddModal() { document.getElementById('modal').style.display = 'flex'; }
-    function hideAddModal() { document.getElementById('modal').style.display = 'none'; }
-    function addContact() {
-        const n = document.getElementById('add-name').value;
-        const i = document.getElementById('add-id').value;
-        if(n && i) {
-            friends.push({name: n, id: i.toString()});
-            localStorage.setItem('friends', JSON.stringify(friends));
-            renderFriends(); hideAddModal();
-        }
+    // Остальные функции чата...
+    function renderFriends() {
+        const list = document.getElementById('contact-list');
+        list.innerHTML = "";
+        friends.forEach(f => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.onclick = () => openChat(f.id, f.name);
+            card.innerHTML = `<div class="avatar">${f.name[0]}</div><div style="flex:1"><b>${f.name}</b><br><small>ID: ${f.id}</small></div>`;
+            list.appendChild(card);
+        });
     }
 
-    const cnv = document.getElementById('canvas'); const ctx = cnv.getContext('2d');
-    let pts = [];
-    function init() {
-        cnv.width = window.innerWidth; cnv.height = window.innerHeight;
-        for(let i=0; i<40; i++) pts.push({x:Math.random()*cnv.width, y:Math.random()*cnv.height, vx:Math.random()-0.5, vy:Math.random()-0.5});
+    function openChat(id, name) {
+        activeId = id;
+        document.getElementById('chat-title').innerText = name;
+        document.getElementById('chat-screen').style.display = 'flex';
+        updateChatUI();
     }
-    function loop() {
-        ctx.clearRect(0,0,cnv.width, cnv.height); ctx.fillStyle = "#0088cc";
-        pts.forEach(p => {
-            p.x += p.vx; p.y += p.vy;
-            if(p.x<0 || p.x>cnv.width) p.vx*=-1; if(p.y<0 || p.y>cnv.height) p.vy*=-1;
-            ctx.beginPath(); ctx.arc(p.x, p.y, 1.5, 0, Math.PI*2); ctx.fill();
+    function closeChat() { document.getElementById('chat-screen').style.display = 'none'; }
+    function sendMsg() {
+        const inp = document.getElementById('m-inp');
+        if(!inp.value) return;
+        client.publish(`cyber/v4/${activeId}`, JSON.stringify({type:'msg', from:myId, text:inp.value}));
+        if(!chatLog[activeId]) chatLog[activeId] = [];
+        chatLog[activeId].push({side:'me', text:inp.value});
+        inp.value = ""; updateChatUI();
+    }
+    function updateChatUI() {
+        const box = document.getElementById('msg-container');
+        box.innerHTML = "";
+        (chatLog[activeId] || []).forEach(m => {
+            const d = document.createElement('div');
+            d.className = `msg ${m.side}`; d.innerText = m.text;
+            box.appendChild(d);
         });
-        requestAnimationFrame(loop);
+        box.scrollTop = box.scrollHeight;
     }
-    init(); loop();
+    function showAddModal() { document.getElementById('modal').style.display = 'flex'; }
+    function closeModal() { document.getElementById('modal').style.display = 'none'; }
+    function saveContact() {
+        const n = document.getElementById('in-name').value;
+        const i = document.getElementById('in-id').value;
+        if(n && i) {
+            friends.push({name: n, id: i.toString()});
+            localStorage.setItem('f_v4', JSON.stringify(friends));
+            renderFriends(); closeModal();
+        }
+    }
 </script>
 </body>
 </html>
