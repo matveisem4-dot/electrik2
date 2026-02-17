@@ -2,82 +2,188 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FEAR CONNECT - DOOMSDAY</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>P2P Cyber Messenger</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        body { background: #000; color: #f00; font-family: 'Courier New', monospace; text-align: center; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .terminal { border: 10px double #f00; padding: 30px; width: 90%; max-width: 500px; box-shadow: 0 0 50px #f00; background: rgba(20,0,0,0.9); }
-        h1 { font-size: 2.5rem; text-transform: uppercase; margin: 0; }
-        #status { color: #fff; margin: 20px 0; font-size: 1.1rem; text-shadow: 0 0 10px #f00; }
-        .btn-group { display: flex; flex-direction: column; gap: 15px; }
-        button { padding: 25px; font-size: 1.5rem; font-weight: 900; cursor: pointer; border: none; text-transform: uppercase; }
-        .hack { background: #f00; color: #000; }
-        .reset { background: #444; color: #fff; font-size: 1rem; }
-        #console { font-size: 0.7rem; color: #0f0; text-align: left; margin-top: 20px; height: 80px; overflow: hidden; border: 1px solid #333; padding: 5px; }
+        :root { --accent: #2481cc; --danger: #e53935; --success: #31b545; }
+        body { margin: 0; background: #0e1621; color: white; font-family: sans-serif; overflow: hidden; }
+        
+        /* Экран пароля */
+        #lock-screen { position: fixed; inset: 0; background: #0e1621; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
+        /* Главное меню */
+        #main-app { display: none; padding: 20px; text-align: center; }
+        .btn { background: var(--accent); color: white; border: none; padding: 15px; border-radius: 12px; width: 100%; max-width: 300px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        input { background: #17212b; border: 1px solid #2b5278; color: white; padding: 12px; border-radius: 10px; width: 80%; max-width: 280px; margin: 10px 0; text-align: center; }
+
+        /* Окно вызова */
+        #incoming-call { position: fixed; inset: 0; background: radial-gradient(circle, #1c2a3d, #0e1621); display: none; flex-direction: column; align-items: center; justify-content: space-around; z-index: 2000; }
+        
+        /* Видео контейнеры */
+        #video-chat { display: none; position: fixed; inset: 0; background: black; z-index: 1500; }
+        .video-wrapper { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        
+        #remote-video { 
+            width: 100%; height: 100%; object-fit: cover; 
+            transition: box-shadow 0.3s ease;
+        }
+        /* Подсветка говорящего */
+        .speaking { box-shadow: inset 0 0 40px 10px var(--success); }
+
+        #local-video { 
+            position: absolute; top: 20px; right: 20px; width: 30%; max-width: 120px; 
+            aspect-ratio: 3/4; object-fit: cover; border-radius: 12px; border: 2px solid var(--accent); transform: scaleX(-1); 
+        }
+        
+        .controls { position: absolute; bottom: 40px; width: 100%; display: flex; justify-content: center; }
+        .hangup-btn { background: var(--danger); width: 70px; height: 70px; border-radius: 50%; border: none; color: white; font-size: 30px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div class="terminal">
-    <h1>DOOMSDAY v8.0</h1>
-    <div id="status">ЦЕЛЬ: TOTAL SYSTEM OVERRIDE</div>
-    
-    <div class="btn-group">
-        <button class="hack" onclick="doomsday('HACK')">ВЫЖЕЧЬ ЛИМИТЫ (30 КМ/Ч)</button>
-        <button class="reset" onclick="doomsday('RESET')">ОТКАТИТЬ В СТОК (20 КМ/Ч)</button>
+    <div id="lock-screen">
+        <h2>P2P CRYPTO CALL</h2>
+        <input type="password" id="pass-input" placeholder="Пароль">
+        <button class="btn" onclick="checkPass()">ВОЙТИ</button>
     </div>
 
-    <div id="console">ОЖИДАНИЕ УДАРА...</div>
-</div>
+    <div id="main-app">
+        <p>Ваш ID: <b id="my-id-val">...</b></p>
+        <input type="text" id="target-id" placeholder="ID собеседника">
+        <button class="btn" onclick="startCallRequest()">📞 НАЧАТЬ ЗВОНОК</button>
+    </div>
+
+    <div id="incoming-call">
+        <h1 id="caller-id-label">Входящий вызов...</h1>
+        <div style="display: flex; gap: 40px;">
+            <button onclick="acceptCall()" style="background:var(--success); width:80px; height:80px; border-radius:50%; border:none; color:white; font-size:35px;">✔</button>
+            <button onclick="rejectCall(true)" style="background:var(--danger); width:80px; height:80px; border-radius:50%; border:none; color:white; font-size:35px;">✖</button>
+        </div>
+    </div>
+
+    <div id="video-chat">
+        <div class="video-wrapper" id="v-wrapper">
+            <video id="remote-video" autoplay playsinline></video>
+            <video id="local-video" autoplay muted playsinline></audio>
+        </div>
+        <div class="controls">
+            <button class="hangup-btn" onclick="rejectCall(true)">🛑</button>
+        </div>
+    </div>
+
+    <audio id="ringtone" loop src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"></audio>
 
 <script>
-async function doomsday(mode) {
-    const con = document.getElementById('console');
-    const log = (m) => { con.innerHTML += "> " + m + "<br>"; con.scrollTop = con.scrollHeight; };
-    
-    try {
-        log("ЗАПУСК ЦИКЛА ВЗЛОМА...");
-        // Запрашиваем ВСЁ. Без исключений.
-        const device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: [
-                '00001a00-0000-1000-8000-00805f9b34fb', 
-                '0000fe95-0000-1000-8000-00805f9b34fb',
-                '0000180a-0000-1000-8000-00805f9b34fb',
-                '00001800-0000-1000-8000-00805f9b34fb'
-            ]
-        });
+    const USER_PASS = "1234";
+    const myId = Math.floor(1000 + Math.random() * 9000).toString();
+    document.getElementById('my-id-val').innerText = myId;
 
-        log("ВТОРЖЕНИЕ В ЯДРО...");
-        const server = await device.gatt.connect();
-        
-        // Массированный поиск любой лазейки
-        const services = await server.getPrimaryServices();
-        log("НАЙДЕНО КАНАЛОВ: " + services.length);
+    let client, pc, targetId, localStream;
 
-        const data = mode === 'HACK' 
-            ? new Uint8Array([0x55, 0xAA, 0x03, 0x22, 0x01, 0x02, 0x14, 0x01, 0xC3]) 
-            : new Uint8Array([0x55, 0xAA, 0x03, 0x22, 0x01, 0x02, 0x0F, 0x01, 0xC8]);
-
-        for (const s of services) {
-            try {
-                const chars = await s.getCharacteristics();
-                for (const c of chars) {
-                    if (c.properties.write || c.properties.writeWithoutResponse) {
-                        log("УДАР ПО СЕКТОРУ: " + c.uuid.substring(0,4));
-                        await c.writeValue(data).catch(() => {});
-                    }
-                }
-            } catch (e) { continue; }
+    function checkPass() {
+        if(document.getElementById('pass-input').value === USER_PASS) {
+            document.getElementById('lock-screen').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            connectToMQTT();
         }
-
-        log("СИСТЕМА ПЕРЕГРУЖЕНА. ПРИКАЗ ПРИНЯТ.");
-        alert("ГОТОВО! Если процессор выжил — он теперь твой раб. Перезагрузи самокат!");
-
-    } catch (e) {
-        log("КРИТИЧЕСКАЯ ОШИБКА: " + e.message);
     }
-}
+
+    function connectToMQTT() {
+        client = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
+        client.on('connect', () => client.subscribe(`p2p/call/${myId}`));
+        
+        client.on('message', async (topic, msg) => {
+            const data = JSON.parse(msg.toString());
+            if (data.type === 'offer') {
+                targetId = data.from;
+                window.pendingOffer = data.offer;
+                document.getElementById('incoming-call').style.display = 'flex';
+                document.getElementById('ringtone').play();
+            } else if (data.type === 'answer') {
+                await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+            } else if (data.type === 'ice') {
+                if(pc) pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+            } else if (data.type === 'hangup') {
+                stopAll();
+            }
+        });
+    }
+
+    async function startCallRequest() {
+        targetId = document.getElementById('target-id').value;
+        if(!targetId) return;
+        initCall(true);
+    }
+
+    async function initCall(isOffer) {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        document.getElementById('local-video').srcObject = localStream;
+        document.getElementById('video-chat').style.display = 'block';
+        
+        pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+        
+        localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+        pc.onicecandidate = e => e.candidate && sendSignal({ type: 'ice', candidate: e.candidate });
+        pc.ontrack = e => {
+            document.getElementById('remote-video').srcObject = e.streams[0];
+            detectVolume(e.streams[0]); // Включаем подсветку
+        };
+
+        if(isOffer) {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            sendSignal({ type: 'offer', offer: offer, from: myId });
+        }
+    }
+
+    async function acceptCall() {
+        document.getElementById('ringtone').pause();
+        document.getElementById('incoming-call').style.display = 'none';
+        await initCall(false);
+        await pc.setRemoteDescription(new RTCSessionDescription(window.pendingOffer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        sendSignal({ type: 'answer', answer: answer });
+    }
+
+    function rejectCall(notify) {
+        if(notify) sendSignal({ type: 'hangup' });
+        stopAll();
+    }
+
+    function stopAll() {
+        if(localStream) localStream.getTracks().forEach(t => t.stop());
+        location.reload(); 
+    }
+
+    function sendSignal(data) {
+        client.publish(`p2p/call/${targetId}`, JSON.stringify(data));
+    }
+
+    // Детектор голоса для подсветки
+    function detectVolume(stream) {
+        const audioContext = new AudioContext();
+        const source = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        function check() {
+            analyser.getByteFrequencyData(dataArray);
+            let sum = dataArray.reduce((a, b) => a + b, 0);
+            let average = sum / dataArray.length;
+            const remoteVideo = document.getElementById('remote-video');
+            if(average > 30) { // Чувствительность
+                remoteVideo.classList.add('speaking');
+            } else {
+                remoteVideo.classList.remove('speaking');
+            }
+            requestAnimationFrame(check);
+        }
+        check();
+    }
 </script>
 </body>
 </html>
