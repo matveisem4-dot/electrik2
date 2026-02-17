@@ -6,289 +6,312 @@
     <title>CyberGram Ultra</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        :root {
-            --bg: #080a0c;
-            --panel: #111418;
-            --accent: #0088cc;
-            --accent-glow: rgba(0, 136, 204, 0.4);
-            --text: #ffffff;
-            --danger: #ff3b30;
-            --success: #4cd964;
+        :root { 
+            --bg: #080a0c; --panel: #111418; --accent: #0088cc; 
+            --text: #ffffff; --danger: #ff3b30; --success: #4cd964; 
         }
-
         body, html { 
             margin: 0; padding: 0; background: var(--bg); color: var(--text); 
-            font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; height: 100vh; overflow: hidden; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            height: 100vh; overflow: hidden; 
         }
+        canvas { position: fixed; inset: 0; z-index: -1; opacity: 0.2; }
 
-        #bg-canvas { position: fixed; inset: 0; z-index: -1; opacity: 0.3; }
-
-        /* Вход */
-        #lock-screen { 
-            position: fixed; inset: 0; background: var(--bg); z-index: 10000; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-        }
-        .pass-box { 
-            background: var(--panel); border: 2px solid var(--accent); color: white; 
-            padding: 20px; border-radius: 20px; font-size: 24px; text-align: center; 
-            width: 220px; outline: none; box-shadow: 0 0 20px var(--accent-glow);
-        }
-
-        /* Интерфейс */
-        #app { display: none; flex-direction: column; height: 100vh; }
-        header { 
-            padding: 20px; background: var(--panel); display: flex; 
-            justify-content: space-between; align-items: center; border-bottom: 1px solid #222;
-        }
-
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-        .online { background: var(--success); box-shadow: 0 0 10px var(--success); }
-
+        /* Экраны */
+        #lock-screen, #app, #chat-screen, #call-screen { position: fixed; inset: 0; display: none; flex-direction: column; }
+        #lock-screen { display: flex; z-index: 10000; background: var(--bg); align-items: center; justify-content: center; }
+        
+        /* Заголовок */
+        header { padding: 15px 20px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; }
+        
+        /* Список контактов */
         .contact-list { flex: 1; overflow-y: auto; padding: 15px; }
         .contact-card { 
             background: var(--panel); padding: 15px; border-radius: 18px; 
-            margin-bottom: 12px; display: flex; align-items: center; 
-            border: 1px solid #222; transition: 0.3s;
+            margin-bottom: 10px; display: flex; align-items: center; 
+            border: 1px solid #222; cursor: pointer; transition: 0.2s;
         }
-        .contact-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-        
-        .avatar-circle { 
-            width: 50px; height: 50px; background: linear-gradient(45deg, var(--accent), #00c6ff); 
-            border-radius: 50%; display: flex; align-items: center; justify-content: center; 
-            font-weight: bold; font-size: 20px; margin-right: 15px;
-        }
-
-        .call-btn-main { 
-            background: var(--accent); border: none; color: white; padding: 10px 20px; 
-            border-radius: 12px; font-weight: bold; cursor: pointer;
+        .contact-card:active { transform: scale(0.97); }
+        .avatar { 
+            width: 48px; height: 48px; background: var(--accent); border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: bold; margin-right: 15px; font-size: 20px;
         }
 
-        /* КРАСИВОЕ МОДАЛЬНОЕ ОКНО (Вместо того, что на скрине) */
-        #custom-modal {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(10px); z-index: 11000;
-            display: none; align-items: center; justify-content: center;
+        /* Чат */
+        #chat-screen { background: var(--bg); z-index: 500; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
+        .msg { max-width: 75%; padding: 10px 14px; border-radius: 16px; font-size: 15px; word-wrap: break-word; }
+        .msg.me { align-self: flex-end; background: var(--accent); border-bottom-right-radius: 4px; }
+        .msg.them { align-self: flex-start; background: var(--panel); border-bottom-left-radius: 4px; }
+        .input-area { padding: 15px; background: var(--panel); display: flex; gap: 10px; border-top: 1px solid #222; }
+        input[type="text"], input[type="password"], input[type="number"] { 
+            flex: 1; background: #000; border: 1px solid #333; color: white; 
+            padding: 12px; border-radius: 12px; outline: none; 
         }
-        .modal-content {
-            background: var(--panel); border: 1px solid var(--accent);
-            padding: 30px; border-radius: 25px; width: 85%; max-width: 350px;
-            text-align: center; box-shadow: 0 0 30px rgba(0,0,0,0.5);
-        }
-        .modal-input {
-            background: #080a0c; border: 1px solid #333; color: white;
-            padding: 15px; border-radius: 12px; width: 90%; margin: 10px 0; outline: none;
-        }
-        .modal-input:focus { border-color: var(--accent); }
 
-        /* Экран звонка */
-        #call-screen { 
-            position: fixed; inset: 0; background: #000; z-index: 8000; 
-            display: none; flex-direction: column; 
-        }
+        /* Видеозвонок */
+        #call-screen { background: #000; z-index: 2000; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; }
         #local-video { 
-            position: absolute; top: 30px; right: 20px; width: 110px; 
-            aspect-ratio: 3/4; border-radius: 15px; border: 2px solid var(--accent); 
-            object-fit: cover; transform: scaleX(-1);
+            position: absolute; top: 20px; right: 20px; width: 100px; 
+            aspect-ratio: 3/4; border-radius: 12px; border: 2px solid var(--accent); 
+            object-fit: cover; transform: scaleX(-1); 
         }
-        .call-ui { 
-            position: absolute; bottom: 50px; width: 100%; 
-            display: flex; justify-content: center; gap: 30px; 
-        }
-        .round-btn { 
-            width: 75px; height: 75px; border-radius: 50%; border: none; 
+        .call-ui { position: absolute; bottom: 40px; width: 100%; display: flex; justify-content: center; gap: 30px; }
+        .btn-round { 
+            width: 70px; height: 70px; border-radius: 50%; border: none; 
             color: white; font-size: 30px; cursor: pointer; display: flex; 
             align-items: center; justify-content: center;
         }
 
+        /* Модалка (вместо prompt) */
+        #modal { 
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85); 
+            backdrop-filter: blur(8px); z-index: 11000; 
+            display: none; align-items: center; justify-content: center; 
+        }
+        .modal-box { 
+            background: var(--panel); padding: 25px; border-radius: 24px; 
+            width: 85%; max-width: 320px; text-align: center; border: 1px solid var(--accent); 
+        }
+
         .fab { 
-            position: fixed; bottom: 30px; right: 30px; width: 65px; height: 65px; 
+            position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; 
             background: var(--accent); border-radius: 50%; border: none; 
-            color: white; font-size: 35px; box-shadow: 0 5px 20px rgba(0,0,0,0.5); 
+            color: white; font-size: 35px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); 
         }
     </style>
 </head>
 <body>
 
-    <canvas id="bg-canvas"></canvas>
+<canvas id="canvas"></canvas>
 
-    <div id="custom-modal">
-        <div class="modal-content">
-            <h3 style="margin-top:0">Новый контакт</h3>
-            <input type="text" id="new-name" class="modal-input" placeholder="Имя друга">
-            <input type="number" id="new-id" class="modal-input" placeholder="ID (4 цифры)">
-            <div style="display:flex; gap:10px; margin-top:20px;">
-                <button onclick="closeModal()" style="flex:1; background:#222; border:none; color:white; padding:12px; border-radius:10px;">Отмена</button>
-                <button onclick="saveContact()" style="flex:1; background:var(--accent); border:none; color:white; padding:12px; border-radius:10px; font-weight:bold;">OK</button>
-            </div>
+<div id="lock-screen">
+    <h1 style="color:var(--accent); letter-spacing:4px; margin-bottom:30px;">CYBERGRAM</h1>
+    <input type="password" id="pin" placeholder="PIN-CODE" maxlength="4" style="text-align:center; font-size:24px; width:140px; letter-spacing:5px;">
+    <button onclick="auth()" style="margin-top:20px; color:var(--accent); background:none; border:none; font-weight:bold; cursor:pointer;">CONNECT TO NODE</button>
+</div>
+
+<div id="app">
+    <header>
+        <div><b>ID: <span id="my-id-text">0000</span></b></div>
+        <button onclick="location.reload()" style="background:none; border:none; color:#555;">EXIT</button>
+    </header>
+    <div class="contact-list" id="contact-list"></div>
+    <button class="fab" onclick="showAddModal()">+</button>
+</div>
+
+<div id="chat-screen">
+    <header>
+        <button onclick="closeChat()" style="background:none; border:none; color:var(--accent); font-size:24px;">←</button>
+        <b id="chat-name">Имя</b>
+        <button onclick="callContact(activeId)" style="background:none; border:none; font-size:22px;">📞</button>
+    </header>
+    <div class="chat-messages" id="chat-box"></div>
+    <div class="input-area">
+        <input type="text" id="chat-input" placeholder="Написать...">
+        <button onclick="sendMessage()" style="background:var(--accent); border:none; color:white; padding:10px 18px; border-radius:12px; font-weight:bold;">➜</button>
+    </div>
+</div>
+
+<div id="call-screen">
+    <video id="remote-video" autoplay playsinline></video>
+    <video id="local-video" autoplay muted playsinline></video>
+    <div class="call-ui">
+        <button id="btn-accept" class="btn-round" style="background:var(--success); display:none;" onclick="acceptCall()">✔</button>
+        <button class="btn-round" style="background:var(--danger);" onclick="hangup(true)">🛑</button>
+    </div>
+    <audio id="ring" loop src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3"></audio>
+</div>
+
+<div id="modal">
+    <div class="modal-box">
+        <h3 style="margin-top:0">Новый контакт</h3>
+        <input type="text" id="add-name" placeholder="Имя друга" style="width:90%; margin-bottom:10px;">
+        <input type="number" id="add-id" placeholder="ID (4 цифры)" style="width:90%;">
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button onclick="hideAddModal()" style="flex:1; background:#222; border:none; color:#fff; padding:12px; border-radius:12px;">Отмена</button>
+            <button onclick="addContact()" style="flex:1; background:var(--accent); border:none; color:#fff; padding:12px; border-radius:12px; font-weight:bold;">ДОБАВИТЬ</button>
         </div>
     </div>
-
-    <div id="lock-screen">
-        <h1 style="letter-spacing: 5px; color: var(--accent);">CYBERGRAM</h1>
-        <input type="password" id="pass" class="pass-box" placeholder="PIN" maxlength="4">
-        <button onclick="checkAuth()" style="margin-top:20px; background:none; border:none; color:var(--accent); cursor:pointer; font-weight:bold;">ACCESS SYSTEM</button>
-    </div>
-
-    <div id="app">
-        <header>
-            <div><span class="status-dot online"></span> <b>SECURE NODE: <span id="my-id-label">0000</span></b></div>
-            <button onclick="location.reload()" style="background:none; border:none; color:#555;">LOGOUT</button>
-        </header>
-
-        <div class="contact-list" id="contacts-container"></div>
-
-        <button class="fab" onclick="openModal()">+</button>
-    </div>
-
-    <div id="call-screen">
-        <video id="remote-video" autoplay playsinline></video>
-        <video id="local-video" autoplay muted playsinline></video>
-        <div class="call-ui">
-            <button class="round-btn" id="accept-btn" style="background: var(--success); display: none;" onclick="answer()">✔</button>
-            <button class="round-btn" style="background: var(--danger);" onclick="hangup(true)">🛑</button>
-        </div>
-        <audio id="ring" loop src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"></audio>
-    </div>
+</div>
 
 <script>
-    const PIN = "1234";
+    const MY_PIN = "1234";
     const myId = Math.floor(1000 + Math.random() * 9000).toString();
-    document.getElementById('my-id-label').innerText = myId;
+    document.getElementById('my-id-text').innerText = myId;
 
     let friends = JSON.parse(localStorage.getItem('friends') || '[]');
-    let client, pc, localStream, activeTargetId;
+    let chatLog = {}; 
+    let client, pc, localStream, activeId;
 
-    // ФУНКЦИИ МОДАЛЬНОГО ОКНА
-    function openModal() { document.getElementById('custom-modal').style.display = 'flex'; }
-    function closeModal() { document.getElementById('custom-modal').style.display = 'none'; }
-    
-    function saveContact() {
-        const name = document.getElementById('new-name').value;
-        const id = document.getElementById('new-id').value;
-        if(name && id) {
-            friends.push({name, id});
-            localStorage.setItem('friends', JSON.stringify(friends));
-            renderFriends();
-            closeModal();
-            // Очистка полей
-            document.getElementById('new-name').value = "";
-            document.getElementById('new-id').value = "";
-        }
-    }
-
-    function checkAuth() {
-        if(document.getElementById('pass').value === PIN) {
+    function auth() {
+        if(document.getElementById('pin').value === MY_PIN) {
             document.getElementById('lock-screen').style.display = 'none';
             document.getElementById('app').style.display = 'flex';
-            initApp();
-        } else {
-            alert("ACCESS DENIED");
-            document.getElementById('pass').value = "";
-        }
+            setupMQTT();
+            renderFriends();
+        } else { alert("ACCESS DENIED"); }
     }
 
-    function renderFriends() {
-        const container = document.getElementById('contacts-container');
-        container.innerHTML = friends.length ? '' : '<p style="text-align:center; opacity:0.3; margin-top:50px;">Нет активных каналов связи</p>';
-        friends.forEach(f => {
-            const card = document.createElement('div');
-            card.className = 'contact-card';
-            card.innerHTML = `
-                <div class="avatar-circle">${f.name[0].toUpperCase()}</div>
-                <div style="flex:1">
-                    <div style="font-weight:bold">${f.name}</div>
-                    <div style="font-size:12px; color:var(--accent)">+P2P-SYS-${f.id}</div>
-                </div>
-                <button class="call-btn-main" onclick="startCall('${f.id}')">CALL</button>
-            `;
-            container.appendChild(card);
-        });
-    }
-
-    function initApp() {
-        renderFriends();
+    function setupMQTT() {
         client = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
-        client.on('connect', () => client.subscribe(`cybergram/call/${myId}`));
+        client.on('connect', () => client.subscribe(`cyber/call/${myId}`));
         
         client.on('message', async (topic, msg) => {
             const data = JSON.parse(msg.toString());
-            if (data.type === 'offer') {
-                activeTargetId = data.from;
+            
+            if (data.type === 'msg') {
+                handleIncomingMsg(data.from, data.text);
+            } else if (data.type === 'offer') {
+                activeId = data.from;
                 window.incomingOffer = data.offer;
+                checkAndAdd(data.from);
                 document.getElementById('call-screen').style.display = 'flex';
-                document.getElementById('accept-btn').style.display = 'flex';
+                document.getElementById('btn-accept').style.display = 'flex';
                 document.getElementById('ring').play();
             } else if (data.type === 'answer') {
                 await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
             } else if (data.type === 'ice') {
                 if(pc) pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-            } else if (data.type === 'hangup') {
-                location.reload();
-            }
+            } else if (data.type === 'hangup') { location.reload(); }
         });
     }
 
-    async function startCall(id) {
-        activeTargetId = id;
-        document.getElementById('call-screen').style.display = 'flex';
-        await startMedia(true);
+    function renderFriends() {
+        const list = document.getElementById('contact-list');
+        list.innerHTML = friends.length ? '' : '<p style="text-align:center; opacity:0.3; margin-top:40px;">Нет активных чатов</p>';
+        friends.forEach(f => {
+            const el = document.createElement('div');
+            el.className = 'contact-card';
+            el.onclick = () => openChat(f.id, f.name);
+            el.innerHTML = `<div class="avatar">${f.name[0]}</div><div style="flex:1"><b>${f.name}</b><br><small style="color:var(--accent)">ID: ${f.id}</small></div>`;
+            list.appendChild(el);
+        });
     }
 
-    async function startMedia(isOffer) {
-        localStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "user" }, 
-            audio: { echoCancellation: true, noiseSuppression: true } 
-        });
-        document.getElementById('local-video').srcObject = localStream;
-        pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-        localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-        pc.onicecandidate = e => e.candidate && sendSignal({ type: 'ice', candidate: e.candidate });
-        pc.ontrack = e => { document.getElementById('remote-video').srcObject = e.streams[0]; };
-        if(isOffer) {
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            sendSignal({ type: 'offer', offer: offer, from: myId });
+    // ЧАТ
+    function openChat(id, name) {
+        activeId = id;
+        document.getElementById('chat-name').innerText = name;
+        document.getElementById('chat-screen').style.display = 'flex';
+        updateChatUI();
+    }
+    function closeChat() { document.getElementById('chat-screen').style.display = 'none'; }
+    
+    function sendMessage() {
+        const inp = document.getElementById('chat-input');
+        if(!inp.value) return;
+        client.publish(`cyber/call/${activeId}`, JSON.stringify({type:'msg', from:myId, text:inp.value}));
+        saveMsg(activeId, 'me', inp.value);
+        inp.value = "";
+        updateChatUI();
+    }
+
+    function handleIncomingMsg(from, text) {
+        checkAndAdd(from);
+        saveMsg(from, 'them', text);
+        if(document.getElementById('chat-screen').style.display === 'flex' && activeId === from) {
+            updateChatUI();
+        } else {
+            alert("Сообщение от " + from);
         }
     }
 
-    async function answer() {
-        document.getElementById('ring').pause();
-        document.getElementById('accept-btn').style.display = 'none';
-        await startMedia(false);
-        await pc.setRemoteDescription(new RTCSessionDescription(window.incomingOffer));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        sendSignal({ type: 'answer', answer: answer });
+    function saveMsg(id, side, text) {
+        if(!chatLog[id]) chatLog[id] = [];
+        chatLog[id].push({side, text});
     }
 
-    function sendSignal(data) { client.publish(`cybergram/call/${activeTargetId}`, JSON.stringify(data)); }
+    function updateChatUI() {
+        const box = document.getElementById('chat-box');
+        box.innerHTML = "";
+        (chatLog[activeId] || []).forEach(m => {
+            const d = document.createElement('div');
+            d.className = `msg ${m.side}`;
+            d.innerText = m.text;
+            box.appendChild(d);
+        });
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function checkAndAdd(id) {
+        if(!friends.find(f => f.id === id.toString())) {
+            friends.push({name: "Неизвестный", id: id.toString()});
+            localStorage.setItem('friends', JSON.stringify(friends));
+            renderFriends();
+        }
+    }
+
+    // ЗВОНКИ
+    async function callContact(id) {
+        activeId = id;
+        document.getElementById('call-screen').style.display = 'flex';
+        await startWebRTC(true);
+    }
+
+    async function startWebRTC(isOffer) {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: { echoCancellation: true } });
+        document.getElementById('local-video').srcObject = localStream;
+        pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+        localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+        pc.onicecandidate = e => e.candidate && client.publish(`cyber/call/${activeId}`, JSON.stringify({type:'ice', candidate:e.candidate}));
+        pc.ontrack = e => document.getElementById('remote-video').srcObject = e.streams[0];
+        if(isOffer) {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            client.publish(`cyber/call/${activeId}`, JSON.stringify({type:'offer', offer:offer, from:myId}));
+        }
+    }
+
+    async function acceptCall() {
+        document.getElementById('ring').pause();
+        document.getElementById('btn-accept').style.display = 'none';
+        await startWebRTC(false);
+        await pc.setRemoteDescription(new RTCSessionDescription(window.incomingOffer));
+        const ans = await pc.createAnswer();
+        await pc.setLocalDescription(ans);
+        client.publish(`cyber/call/${activeId}`, JSON.stringify({type:'answer', answer:ans}));
+    }
+
     function hangup(notify) {
-        if(notify && activeTargetId) sendSignal({ type: 'hangup' });
+        if(notify && activeId) client.publish(`cyber/call/${activeId}`, JSON.stringify({type:'hangup'}));
         location.reload();
     }
 
-    // Canvas Background
-    const canvas = document.getElementById('bg-canvas');
-    const ctx = canvas.getContext('2d');
-    let dots = [];
-    function initCanvas() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        for(let i=0; i<50; i++) dots.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, vx: Math.random()-0.5, vy: Math.random()-0.5});
+    // МОДАЛКА
+    function showAddModal() { document.getElementById('modal').style.display = 'flex'; }
+    function hideAddModal() { document.getElementById('modal').style.display = 'none'; }
+    function addContact() {
+        const n = document.getElementById('add-name').value;
+        const i = document.getElementById('add-id').value;
+        if(n && i) {
+            friends.push({name: n, id: i.toString()});
+            localStorage.setItem('friends', JSON.stringify(friends));
+            renderFriends(); hideAddModal();
+        }
     }
-    function draw() {
-        ctx.clearRect(0,0,canvas.width, canvas.height);
-        ctx.fillStyle = "#0088cc";
-        dots.forEach(d => {
-            d.x += d.vx; d.y += d.vy;
-            if(d.x<0 || d.x>canvas.width) d.vx *= -1;
-            if(d.y<0 || d.y>canvas.height) d.vy *= -1;
-            ctx.beginPath(); ctx.arc(d.x, d.y, 2, 0, Math.PI*2); ctx.fill();
+
+    // FON
+    const cnv = document.getElementById('canvas');
+    const ctx = cnv.getContext('2d');
+    let pts = [];
+    function resize() { cnv.width = window.innerWidth; cnv.height = window.innerHeight; }
+    function init() {
+        resize();
+        for(let i=0; i<40; i++) pts.push({x:Math.random()*cnv.width, y:Math.random()*cnv.height, vx:Math.random()-0.5, vy:Math.random()-0.5});
+    }
+    function loop() {
+        ctx.clearRect(0,0,cnv.width, cnv.height); ctx.fillStyle = "#0088cc";
+        pts.forEach(p => {
+            p.x += p.vx; p.y += p.vy;
+            if(p.x<0 || p.x>cnv.width) p.vx*=-1; if(p.y<0 || p.y>cnv.height) p.vy*=-1;
+            ctx.beginPath(); ctx.arc(p.x, p.y, 1.5, 0, Math.PI*2); ctx.fill();
         });
-        requestAnimationFrame(draw);
+        requestAnimationFrame(loop);
     }
-    initCanvas(); draw();
+    window.onresize = resize; init(); loop();
 </script>
 </body>
 </html>
