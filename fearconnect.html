@@ -21,7 +21,6 @@
             font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; height: 100vh; overflow: hidden; 
         }
 
-        /* Анимированный фон */
         #bg-canvas { position: fixed; inset: 0; z-index: -1; opacity: 0.3; }
 
         /* Вход */
@@ -64,6 +63,23 @@
             border-radius: 12px; font-weight: bold; cursor: pointer;
         }
 
+        /* КРАСИВОЕ МОДАЛЬНОЕ ОКНО (Вместо того, что на скрине) */
+        #custom-modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px); z-index: 11000;
+            display: none; align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background: var(--panel); border: 1px solid var(--accent);
+            padding: 30px; border-radius: 25px; width: 85%; max-width: 350px;
+            text-align: center; box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+        .modal-input {
+            background: #080a0c; border: 1px solid #333; color: white;
+            padding: 15px; border-radius: 12px; width: 90%; margin: 10px 0; outline: none;
+        }
+        .modal-input:focus { border-color: var(--accent); }
+
         /* Экран звонка */
         #call-screen { 
             position: fixed; inset: 0; background: #000; z-index: 8000; 
@@ -96,10 +112,22 @@
 
     <canvas id="bg-canvas"></canvas>
 
+    <div id="custom-modal">
+        <div class="modal-content">
+            <h3 style="margin-top:0">Новый контакт</h3>
+            <input type="text" id="new-name" class="modal-input" placeholder="Имя друга">
+            <input type="number" id="new-id" class="modal-input" placeholder="ID (4 цифры)">
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button onclick="closeModal()" style="flex:1; background:#222; border:none; color:white; padding:12px; border-radius:10px;">Отмена</button>
+                <button onclick="saveContact()" style="flex:1; background:var(--accent); border:none; color:white; padding:12px; border-radius:10px; font-weight:bold;">OK</button>
+            </div>
+        </div>
+    </div>
+
     <div id="lock-screen">
         <h1 style="letter-spacing: 5px; color: var(--accent);">CYBERGRAM</h1>
         <input type="password" id="pass" class="pass-box" placeholder="PIN" maxlength="4">
-        <button onclick="checkAuth()" style="margin-top:20px; background:none; border:none; color:var(--accent); cursor:pointer;">ACCESS SYSTEM</button>
+        <button onclick="checkAuth()" style="margin-top:20px; background:none; border:none; color:var(--accent); cursor:pointer; font-weight:bold;">ACCESS SYSTEM</button>
     </div>
 
     <div id="app">
@@ -110,7 +138,7 @@
 
         <div class="contact-list" id="contacts-container"></div>
 
-        <button class="fab" onclick="addFriend()">+</button>
+        <button class="fab" onclick="openModal()">+</button>
     </div>
 
     <div id="call-screen">
@@ -131,7 +159,24 @@
     let friends = JSON.parse(localStorage.getItem('friends') || '[]');
     let client, pc, localStream, activeTargetId;
 
-    // --- АВТОРИЗАЦИЯ ---
+    // ФУНКЦИИ МОДАЛЬНОГО ОКНА
+    function openModal() { document.getElementById('custom-modal').style.display = 'flex'; }
+    function closeModal() { document.getElementById('custom-modal').style.display = 'none'; }
+    
+    function saveContact() {
+        const name = document.getElementById('new-name').value;
+        const id = document.getElementById('new-id').value;
+        if(name && id) {
+            friends.push({name, id});
+            localStorage.setItem('friends', JSON.stringify(friends));
+            renderFriends();
+            closeModal();
+            // Очистка полей
+            document.getElementById('new-name').value = "";
+            document.getElementById('new-id').value = "";
+        }
+    }
+
     function checkAuth() {
         if(document.getElementById('pass').value === PIN) {
             document.getElementById('lock-screen').style.display = 'none';
@@ -143,7 +188,6 @@
         }
     }
 
-    // --- КОНТАКТЫ ---
     function renderFriends() {
         const container = document.getElementById('contacts-container');
         container.innerHTML = friends.length ? '' : '<p style="text-align:center; opacity:0.3; margin-top:50px;">Нет активных каналов связи</p>';
@@ -162,17 +206,6 @@
         });
     }
 
-    function addFriend() {
-        const name = prompt("Имя контакта:");
-        const id = prompt("ID (4 цифры):");
-        if(name && id) {
-            friends.push({name, id});
-            localStorage.setItem('friends', JSON.stringify(friends));
-            renderFriends();
-        }
-    }
-
-    // --- СИГНАЛИЗАЦИЯ (MQTT) ---
     function initApp() {
         renderFriends();
         client = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
@@ -196,7 +229,6 @@
         });
     }
 
-    // --- P2P СВЯЗЬ ---
     async function startCall(id) {
         activeTargetId = id;
         document.getElementById('call-screen').style.display = 'flex';
@@ -209,15 +241,10 @@
             audio: { echoCancellation: true, noiseSuppression: true } 
         });
         document.getElementById('local-video').srcObject = localStream;
-
         pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
         localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-
         pc.onicecandidate = e => e.candidate && sendSignal({ type: 'ice', candidate: e.candidate });
-        pc.ontrack = e => {
-            document.getElementById('remote-video').srcObject = e.streams[0];
-        };
-
+        pc.ontrack = e => { document.getElementById('remote-video').srcObject = e.streams[0]; };
         if(isOffer) {
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
@@ -235,16 +262,13 @@
         sendSignal({ type: 'answer', answer: answer });
     }
 
-    function sendSignal(data) {
-        client.publish(`cybergram/call/${activeTargetId}`, JSON.stringify(data));
-    }
-
+    function sendSignal(data) { client.publish(`cybergram/call/${activeTargetId}`, JSON.stringify(data)); }
     function hangup(notify) {
         if(notify && activeTargetId) sendSignal({ type: 'hangup' });
         location.reload();
     }
 
-    // --- КРАСИВЫЙ ФОН ---
+    // Canvas Background
     const canvas = document.getElementById('bg-canvas');
     const ctx = canvas.getContext('2d');
     let dots = [];
