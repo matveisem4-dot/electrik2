@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberGram v8.5</title>
+    <title>CyberGram v8.7</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
         :root { --bg: #05070a; --panel: #11141b; --accent: #0088cc; --text: #e0e0e0; --danger: #ff4444; --success: #4cd964; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body, html { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: sans-serif; height: 100vh; overflow: hidden; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        body, html { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; height: 100vh; overflow: hidden; }
         
         .screen { position: fixed; inset: 0; display: none; flex-direction: column; background: var(--bg); z-index: 10; }
         #login-screen { display: flex; align-items: center; justify-content: center; z-index: 100; }
@@ -16,21 +16,26 @@
         
         header { padding: 15px 20px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f232d; }
         .content { flex: 1; overflow-y: auto; padding: 15px; }
-        .card { background: var(--panel); padding: 16px; border-radius: 18px; margin-bottom: 12px; display: flex; align-items: center; border: 1px solid #1f232d; }
-        .avatar { width: 48px; height: 48px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-weight: bold; }
+        .card { background: var(--panel); padding: 16px; border-radius: 18px; margin-bottom: 12px; display: flex; align-items: center; border: 1px solid #1f232d; cursor: pointer; }
+        .avatar { width: 48px; height: 48px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-weight: bold; color: white; }
 
-        .messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; background: #000; }
-        .msg { max-width: 75%; padding: 10px 16px; border-radius: 18px; font-size: 15px; }
-        .msg.me { align-self: flex-end; background: var(--accent); border-bottom-right-radius: 4px; }
+        /* ЧАТ С ФОНОМ */
+        .messages { 
+            flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; 
+            background-color: #000; background-size: cover; background-position: center; 
+        }
+        .msg { max-width: 75%; padding: 10px 16px; border-radius: 18px; font-size: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .msg.me { align-self: flex-end; background: var(--accent); border-bottom-right-radius: 4px; color: white; }
         .msg.them { align-self: flex-start; background: var(--panel); border-bottom-left-radius: 4px; }
         
         .btn { padding: 12px 20px; border-radius: 12px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .btn:active { transform: scale(0.95); opacity: 0.8; }
         .btn-blue { background: var(--accent); color: white; }
         .btn-red { background: var(--danger); color: white; }
         
-        input { width: 100%; background: #000; border: 1px solid #2a2f3d; color: white; padding: 14px; border-radius: 12px; margin-bottom: 12px; outline: none; font-size: 16px; }
-        input:focus { border-color: var(--accent); }
+        input { width: 100%; background: #0a0c10; border: 1px solid #2a2f3d; color: white; padding: 14px; border-radius: 12px; margin-bottom: 12px; font-size: 16px; }
+        
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
+        .modal-body { background: var(--panel); padding: 25px; border-radius: 24px; width: 100%; max-width: 320px; }
 
         #call-ui { position: fixed; inset: 0; background: #000; z-index: 2000; display: none; flex-direction: column; }
         #remote-v { flex: 1; width: 100%; height: 100%; object-fit: cover; }
@@ -41,24 +46,48 @@
 
 <div id="login-screen" class="screen">
     <div class="login-box">
-        <h1 style="color:var(--accent); margin-bottom:20px;">CyberGram</h1>
-        <input type="number" id="my-id-input" placeholder="ID (любые цифры)">
+        <h1 style="color:var(--accent)">CYBERGRAM</h1>
+        <input type="number" id="my-id-input" placeholder="ID">
         <input type="password" id="my-pw-input" placeholder="Пароль">
-        <button id="login-btn" class="btn btn-blue" style="width:100%" onclick="handleLogin()">ВОЙТИ</button>
+        <button class="btn btn-blue" style="width:100%" onclick="handleLogin()">CONNECT</button>
     </div>
 </div>
 
 <div id="app-screen" class="screen">
-    <header><b>Мой ID: <span id="display-id">...</span></b><span onclick="logout()" style="color:var(--danger); cursor:pointer">Выход</span></header>
+    <header>
+        <b>ID: <span id="display-id">...</span></b>
+        <span onclick="logout()" style="color:var(--danger); cursor:pointer">ВЫХОД</span>
+    </header>
     <div class="content" id="contact-list"></div>
-    <button class="btn btn-blue" style="position:fixed; bottom:30px; right:30px; border-radius:50%; width:64px; height:64px; font-size:32px;" onclick="addFriend()">+</button>
+    <button class="btn btn-blue" style="position:fixed; bottom:30px; right:30px; border-radius:50%; width:64px; height:64px; font-size:32px;" onclick="openModal('add')">+</button>
 </div>
 
 <div id="chat-screen" class="screen">
-    <header><span onclick="closeChat()" style="font-size:24px; cursor:pointer">←</span><b id="chat-user-name">Чат</b><span onclick="startCall()" style="cursor:pointer; font-size:22px;">📞</span></header>
+    <header>
+        <span onclick="closeChat()" style="font-size:24px; cursor:pointer">←</span>
+        <b id="chat-user-name">Чат</b>
+        <div>
+            <span onclick="openModal('bg')" style="cursor:pointer; margin-right:15px; font-size:20px;">🖼️</span>
+            <span onclick="startCall()" style="cursor:pointer; font-size:20px;">📞</span>
+        </div>
+    </header>
     <div class="messages" id="chat-msgs"></div>
     <div style="padding:15px; background:var(--panel); display:flex; gap:10px;">
-        <input type="text" id="msg-input" placeholder="Сообщение..." style="margin:0;"><button class="btn btn-blue" onclick="sendMsg()">➜</button>
+        <input type="text" id="msg-input" placeholder="Сообщение..." style="margin:0;" onkeydown="if(event.key==='Enter') sendMsg()">
+        <button class="btn btn-blue" onclick="sendMsg()">➜</button>
+    </div>
+</div>
+
+<div id="modal-ui" class="modal">
+    <div class="modal-body">
+        <h3 id="modal-title" style="margin-top:0">Действие</h3>
+        <p id="modal-error" style="color:var(--danger); font-size:12px; display:none;">Ошибка!</p>
+        <input type="text" id="m-val1" placeholder="">
+        <input type="text" id="m-val2" placeholder="">
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn btn-red" style="flex:1" onclick="closeModal()">ОТМЕНА</button>
+            <button class="btn btn-blue" style="flex:1" id="m-ok">ОК</button>
+        </div>
     </div>
 </div>
 
@@ -66,21 +95,20 @@
     <video id="remote-v" autoplay playsinline></video>
     <video id="local-v" autoplay playsinline muted></video>
     <div style="position:absolute; bottom:50px; width:100%; display:flex; justify-content:center; gap:30px;">
-        <button id="ans-btn" class="btn" style="display:none; background:var(--success); width:75px; height:75px; border-radius:50%; font-size:28px;" onclick="answerCall()">✔</button>
-        <button class="btn btn-red" style="width:75px; height:75px; border-radius:50%; font-size:28px;" onclick="stopCall(true)">🛑</button>
+        <button id="ans-btn" class="btn" style="display:none; background:var(--success); width:75px; height:75px; border-radius:50%" onclick="answerCall()">✔</button>
+        <button class="btn btn-red" style="width:75px; height:75px; border-radius:50%" onclick="stopCall(true)">🛑</button>
     </div>
 </div>
 
 <script>
     let myID, activePeer, mqttClient, pc, localStream;
-    let friends = JSON.parse(localStorage.getItem('cg_f85') || '[]');
+    let friends = JSON.parse(localStorage.getItem('cg_f87') || '[]');
+    let backgrounds = JSON.parse(localStorage.getItem('cg_bg87') || '{}');
     let logs = {};
 
-    // ФИКС ВХОДА
     window.onload = () => {
-        const savedID = localStorage.getItem('cg_id');
-        if(savedID) {
-            myID = savedID;
+        if(localStorage.getItem('cg_id')) {
+            myID = localStorage.getItem('cg_id');
             startApp();
         } else {
             document.getElementById('login-screen').style.display = 'flex';
@@ -90,17 +118,12 @@
     function handleLogin() {
         const id = document.getElementById('my-id-input').value;
         const pw = document.getElementById('my-pw-input').value;
-        
-        if(!id || !pw) {
-            alert("Введите ID и Пароль!");
-            return;
+        if(id && pw) {
+            localStorage.setItem('cg_id', id);
+            localStorage.setItem('cg_pw', pw);
+            myID = id;
+            startApp();
         }
-
-        // Сохраняем и заходим
-        localStorage.setItem('cg_id', id);
-        localStorage.setItem('cg_pw', pw);
-        myID = id;
-        startApp();
     }
 
     function startApp() {
@@ -111,12 +134,9 @@
         renderList();
     }
 
-    // СЕТЬ
     function initMQTT() {
         mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
-        mqttClient.on('connect', () => {
-            mqttClient.subscribe(`cg/v85/${myID}`);
-        });
+        mqttClient.on('connect', () => mqttClient.subscribe(`cg/v87/${myID}`));
         mqttClient.on('message', async (t, m) => {
             const d = JSON.parse(m.toString());
             if(d.type === 'msg') {
@@ -138,68 +158,68 @@
         });
     }
 
-    // МЕДИА (ВИДЕО И ЗВУК)
-    async function setupMedia() {
-        localStream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
-        document.getElementById('local-v').srcObject = localStream;
+    // УПРАВЛЕНИЕ МОДАЛКАМИ
+    function openModal(type) {
+        const m = document.getElementById('modal-ui');
+        const t = document.getElementById('modal-title');
+        const v1 = document.getElementById('m-val1');
+        const v2 = document.getElementById('m-val2');
+        const ok = document.getElementById('m-ok');
+        const err = document.getElementById('modal-error');
         
-        pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+        m.style.display = 'flex';
+        err.style.display = 'none';
+        v1.value = ""; v2.value = "";
 
-        pc.ontrack = (e) => { document.getElementById('remote-v').srcObject = e.streams[0]; };
-        pc.onicecandidate = (e) => {
-            if (e.candidate) mqttClient.publish(`cg/v85/${activePeer}`, JSON.stringify({type:'ice', from:myID, val:e.candidate}));
-        };
+        if(type === 'add') {
+            t.innerText = "Новый контакт";
+            v1.placeholder = "Имя"; v2.placeholder = "ID";
+            v2.style.display = "block";
+            ok.onclick = () => {
+                if(friends.some(f => f.name.toLowerCase() === v1.value.toLowerCase())) {
+                    err.innerText = "Имя уже занято!"; err.style.display = 'block';
+                } else {
+                    friends.push({name: v1.value, id: v2.value});
+                    localStorage.setItem('cg_f87', JSON.stringify(friends));
+                    renderList(); closeModal();
+                }
+            };
+        } else if(type === 'bg') {
+            t.innerText = "Фон чата";
+            v1.placeholder = "Ссылка на картинку (URL)";
+            v2.style.display = "none";
+            ok.onclick = () => {
+                backgrounds[activePeer] = v1.value;
+                localStorage.setItem('cg_bg87', JSON.stringify(backgrounds));
+                applyBg(); closeModal();
+            };
+        }
     }
 
-    async function startCall() {
-        document.getElementById('call-ui').style.display = 'flex';
-        await setupMedia();
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        mqttClient.publish(`cg/v85/${activePeer}`, JSON.stringify({type:'offer', from:myID, val:offer}));
+    function closeModal() { document.getElementById('modal-ui').style.display = 'none'; }
+
+    function applyBg() {
+        const chatBox = document.getElementById('chat-msgs');
+        if(backgrounds[activePeer]) {
+            chatBox.style.backgroundImage = `url('${backgrounds[activePeer]}')`;
+        } else {
+            chatBox.style.backgroundImage = 'none';
+        }
     }
 
-    async function answerCall() {
-        document.getElementById('ans-btn').style.display = 'none';
-        await setupMedia();
-        await pc.setRemoteDescription(new RTCSessionDescription(window.offer));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        mqttClient.publish(`cg/v85/${activePeer}`, JSON.stringify({type:'answer', from:myID, val:answer}));
-    }
-
-    function stopCall(sendSignal) {
-        if(sendSignal && activePeer) mqttClient.publish(`cg/v85/${activePeer}`, JSON.stringify({type:'hangup', from:myID}));
-        if(localStream) localStream.getTracks().forEach(t => t.stop());
-        if(pc) pc.close();
-        document.getElementById('call-ui').style.display = 'none';
-    }
-
-    // ИНТЕРФЕЙС
-    function renderList() {
-        const container = document.getElementById('contact-list');
-        container.innerHTML = "";
-        friends.forEach(f => {
-            const d = document.createElement('div');
-            d.className = 'card';
-            d.onclick = () => openChat(f.id, f.name);
-            d.innerHTML = `<div class="avatar">${f.name[0]}</div><div><b>${f.name}</b><br><small>ID: ${f.id}</small></div>`;
-            container.appendChild(d);
-        });
-    }
-
+    // ЧАТ И ЗВОНКИ
     function openChat(id, name) {
         activePeer = id;
         document.getElementById('chat-user-name').innerText = name;
         document.getElementById('chat-screen').style.display = 'flex';
+        applyBg();
         renderMsgs();
     }
 
     function sendMsg() {
         const i = document.getElementById('msg-input');
-        if(!i.value) return;
-        mqttClient.publish(`cg/v85/${activePeer}`, JSON.stringify({type:'msg', from:myID, val:i.value}));
+        if(!i.value.trim()) return;
+        mqttClient.publish(`cg/v87/${activePeer}`, JSON.stringify({type:'msg', from:myID, val:i.value}));
         if(!logs[activePeer]) logs[activePeer] = [];
         logs[activePeer].push({side:'me', val:i.value});
         i.value = ""; renderMsgs();
@@ -216,14 +236,49 @@
         b.scrollTop = b.scrollHeight;
     }
 
-    function addFriend() {
-        const id = prompt("ID:");
-        const name = prompt("Имя:");
-        if(id && name) {
-            friends.push({id, name});
-            localStorage.setItem('cg_f85', JSON.stringify(friends));
-            renderList();
-        }
+    async function setupMedia() {
+        localStream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
+        document.getElementById('local-v').srcObject = localStream;
+        pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+        pc.ontrack = (e) => { document.getElementById('remote-v').srcObject = e.streams[0]; };
+        pc.onicecandidate = (e) => { if (e.candidate) mqttClient.publish(`cg/v87/${activePeer}`, JSON.stringify({type:'ice', from:myID, val:e.candidate})); };
+    }
+
+    async function startCall() {
+        document.getElementById('call-ui').style.display = 'flex';
+        await setupMedia();
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        mqttClient.publish(`cg/v87/${activePeer}`, JSON.stringify({type:'offer', from:myID, val:offer}));
+    }
+
+    async function answerCall() {
+        document.getElementById('ans-btn').style.display = 'none';
+        await setupMedia();
+        await pc.setRemoteDescription(new RTCSessionDescription(window.offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        mqttClient.publish(`cg/v87/${activePeer}`, JSON.stringify({type:'answer', from:myID, val:answer}));
+    }
+
+    function stopCall(sendSignal) {
+        if(sendSignal && activePeer) mqttClient.publish(`cg/v87/${activePeer}`, JSON.stringify({type:'hangup', from:myID}));
+        if(localStream) localStream.getTracks().forEach(t => t.stop());
+        if(pc) pc.close();
+        document.getElementById('call-ui').style.display = 'none';
+    }
+
+    function renderList() {
+        const container = document.getElementById('contact-list');
+        container.innerHTML = "";
+        friends.forEach(f => {
+            const d = document.createElement('div');
+            d.className = 'card';
+            d.onclick = () => openChat(f.id, f.name);
+            d.innerHTML = `<div class="avatar">${f.name[0].toUpperCase()}</div><div><b>${f.name}</b><br><small style="opacity:0.5">ID: ${f.id}</small></div>`;
+            container.appendChild(d);
+        });
     }
 
     function logout() { localStorage.clear(); location.reload(); }
