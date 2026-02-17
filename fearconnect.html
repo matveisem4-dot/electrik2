@@ -3,133 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberGram v8</title>
+    <title>CyberGram v8.1</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
         :root { --bg: #05070a; --panel: #11141b; --accent: #0088cc; --text: #e0e0e0; --danger: #ff4444; --success: #44ff44; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body, html { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; height: 100vh; overflow: hidden; }
+        body, html { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: sans-serif; height: 100vh; overflow: hidden; }
         
         .screen { position: fixed; inset: 0; display: none; flex-direction: column; background: var(--bg); z-index: 10; }
-        header { padding: 15px 20px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f232d; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        header { padding: 15px 20px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f232d; }
         
         /* Вход */
-        #login-screen { display: flex; align-items: center; justify-content: center; z-index: 100; background: radial-gradient(circle at center, #111b27 0%, #05070a 100%); }
+        #login-screen { display: flex; align-items: center; justify-content: center; z-index: 100; }
         .login-box { background: var(--panel); padding: 30px; border-radius: 24px; border: 1px solid #2a2f3d; width: 90%; max-width: 340px; text-align: center; }
         
         /* Списки */
         .content { flex: 1; overflow-y: auto; padding: 15px; }
-        .card { background: var(--panel); padding: 16px; border-radius: 18px; margin-bottom: 12px; display: flex; align-items: center; border: 1px solid #1f232d; transition: 0.2s; }
-        .card:active { transform: scale(0.98); background: #1a1f29; }
-        .avatar { width: 48px; height: 48px; background: linear-gradient(135deg, var(--accent), #0055aa); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-weight: bold; color: white; font-size: 18px; }
+        .card { background: var(--panel); padding: 16px; border-radius: 18px; margin-bottom: 12px; display: flex; align-items: center; border: 1px solid #1f232d; }
+        .avatar { width: 48px; height: 48px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-weight: bold; color: white; }
 
         /* Чат */
-        .messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; background: #080a0f; }
-        .msg { max-width: 75%; padding: 10px 16px; border-radius: 18px; font-size: 15px; line-height: 1.4; position: relative; }
-        .msg.me { align-self: flex-end; background: var(--accent); color: white; border-bottom-right-radius: 4px; }
-        .msg.them { align-self: flex-start; background: var(--panel); border: 1px solid #1f232d; border-bottom-left-radius: 4px; }
+        .messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; background: #000; }
+        .msg { max-width: 75%; padding: 10px 16px; border-radius: 18px; font-size: 15px; }
+        .msg.me { align-self: flex-end; background: var(--accent); border-bottom-right-radius: 4px; }
+        .msg.them { align-self: flex-start; background: var(--panel); border-bottom-left-radius: 4px; }
         
-        /* Кнопки и Инпуты */
-        .btn { padding: 12px 20px; border-radius: 12px; border: none; cursor: pointer; font-weight: 600; font-size: 14px; transition: 0.2s; }
+        .btn { padding: 12px 20px; border-radius: 12px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn:active { opacity: 0.7; transform: scale(0.95); }
         .btn-blue { background: var(--accent); color: white; }
         .btn-red { background: var(--danger); color: white; }
-        .btn-green { background: var(--success); color: black; }
         
-        input { width: 100%; background: #000; border: 1px solid #2a2f3d; color: white; padding: 14px; border-radius: 12px; margin-bottom: 12px; outline: none; font-size: 16px; }
-        input:focus { border-color: var(--accent); }
-
-        /* Модальные окна (вместо prompt) */
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .modal-body { background: var(--panel); padding: 25px; border-radius: 24px; width: 100%; max-width: 320px; border: 1px solid #2a2f3d; }
-
+        input { width: 100%; background: #000; border: 1px solid #2a2f3d; color: white; padding: 14px; border-radius: 12px; margin-bottom: 12px; outline: none; }
+        
         /* Видео */
         #call-ui { position: fixed; inset: 0; background: #000; z-index: 2000; display: none; flex-direction: column; }
         #remote-v { flex: 1; width: 100%; object-fit: cover; }
-        #local-v { position: absolute; top: 40px; right: 20px; width: 100px; aspect-ratio: 3/4; border-radius: 16px; border: 2px solid var(--accent); object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .call-tools { position: absolute; bottom: 50px; width: 100%; display: flex; justify-content: center; gap: 30px; }
+        #local-v { position: absolute; top: 40px; right: 20px; width: 100px; aspect-ratio: 3/4; border-radius: 16px; border: 2px solid var(--accent); object-fit: cover; }
     </style>
 </head>
 <body>
 
 <div id="login-screen" class="screen">
     <div class="login-box">
-        <h1 style="color:var(--accent); margin-top:0;">CyberGram</h1>
-        <input type="number" id="my-id-input" placeholder="Введите ваш ID">
+        <h1 style="color:var(--accent)">CyberGram</h1>
+        <p style="font-size:12px; opacity:0.6">Введите ID и Пароль для входа</p>
+        <input type="number" id="my-id-input" placeholder="ID">
         <input type="password" id="my-pw-input" placeholder="Пароль">
-        <button class="btn btn-blue" style="width:100%" onclick="saveAuth()">ВОЙТИ В СИСТЕМУ</button>
+        <button class="btn btn-blue" style="width:100%" onclick="handleLogin()">ВОЙТИ</button>
     </div>
 </div>
 
 <div id="app-screen" class="screen">
     <header>
         <b>ID: <span id="display-id">0000</span></b>
-        <span onclick="logout()" style="color:var(--danger); font-weight:bold; cursor:pointer">ВЫХОД</span>
+        <span onclick="logout()" style="color:var(--danger); cursor:pointer">Выйти</span>
     </header>
     <div class="content" id="contact-list"></div>
-    <button class="btn btn-blue" style="position:fixed; bottom:30px; right:30px; border-radius:50%; width:64px; height:64px; font-size:32px; box-shadow: 0 8px 20px rgba(0,136,204,0.4);" onclick="openModal('add')">+</button>
+    <button class="btn btn-blue" style="position:fixed; bottom:30px; right:30px; border-radius:50%; width:64px; height:64px; font-size:32px;" onclick="addFriend()">+</button>
 </div>
 
 <div id="chat-screen" class="screen">
     <header>
         <span onclick="closeChat()" style="font-size:24px; cursor:pointer">←</span>
         <b id="chat-user-name">Чат</b>
-        <span onclick="startCall()" style="font-size:22px; cursor:pointer">📞</span>
+        <span onclick="startCall()" style="cursor:pointer">📞</span>
     </header>
-    <div id="decision-bar" style="display:none; padding:10px; background:#1a212c; gap:10px; justify-content:center; border-bottom:1px solid #333;">
-        <button class="btn btn-green" onclick="openModal('accept')">ДОБАВИТЬ</button>
-        <button class="btn btn-red" onclick="banStranger()">В БАН</button>
+    <div id="decision-bar" style="display:none; padding:10px; background:#1a212c; gap:10px; justify-content:center;">
+        <button class="btn btn-blue" style="background:var(--success); color:black;" onclick="acceptStranger()">Добавить</button>
+        <button class="btn btn-red" onclick="banStranger()">В бан</button>
     </div>
     <div class="messages" id="chat-msgs"></div>
-    <div style="padding:15px; background:var(--panel); display:flex; gap:10px; border-top: 1px solid #1f232d;">
-        <input type="text" id="msg-input" placeholder="Сообщение..." style="margin:0;">
+    <div style="padding:15px; background:var(--panel); display:flex; gap:10px;">
+        <input type="text" id="msg-input" placeholder="Текст..." style="margin:0;">
         <button class="btn btn-blue" onclick="sendMsg()">➜</button>
-    </div>
-</div>
-
-<div id="modal-ui" class="modal">
-    <div class="modal-body">
-        <h3 id="modal-title" style="margin-top:0">Контакт</h3>
-        <input type="text" id="modal-name" placeholder="Имя">
-        <input type="number" id="modal-id" placeholder="ID">
-        <div style="display:flex; gap:10px;">
-            <button class="btn" style="flex:1; background:#333; color:white;" onclick="closeModal()">ОТМЕНА</button>
-            <button class="btn btn-blue" style="flex:1" onclick="handleModalSave()">ОК</button>
-        </div>
     </div>
 </div>
 
 <div id="call-ui">
     <video id="remote-v" autoplay playsinline></video>
     <video id="local-v" autoplay playsinline muted></video>
-    <div class="call-tools">
-        <button id="ans-btn" class="btn btn-green" style="display:none; width:75px; height:75px; border-radius:50%; font-size:24px;" onclick="answerCall()">✔</button>
-        <button class="btn btn-red" style="width:75px; height:75px; border-radius:50%; font-size:24px;" onclick="location.reload()">🛑</button>
+    <div style="position:absolute; bottom:50px; width:100%; display:flex; justify-content:center; gap:30px;">
+        <button id="ans-btn" class="btn" style="display:none; background:var(--success); width:70px; height:70px; border-radius:50%" onclick="answerCall()">✔</button>
+        <button class="btn btn-red" style="width:70px; height:70px; border-radius:50%" onclick="location.reload()">🛑</button>
     </div>
 </div>
 
 <script>
-    let myID, activePeer, mqttClient, pc, localStream, modalMode;
+    let myID, activePeer, mqttClient, pc, localStream;
     let friends = JSON.parse(localStorage.getItem('cg_f8') || '[]');
     let bans = JSON.parse(localStorage.getItem('cg_b8') || '[]');
     let logs = {};
 
-    // Авторизация
-    if(localStorage.getItem('cg_id')) {
-        myID = localStorage.getItem('cg_id');
-        startApp();
-    } else { document.getElementById('login-screen').style.display = 'flex'; }
+    // ПРОВЕРКА ВХОДА
+    window.onload = () => {
+        if(localStorage.getItem('cg_id')) {
+            myID = localStorage.getItem('cg_id');
+            startApp();
+        } else {
+            document.getElementById('login-screen').style.display = 'flex';
+        }
+    };
 
-    function saveAuth() {
+    function handleLogin() {
         const id = document.getElementById('my-id-input').value;
         const pw = document.getElementById('my-pw-input').value;
-        if(id && pw) {
+        
+        if(!id || !pw) {
+            alert("Заполните ID и Пароль");
+            return;
+        }
+
+        // Если это первый вход — сохраняем
+        if(!localStorage.getItem('cg_id')) {
             localStorage.setItem('cg_id', id);
             localStorage.setItem('cg_pw', pw);
-            location.reload();
+            myID = id;
+            startApp();
+        } else {
+            // Если уже есть данные — проверяем пароль
+            if(pw === localStorage.getItem('cg_pw') && id === localStorage.getItem('cg_id')) {
+                myID = id;
+                startApp();
+            } else {
+                alert("Неверный ID или Пароль");
+            }
         }
     }
 
-    function logout() { localStorage.clear(); location.reload(); }
+    function logout() {
+        localStorage.clear();
+        location.reload();
+    }
 
     function startApp() {
         document.getElementById('login-screen').style.display = 'none';
@@ -163,36 +167,6 @@
         });
     }
 
-    // Модалки
-    function openModal(mode) {
-        modalMode = mode;
-        document.getElementById('modal-ui').style.display = 'flex';
-        if(mode === 'accept') {
-            document.getElementById('modal-title').innerText = "Добавить контакт";
-            document.getElementById('modal-id').value = activePeer;
-            document.getElementById('modal-id').disabled = true;
-        } else {
-            document.getElementById('modal-title').innerText = "Новый контакт";
-            document.getElementById('modal-id').value = "";
-            document.getElementById('modal-id').disabled = false;
-        }
-    }
-    function closeModal() { document.getElementById('modal-ui').style.display = 'none'; }
-
-    function handleModalSave() {
-        const name = document.getElementById('modal-name').value;
-        const id = document.getElementById('modal-id').value;
-        if(name && id) {
-            friends = friends.filter(f => f.id !== id.toString());
-            friends.push({id: id.toString(), name: name});
-            localStorage.setItem('cg_f8', JSON.stringify(friends));
-            renderList();
-            closeModal();
-            if(modalMode === 'accept') document.getElementById('decision-bar').style.display = 'none';
-        }
-    }
-
-    // Список и Чат
     function renderList() {
         const container = document.getElementById('contact-list');
         container.innerHTML = "";
@@ -200,14 +174,14 @@
             const d = document.createElement('div');
             d.className = 'card';
             d.onclick = () => openChat(f.id, f.name);
-            d.innerHTML = `<div class="avatar">${f.name[0]}</div><div><b>${f.name}</b><br><small style="opacity:0.5">ID: ${f.id}</small></div>`;
+            d.innerHTML = `<div class="avatar">${f.name[0]}</div><div><b>${f.name}</b><br><small>ID: ${f.id}</small></div>`;
             container.appendChild(d);
         });
         Object.keys(logs).forEach(id => {
             if(!friends.find(f => f.id === id) && !bans.includes(id)) {
                 const d = document.createElement('div');
                 d.className = 'card';
-                d.style.borderColor = var(--accent);
+                d.style.borderColor = '#0088cc';
                 d.onclick = () => openChat(id, "Неизвестный");
                 d.innerHTML = `<div class="avatar" style="background:#444">?</div><div><b>Новый контакт</b><br><small>ID: ${id}</small></div>`;
                 container.appendChild(d);
@@ -245,13 +219,32 @@
         b.scrollTop = b.scrollHeight;
     }
 
+    function addFriend() {
+        const id = prompt("Введите ID:");
+        const name = prompt("Введите Имя:");
+        if(id && name) {
+            friends.push({id, name});
+            localStorage.setItem('cg_f8', JSON.stringify(friends));
+            renderList();
+        }
+    }
+
+    function acceptStranger() {
+        const name = prompt("Как назвать контакт?");
+        if(name) {
+            friends.push({id: activePeer, name: name});
+            localStorage.setItem('cg_f8', JSON.stringify(friends));
+            document.getElementById('decision-bar').style.display = 'none';
+            renderList();
+        }
+    }
+
     function banStranger() {
         bans.push(activePeer);
         localStorage.setItem('cg_b8', JSON.stringify(bans));
         closeChat(); renderList();
     }
 
-    // Звонки
     async function startCall() {
         document.getElementById('call-ui').style.display = 'flex';
         localStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
