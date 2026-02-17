@@ -3,36 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>P2P Cyber Messenger</title>
+    <title>P2P Cyber Phone</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
         :root { --accent: #2481cc; --danger: #e53935; --success: #31b545; }
         body { margin: 0; background: #0e1621; color: white; font-family: sans-serif; overflow: hidden; }
         
-        /* Экран пароля */
+        /* Вход */
         #lock-screen { position: fixed; inset: 0; background: #0e1621; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        
-        /* Главное меню */
         #main-app { display: none; padding: 20px; text-align: center; }
-        .btn { background: var(--accent); color: white; border: none; padding: 15px; border-radius: 12px; width: 100%; max-width: 300px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        
         input { background: #17212b; border: 1px solid #2b5278; color: white; padding: 12px; border-radius: 10px; width: 80%; max-width: 280px; margin: 10px 0; text-align: center; }
+        .btn { background: var(--accent); color: white; border: none; padding: 15px; border-radius: 12px; width: 100%; max-width: 300px; font-weight: bold; cursor: pointer; }
 
-        /* Окно вызова */
+        /* Окно входящего звонка */
         #incoming-call { position: fixed; inset: 0; background: radial-gradient(circle, #1c2a3d, #0e1621); display: none; flex-direction: column; align-items: center; justify-content: space-around; z-index: 2000; }
         
         /* Видео контейнеры */
         #video-chat { display: none; position: fixed; inset: 0; background: black; z-index: 1500; }
-        .video-wrapper { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        .video-wrapper { position: relative; width: 100%; height: 100%; }
         
         #remote-video { 
             width: 100%; height: 100%; object-fit: cover; 
-            transition: box-shadow 0.3s ease;
+            transition: outline 0.3s ease;
         }
-        /* Подсветка говорящего */
-        .speaking { box-shadow: inset 0 0 40px 10px var(--success); }
+        .speaking { outline: 8px solid var(--success); outline-offset: -8px; }
 
         #local-video { 
-            position: absolute; top: 20px; right: 20px; width: 30%; max-width: 120px; 
+            position: absolute; top: 20px; right: 20px; width: 100px; 
             aspect-ratio: 3/4; object-fit: cover; border-radius: 12px; border: 2px solid var(--accent); transform: scaleX(-1); 
         }
         
@@ -43,36 +41,35 @@
 <body>
 
     <div id="lock-screen">
-        <h2>P2P CRYPTO CALL</h2>
+        <h2>P2P PRIVATE CALL</h2>
         <input type="password" id="pass-input" placeholder="Пароль">
         <button class="btn" onclick="checkPass()">ВОЙТИ</button>
     </div>
 
     <div id="main-app">
         <p>Ваш ID: <b id="my-id-val">...</b></p>
-        <input type="text" id="target-id" placeholder="ID собеседника">
-        <button class="btn" onclick="startCallRequest()">📞 НАЧАТЬ ЗВОНОК</button>
+        <input type="text" id="target-id" placeholder="Введите ID друга">
+        <button class="btn" onclick="startCallRequest()">📞 ПОЗВОНИТЬ</button>
     </div>
 
     <div id="incoming-call">
-        <h1 id="caller-id-label">Входящий вызов...</h1>
+        <h1 id="caller-id-label">Вам звонят!</h1>
         <div style="display: flex; gap: 40px;">
             <button onclick="acceptCall()" style="background:var(--success); width:80px; height:80px; border-radius:50%; border:none; color:white; font-size:35px;">✔</button>
             <button onclick="rejectCall(true)" style="background:var(--danger); width:80px; height:80px; border-radius:50%; border:none; color:white; font-size:35px;">✖</button>
         </div>
+        <audio id="ringtone" loop src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"></audio>
     </div>
 
     <div id="video-chat">
-        <div class="video-wrapper" id="v-wrapper">
+        <div class="video-wrapper">
             <video id="remote-video" autoplay playsinline></video>
-            <video id="local-video" autoplay muted playsinline></audio>
+            <video id="local-video" autoplay muted playsinline></video>
         </div>
         <div class="controls">
             <button class="hangup-btn" onclick="rejectCall(true)">🛑</button>
         </div>
     </div>
-
-    <audio id="ringtone" loop src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"></audio>
 
 <script>
     const USER_PASS = "1234";
@@ -85,11 +82,11 @@
         if(document.getElementById('pass-input').value === USER_PASS) {
             document.getElementById('lock-screen').style.display = 'none';
             document.getElementById('main-app').style.display = 'block';
-            connectToMQTT();
+            initMQTT();
         }
     }
 
-    function connectToMQTT() {
+    function initMQTT() {
         client = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
         client.on('connect', () => client.subscribe(`p2p/call/${myId}`));
         
@@ -113,21 +110,32 @@
     async function startCallRequest() {
         targetId = document.getElementById('target-id').value;
         if(!targetId) return;
-        initCall(true);
+        await startMedia(true);
     }
 
-    async function initCall(isOffer) {
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    async function startMedia(isOffer) {
+        // Улучшенные настройки для подавления эха
+        const constraints = {
+            video: { facingMode: "user" },
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        };
+
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
         document.getElementById('local-video').srcObject = localStream;
         document.getElementById('video-chat').style.display = 'block';
-        
+
         pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
         
-        localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
         pc.onicecandidate = e => e.candidate && sendSignal({ type: 'ice', candidate: e.candidate });
+        
         pc.ontrack = e => {
-            document.getElementById('remote-video').srcObject = e.streams[0];
-            detectVolume(e.streams[0]); // Включаем подсветку
+            const rv = document.getElementById('remote-video');
+            if (rv.srcObject !== e.streams[0]) {
+                rv.srcObject = e.streams[0];
+                detectVolume(e.streams[0]);
+            }
         };
 
         if(isOffer) {
@@ -140,11 +148,15 @@
     async function acceptCall() {
         document.getElementById('ringtone').pause();
         document.getElementById('incoming-call').style.display = 'none';
-        await initCall(false);
+        await startMedia(false);
         await pc.setRemoteDescription(new RTCSessionDescription(window.pendingOffer));
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         sendSignal({ type: 'answer', answer: answer });
+    }
+
+    function sendSignal(data) {
+        client.publish(`p2p/call/${targetId}`, JSON.stringify(data));
     }
 
     function rejectCall(notify) {
@@ -157,32 +169,22 @@
         location.reload(); 
     }
 
-    function sendSignal(data) {
-        client.publish(`p2p/call/${targetId}`, JSON.stringify(data));
-    }
-
-    // Детектор голоса для подсветки
     function detectVolume(stream) {
-        const audioContext = new AudioContext();
-        const source = audioContext.createMediaStreamSource(stream);
-        const analyser = audioContext.createAnalyser();
-        analyser.fftSize = 256;
-        source.connect(analyser);
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const ctx = new AudioContext();
+        const src = ctx.createMediaStreamSource(stream);
+        const ans = ctx.createAnalyser();
+        src.connect(ans);
+        const data = new Uint8Array(ans.frequencyBinCount);
 
-        function check() {
-            analyser.getByteFrequencyData(dataArray);
-            let sum = dataArray.reduce((a, b) => a + b, 0);
-            let average = sum / dataArray.length;
-            const remoteVideo = document.getElementById('remote-video');
-            if(average > 30) { // Чувствительность
-                remoteVideo.classList.add('speaking');
-            } else {
-                remoteVideo.classList.remove('speaking');
-            }
-            requestAnimationFrame(check);
+        function loop() {
+            ans.getByteFrequencyData(data);
+            let avg = data.reduce((a, b) => a + b) / data.length;
+            const rv = document.getElementById('remote-video');
+            if(avg > 35) rv.classList.add('speaking');
+            else rv.classList.remove('speaking');
+            requestAnimationFrame(loop);
         }
-        check();
+        loop();
     }
 </script>
 </body>
