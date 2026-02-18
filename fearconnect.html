@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberGram v9.2</title>
+    <title>CyberGram v9.3</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
@@ -27,11 +27,9 @@
         input { width: 100%; background: #0a0c10; border: 1px solid #2a2f3d; color: white; padding: 14px; border-radius: 12px; margin-bottom: 12px; font-size: 16px; }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
         .modal-body { background: var(--panel); padding: 25px; border-radius: 24px; width: 100%; max-width: 320px; }
-        
-        /* Исправленный UI звонка */
         #call-ui { position: fixed; inset: 0; background: #000; z-index: 2000; display: none; flex-direction: column; }
-        #remote-v { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
-        #local-v { position: absolute; top: 20px; right: 20px; width: 110px; height: 150px; border-radius: 16px; border: 2px solid var(--accent); object-fit: cover; z-index: 2001; background: #222; }
+        #remote-v { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        #local-v { position: absolute; top: 20px; right: 20px; width: 100px; height: 140px; border-radius: 12px; border: 2px solid var(--accent); object-fit: cover; z-index: 2001; }
         .call-controls { position: absolute; bottom: 40px; width: 100%; display: flex; justify-content: center; gap: 30px; z-index: 2002; }
     </style>
 </head>
@@ -84,19 +82,19 @@
     </div>
 </div>
 
-<div id="call-ui" onclick="unmuteRemote()">
+<div id="call-ui">
     <video id="remote-v" autoplay playsinline></video>
     <video id="local-v" autoplay playsinline muted></video>
     <div class="call-controls">
-        <button id="ans-btn" class="btn" style="display:none; background:var(--success); width:70px; height:70px; border-radius:50%; color:white" onclick="answerCall(event)">✔</button>
-        <button class="btn btn-red" style="width:70px; height:70px; border-radius:50%; color:white" onclick="stopCall(event)">🛑</button>
+        <button id="ans-btn" class="btn" style="display:none; background:var(--success); width:70px; height:70px; border-radius:50%; color:white" onclick="answerCall()">✔</button>
+        <button class="btn btn-red" style="width:70px; height:70px; border-radius:50%; color:white" onclick="hangup()">🛑</button>
     </div>
 </div>
 
 <script>
     let myID, mqttClient, peer, activePeer, currentCall, localStream;
-    let friends = JSON.parse(localStorage.getItem('cg_f92') || '[]');
-    let backgrounds = JSON.parse(localStorage.getItem('cg_bg92') || '{}');
+    let friends = JSON.parse(localStorage.getItem('cg_f93') || '[]');
+    let backgrounds = JSON.parse(localStorage.getItem('cg_bg93') || '{}');
     let logs = {};
 
     window.onload = () => {
@@ -122,7 +120,7 @@
         mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
         mqttClient.on('connect', () => {
             document.getElementById('status').style.color = 'var(--success)';
-            mqttClient.subscribe(`cg/v92/${myID}`);
+            mqttClient.subscribe(`cg/v93/${myID}`);
         });
         mqttClient.on('message', (t, m) => {
             const d = JSON.parse(m.toString());
@@ -131,12 +129,14 @@
                 logs[d.from].push({side:'them', val:d.val});
                 if(activePeer === d.from) renderMsgs();
                 renderList();
+            } else if(d.type === 'hangup') {
+                stopCallUI(); // Сбрасываем у получателя сигнала
             }
         });
     }
 
     function initPeer() {
-        peer = new Peer('cg-call-' + myID, { debug: 1 });
+        peer = new Peer('cg-call-' + myID);
         peer.on('call', (call) => {
             currentCall = call;
             document.getElementById('call-ui').style.display = 'flex';
@@ -147,60 +147,46 @@
     function sendMsg() {
         const i = document.getElementById('msg-input');
         if(!i.value.trim() || !activePeer) return;
-        mqttClient.publish(`cg/v92/${activePeer}`, JSON.stringify({type:'msg', from:myID, val:i.value}));
+        mqttClient.publish(`cg/v93/${activePeer}`, JSON.stringify({type:'msg', from:myID, val:i.value}));
         if(!logs[activePeer]) logs[activePeer] = [];
         logs[activePeer].push({side:'me', val:i.value});
         i.value = ""; renderMsgs();
     }
 
-    // РАБОТА СО ЗВУКОМ И ВИДЕО
-    async function getMedia() {
-        return await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "user" },
-            audio: { echoCancellation: true, noiseSuppression: true }
-        });
-    }
-
-    function handleRemoteStream(stream) {
-        const rv = document.getElementById('remote-v');
-        rv.srcObject = stream;
-        rv.onloadedmetadata = () => {
-            rv.play();
-            rv.muted = false; // Принудительно включаем звук
-            rv.volume = 1.0;
-        };
-    }
-
-    function unmuteRemote() {
-        const rv = document.getElementById('remote-v');
-        if (rv.srcObject) {
-            rv.play();
-            rv.muted = false;
+    // ЗВОНКИ
+    async function hangup() {
+        // Отправляем сигнал другому, чтобы он тоже сбросил
+        if(activePeer) {
+            mqttClient.publish(`cg/v93/${activePeer}`, JSON.stringify({type:'hangup', from:myID}));
         }
+        stopCallUI();
+    }
+
+    function stopCallUI() {
+        if(currentCall) currentCall.close();
+        if(localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+        }
+        document.getElementById('call-ui').style.display = 'none';
+        document.getElementById('ans-btn').style.display = 'none';
+        document.getElementById('remote-v').srcObject = null;
+        document.getElementById('local-v').srcObject = null;
     }
 
     async function startCall() {
         document.getElementById('call-ui').style.display = 'flex';
-        localStream = await getMedia();
+        localStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
         document.getElementById('local-v').srcObject = localStream;
         currentCall = peer.call('cg-call-' + activePeer, localStream);
-        currentCall.on('stream', handleRemoteStream);
+        currentCall.on('stream', (rs) => { document.getElementById('remote-v').srcObject = rs; });
     }
 
-    async function answerCall(e) {
-        if(e) e.stopPropagation();
+    async function answerCall() {
         document.getElementById('ans-btn').style.display = 'none';
-        localStream = await getMedia();
+        localStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
         document.getElementById('local-v').srcObject = localStream;
         currentCall.answer(localStream);
-        currentCall.on('stream', handleRemoteStream);
-    }
-
-    function stopCall(e) {
-        if(e) e.stopPropagation();
-        if(currentCall) currentCall.close();
-        if(localStream) localStream.getTracks().forEach(t => t.stop());
-        document.getElementById('call-ui').style.display = 'none';
+        currentCall.on('stream', (rs) => { document.getElementById('remote-v').srcObject = rs; });
     }
 
     // ИНТЕРФЕЙС
@@ -212,19 +198,19 @@
         m.style.display = 'flex';
         v1.value = ""; v2.value = ""; v2.style.display = "block";
         if(type === 'add') {
-            document.getElementById('modal-title').innerText = "Добавить друга";
+            document.getElementById('modal-title').innerText = "Новый контакт";
             v1.placeholder = "Имя"; v2.placeholder = "ID";
             ok.onclick = () => {
                 if(v1.value && v2.value) {
                     friends.push({name: v1.value, id: v2.value});
-                    localStorage.setItem('cg_f92', JSON.stringify(friends));
+                    localStorage.setItem('cg_f93', JSON.stringify(friends));
                     renderList(); closeModal();
                 }
             };
         } else if(type === 'bg') {
             document.getElementById('modal-title').innerText = "Фон чата";
             v1.placeholder = "URL картинки"; v2.style.display = "none";
-            ok.onclick = () => { backgrounds[activePeer] = v1.value; localStorage.setItem('cg_bg92', JSON.stringify(backgrounds)); applyBg(); closeModal(); };
+            ok.onclick = () => { backgrounds[activePeer] = v1.value; localStorage.setItem('cg_bg93', JSON.stringify(backgrounds)); applyBg(); closeModal(); };
         }
     }
 
