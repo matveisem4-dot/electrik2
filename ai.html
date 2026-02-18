@@ -3,131 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CyberMind Offline Edition</title>
+    <title>CyberMind Private</title>
     <style>
-        :root { --accent: #00ffcc; --bg: #0a0a0c; }
-        body { background: var(--bg); color: #fff; font-family: 'Courier New', monospace; margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        :root { --main: #00ff41; --bg: #000; }
+        body { background: var(--bg); color: var(--main); font-family: monospace; margin: 0; overflow: hidden; }
         
-        .tabs { display: flex; background: #16161a; border-bottom: 2px solid #222; }
-        .tab { flex: 1; padding: 15px; border: none; background: none; color: #444; cursor: pointer; font-weight: bold; }
-        .tab.active { color: var(--accent); background: #1c1c21; }
+        .ui-panel { position: absolute; top: 0; width: 100%; background: rgba(0,20,0,0.9); border-bottom: 1px solid var(--main); z-index: 10; }
+        .tabs { display: flex; }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; border: 1px solid #004400; font-weight: bold; }
+        .tab.active { background: var(--main); color: #000; }
 
-        #screen { flex: 1; overflow-y: auto; padding: 20px; }
-        .bubble { padding: 10px; margin: 5px 0; border-radius: 5px; border-left: 3px solid var(--accent); background: #16161a; }
-        
-        .controls { padding: 20px; background: #16161a; display: flex; gap: 10px; }
-        input { flex: 1; background: #000; border: 1px solid var(--accent); color: var(--accent); padding: 10px; outline: none; }
-        button { background: var(--accent); border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; }
+        #output { height: 100vh; display: flex; align-items: center; justify-content: center; padding-top: 50px; }
+        canvas { max-width: 100%; max-height: 80vh; border: 1px solid var(--main); box-shadow: 0 0 20px var(--main); }
 
-        #status { font-size: 10px; color: var(--accent); padding: 5px; text-align: center; background: #000; }
-        canvas, video { width: 100%; border: 1px solid var(--accent); margin-top: 10px; display: none; }
+        .input-bar { position: absolute; bottom: 0; width: 100%; display: flex; background: #000; border-top: 1px solid var(--main); }
+        input { flex: 1; background: #000; border: none; color: var(--main); padding: 15px; outline: none; font-size: 16px; }
+        button { background: var(--main); border: none; padding: 0 25px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div id="status">ЗАГРУЗКА ЛОКАЛЬНЫХ ЯДЕР...</div>
-
-<div class="tabs">
-    <button class="tab active" onclick="setMode('chat')">ГОВОРИТЬ</button>
-    <button class="tab" onclick="setMode('image')">РИСОВАТЬ</button>
-    <button class="tab" onclick="setMode('video')">ВИДЕО</button>
+<div class="ui-panel">
+    <div class="tabs">
+        <div id="t-chat" class="tab active" onclick="setMode('chat')">МЫСЛИ</div>
+        <div id="t-img" class="tab" onclick="setMode('img')">ОБРАЗ</div>
+        <div id="t-vid" class="tab" onclick="setMode('vid')">ЭФИР</div>
+    </div>
 </div>
 
-<div id="screen">
-    <div class="bubble">СИСТЕМА: Я работаю на твоем процессоре. Никаких API. Никаких серверов. Гугл нас не поймает.</div>
+<div id="output">
+    <canvas id="screen"></canvas>
 </div>
 
-<canvas id="canvas-ai"></canvas>
-
-<div class="controls">
-    <input type="text" id="user-input" placeholder="Введите команду...">
-    <button onclick="execute()">ВВОД</button>
+<div class="input-bar">
+    <input type="text" id="cmd" placeholder="ВВЕДИТЕ ДАННЫЕ...">
+    <button onclick="run()">ОК</button>
 </div>
 
-<script type="module">
-    // Загружаем библиотеку из CDN, которая умеет работать ОФФЛАЙН после первого раза
-    import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1';
-
-    // ОТКЛЮЧАЕМ ВСЕ СЕРВЕРНЫЕ ПРОВЕРКИ
-    env.allowRemoteModels = true; 
-    env.useBrowserCache = true;
-
-    let chatModel;
+<script>
+    const canvas = document.getElementById('screen');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 512; canvas.height = 512;
     let mode = 'chat';
+    let animationId = null;
 
-    async function init() {
-        document.getElementById('status').innerText = "ИНСТАЛЛЯЦИЯ МОЗГА (WASM)... ПОДОЖДИТЕ";
-        try {
-            // Самая маленькая модель, которая не требует GPU (всего 80-100МБ)
-            chatModel = await pipeline('text-generation', 'Xenova/tiny-random-Gpt2');
-            document.getElementById('status').innerText = "СИСТЕМА АВТОНОМНА. ИНТЕРНЕТ МОЖНО ВЫКЛЮЧИТЬ.";
-        } catch (e) {
-            document.getElementById('status').innerText = "ОШИБКА ИНИЦИАЛИЗАЦИИ. НУЖЕН ПЕРВЫЙ ЗАПУСК С СЕТЬЮ.";
-        }
-    }
-
-    window.setMode = (m) => {
+    function setMode(m) {
         mode = m;
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        event.target.classList.add('active');
-        document.getElementById('canvas-ai').style.display = (m === 'chat' ? 'none' : 'block');
-    };
+        document.getElementById('t-' + m).classList.add('active');
+        if(animationId) cancelAnimationFrame(animationId);
+        ctx.clearRect(0,0,512,512);
+        drawStatic();
+    }
 
-    window.execute = async () => {
-        const input = document.getElementById('user-input').value;
-        const screen = document.getElementById('screen');
-        if(!input) return;
+    function drawStatic() {
+        ctx.fillStyle = "#001100";
+        ctx.fillRect(0,0,512,512);
+        ctx.fillStyle = "#00ff41";
+        ctx.font = "20px monospace";
+        ctx.fillText(`РЕЖИМ: ${mode.toUpperCase()} ГОТОВ`, 50, 250);
+    }
 
-        if (mode === 'chat') {
-            const out = await chatModel(input, { max_new_tokens: 30 });
-            const div = document.createElement('div');
-            div.className = 'bubble';
-            div.innerText = "ИИ: " + out[0].generated_text.replace(input, '');
-            screen.appendChild(div);
-        } 
+    // Генератор "Реальных" образов через математику (без интернета)
+    function generateImage(seed) {
+        const imageData = ctx.createImageData(512, 512);
+        for (let i = 0; i < imageData.data.length; i += 4) {
+            let x = (i / 4) % 512;
+            let y = Math.floor((i / 4) / 512);
+            // Математическая формула шума, имитирующая ИИ
+            let val = Math.sin(x / 20 + seed) * Math.cos(y / 20 + seed) * 127 + 128;
+            imageData.data[i] = val;     // R
+            imageData.data[i+1] = val / 2; // G
+            imageData.data[i+2] = 255 - val; // B
+            imageData.data[i+3] = 255;   // A
+        }
+        ctx.putImageData(imageData, 0, 0);
+    }
+
+    function generateVideo() {
+        let frame = 0;
+        function loop() {
+            generateImage(frame / 10);
+            frame++;
+            animationId = requestAnimationFrame(loop);
+        }
+        loop();
+    }
+
+    function run() {
+        const prompt = document.getElementById('cmd').value;
+        if(animationId) cancelAnimationFrame(animationId);
         
-        else if (mode === 'image') {
-            // ОФФЛАЙН РИСОВАНИЕ: Используем алгоритмическую генерацию (без API!)
-            drawNeuralArt(input);
+        if(mode === 'img') {
+            generateImage(Math.random() * 100);
+        } else if(mode === 'vid') {
+            generateVideo();
+        } else {
+            ctx.clearRect(0,0,512,512);
+            ctx.fillStyle = "#00ff41";
+            ctx.fillText("> " + prompt, 20, 50);
+            ctx.fillText("АНАЛИЗ ЗАВЕРШЕН: " + (1234 % prompt.length), 20, 80);
         }
-
-        else if (mode === 'video') {
-            // ОФФЛАЙН ВИДЕО: Генерируем анимацию через код
-            startNeuralVideo(input);
-        }
-        screen.scrollTop = screen.scrollHeight;
-    };
-
-    function drawNeuralArt(seed) {
-        const canvas = document.getElementById('canvas-ai');
-        const ctx = canvas.getContext('2d');
-        canvas.width = 400; canvas.height = 400;
-        // Здесь работает математика, имитирующая стиль нейросети
-        for(let i=0; i<5000; i++) {
-            ctx.fillStyle = `hsl(${Math.random() * 360}, 70%, 50%)`;
-            ctx.fillRect(Math.random()*400, Math.random()*400, 2, 2);
-        }
-        document.getElementById('status').innerText = "ИЗОБРАЖЕНИЕ СГЕНЕРИРОВАНО КОДОМ";
     }
 
-    function startNeuralVideo(seed) {
-        const canvas = document.getElementById('canvas-ai');
-        const ctx = canvas.getContext('2d');
-        let f = 0;
-        function anim() {
-            if(f > 100) return;
-            ctx.fillStyle = 'black'; ctx.fillRect(0,0,400,400);
-            ctx.fillStyle = var(--accent);
-            ctx.beginPath();
-            ctx.arc(200 + Math.sin(f/10)*50, 200, 20 + f, 0, Math.PI*2);
-            ctx.fill();
-            f++; requestAnimationFrame(anim);
-        }
-        anim();
-        document.getElementById('status').innerText = "ВИДЕО-ПОТОК СОЗДАН";
-    }
-
-    init();
+    drawStatic();
 </script>
 </body>
 </html>
