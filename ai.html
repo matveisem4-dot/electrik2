@@ -2,59 +2,68 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>CYBERMIND HUB</title>
+    <title>CYBERMIND GEN-CORE</title>
     <style>
-        body { background: #050a10; color: #00f2ff; font-family: 'Consolas', monospace; display: flex; flex-direction: column; height: 100vh; margin: 0; }
-        #terminal { flex: 1; padding: 20px; overflow-y: auto; background: #000; border: 1px solid #1a2a3a; margin: 15px; box-shadow: inset 0 0 15px #00f2ff22; }
-        .input-bar { padding: 20px; background: #0a1118; display: flex; gap: 10px; border-top: 2px solid #00f2ff; }
-        input { flex: 1; background: #000; border: 1px solid #1a2a3a; color: #fff; padding: 12px; outline: none; }
-        button { background: #00f2ff; color: #000; border: none; padding: 0 30px; cursor: pointer; font-weight: bold; text-transform: uppercase; }
-        .log { margin-bottom: 8px; border-left: 2px solid #00f2ff; padding-left: 10px; }
+        body { background: #05080c; color: #00f2ff; font-family: 'Consolas', monospace; padding: 20px; }
+        #terminal { background: #000; border: 1px solid #1a2a3a; height: 500px; overflow-y: auto; padding: 15px; border-radius: 8px; box-shadow: 0 0 20px rgba(0,242,255,0.1); }
+        .log { margin-bottom: 15px; padding: 10px; border-radius: 4px; background: rgba(255,255,255,0.02); }
+        .ai-img { max-width: 100%; border: 2px solid var(--neon); margin-top: 10px; border-radius: 8px; }
+        code { background: #1a1a1a; color: #39ff14; padding: 10px; display: block; white-space: pre; border-radius: 5px; margin-top: 10px; }
+        .input-bar { margin-top: 20px; display: flex; gap: 10px; }
+        input { flex: 1; background: #000; border: 1px solid #1a2a3a; color: #fff; padding: 15px; outline: none; }
+        button { background: #00f2ff; color: #000; border: none; padding: 0 30px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div id="terminal">
-    <div class="log" style="color: #39ff14;">[SYSTEM]: Инициализация модулей по протоколу 1234...</div>
-    <div class="log" style="color: #39ff14;">[SYSTEM]: Все части (kode 1-4) обнаружены. Жду команду.</div>
+    <div class="log">[SYSTEM]: Протокол 1234 активен. Модули генерации кода и графики загружены.</div>
 </div>
 
 <div class="input-bar">
-    <input type="text" id="userInput" placeholder="Введите ваш запрос к ИИ...">
-    <button onclick="execute()">EXEC</button>
+    <input type="text" id="userInput" placeholder="Напиши 'Нарисуй кота в космосе' или 'Напиши код на JS'...">
+    <button onclick="execute()">EXECUTE</button>
 </div>
 
 <script type="module">
-    // Импортируем только главного "командира"
-    import { SuperBrain } from './kode4.js';
+    import { LogicCore } from './kode.js';
+    import { CreativeCore } from './kode2.js';
 
     window.execute = () => {
         const input = document.getElementById('userInput');
         const term = document.getElementById('terminal');
-        const text = input.value;
+        const text = input.value.trim();
         if (!text) return;
 
-        // Печатаем ваш ввод
-        const userDiv = document.createElement('div');
-        userDiv.className = 'log';
-        userDiv.innerHTML = `<span style="color:#fff;">USER:</span> ${text}`;
-        term.appendChild(userDiv);
+        addLog(`USER: ${text}`, "#fff");
 
-        // Получаем ответ от объединенного мозга
-        const response = SuperBrain.think(text);
-
-        // Печатаем ответ ИИ
-        setTimeout(() => {
-            const aiDiv = document.createElement('div');
-            aiDiv.className = 'log';
-            aiDiv.style.color = '#39ff14';
-            aiDiv.innerHTML = `<span style="color:#00f2ff;">CYBERMIND:</span> ${response}`;
-            term.appendChild(aiDiv);
-            term.scrollTop = term.scrollHeight;
-        }, 300);
+        const intent = LogicCore.detectIntent(text);
+        
+        if (intent === "IMAGE") {
+            addLog("Генерация изображения... Пожалуйста, подождите.", "#ffcc00");
+            const imgUrl = CreativeCore.generateImage(text);
+            const imgHtml = `<img src="${imgUrl}" class="ai-img" onload="window.scrollTo(0,document.body.scrollHeight)">`;
+            addLog(`CYBERMIND: Вот твое изображение по запросу "${text}":<br>${imgHtml}`, "#39ff14");
+        } 
+        else if (intent === "CODE") {
+            const code = CreativeCore.generateCode(text);
+            addLog(`CYBERMIND: Генерирую структуру кода...<br><code>${code}</code>`, "#39ff14");
+        }
+        else {
+            addLog("CYBERMIND: Я получил твое сообщение. Для генерации используй слова 'нарисуй' или 'код'.", "#00f2ff");
+        }
 
         input.value = '';
     };
+
+    function addLog(html, col) {
+        const d = document.createElement('div');
+        d.className = 'log';
+        d.style.color = col;
+        d.innerHTML = `> ${html}`;
+        document.getElementById('terminal').appendChild(d);
+        document.getElementById('terminal').scrollTop = document.getElementById('terminal').scrollHeight;
+    }
 </script>
 </body>
 </html>
