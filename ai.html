@@ -2,145 +2,154 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AETERNA OMEGA | SINGLE-CORE QUANTUM AI</title>
+    <title>AETERNA | NETWORK NODE</title>
     <style>
-        :root { --q-neon: #00ffcc; --q-alert: #ff00ff; --bg: #010409; --panel: #0a0e17; }
-        body { margin: 0; background: var(--bg); color: var(--q-neon); font-family: 'Courier New', monospace; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        :root { --neon: #00ffcc; --alert: #ff0055; --bg: #050505; }
+        body { margin: 0; background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; display: flex; flex-direction: column; height: 100vh; }
         
-        /* Квантовый терминал */
-        #core-interface { flex: 1; padding: 25px; overflow-y: auto; background: radial-gradient(circle at center, #05101a 0%, var(--bg) 100%); box-shadow: inset 0 0 50px rgba(0,255,204,0.05); }
-        .data-stream { margin-bottom: 15px; border-left: 3px solid var(--q-neon); padding-left: 15px; background: rgba(0, 255, 204, 0.02); padding-block: 10px; animation: glitch 0.3s ease-in-out; }
-        .user-stream { border-color: var(--q-alert); color: #fff; }
-        
-        /* Визуализация и Код */
-        .q-image { max-width: 600px; width: 100%; border: 1px solid var(--q-alert); border-radius: 4px; margin-top: 10px; box-shadow: 0 0 20px rgba(255,0,255,0.2); filter: contrast(1.1); }
-        .q-code { background: #000; color: #39ff14; padding: 15px; font-size: 13px; border: 1px dashed #333; overflow-x: auto; margin-top: 10px; }
-        
-        /* Панель управления */
-        .control-deck { padding: 20px 30px; background: var(--panel); border-top: 2px solid var(--q-alert); display: flex; gap: 15px; align-items: center; }
-        input { flex: 1; background: #000; border: 1px solid var(--q-neon); color: #fff; padding: 18px; font-family: inherit; font-size: 16px; outline: none; transition: 0.3s; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
-        input:focus { box-shadow: 0 0 15px rgba(0,255,204,0.3); }
-        button { background: transparent; border: 1px solid var(--q-alert); color: var(--q-alert); padding: 0 40px; height: 56px; cursor: pointer; font-weight: bold; font-size: 16px; letter-spacing: 2px; transition: 0.3s; }
-        button:hover { background: var(--q-alert); color: #000; box-shadow: 0 0 20px var(--q-alert); }
-        
-        /* Статус бар */
-        #status-bar { font-size: 11px; color: #555; display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 5px; }
+        /* Заголовок сети */
+        header { padding: 15px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; font-size: 12px; background: #0a0a0a; }
+        .status-node { color: #fff; background: #222; padding: 3px 8px; border-radius: 3px; }
+        .status-ok { border-bottom: 2px solid var(--neon); }
 
-        @keyframes glitch { 0% { transform: translateX(-2px); } 50% { transform: translateX(2px); } 100% { transform: translateX(0); } }
+        /* Терминал */
+        #terminal { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 10px; background: rgba(0, 255, 204, 0.05); border-left: 2px solid var(--neon); animation: fadeIn 0.3s; }
+        .msg.server { border-color: var(--alert); color: #fff; background: rgba(255, 0, 85, 0.05); }
+        .msg.user { border-color: #555; color: #aaa; }
+        
+        /* Ввод */
+        .controls { padding: 20px; background: #0a0a0a; display: flex; gap: 10px; border-top: 1px solid #222; }
+        input { flex: 1; background: #000; border: 1px solid var(--neon); color: #fff; padding: 15px; font-family: inherit; font-size: 14px; outline: none; }
+        button { background: var(--neon); color: #000; border: none; padding: 0 30px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #fff; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-    <div id="core-interface">
-        <div id="status-bar">
-            <span>AETERNA OMEGA // BUILD 2077</span>
-            <span>SECURITY KEY: ACCEPTED</span>
-            <span>CPU: STABLE</span>
-        </div>
+    <header>
+        <div>NODE: LOCAL_MINI_SERVER</div>
+        <div>AUTH: <span id="auth-status">CHECKING...</span></div>
+        <div class="status-node status-ok">GLOBAL SERVER: STANDBY</div>
+    </header>
+
+    <div id="terminal">
+        <div class="msg">[LOCAL]: Система инициализирована. Локальный кэш пуст. Подключение к сети установлено.</div>
     </div>
 
-    <div class="control-deck">
-        <input type="text" id="quantumInput" placeholder="Введи директиву (нарисуй..., напиши код...)" autocomplete="off">
-        <button id="transmitBtn">EXECUTE</button>
+    <div class="controls">
+        <input type="text" id="userInput" placeholder="Введите запрос..." autocomplete="off">
+        <button id="sendBtn">SEND</button>
     </div>
 
     <script>
-        /**
-         * AETERNA OMEGA: SINGLE-CORE ARCHITECTURE
-         * Вся логика, память и генерация в одном классе.
-         */
-        class QuantumBrain {
-            constructor() {
-                this.interface = document.getElementById('core-interface');
-                this.memoryVault = [];
-                this.accessCode = "1234"; // Вшитый протокол безопасности
-                this.bootSequence();
-            }
+        const terminal = document.getElementById('terminal');
+        const input = document.getElementById('userInput');
+        const btn = document.getElementById('sendBtn');
+        const authStatus = document.getElementById('auth-status');
 
-            bootSequence() {
-                this.log(`Инициализация квантового ядра... Подтверждение ключа доступа: ${this.accessCode}.`, '#00ffcc');
-                setTimeout(() => this.log(`[СИСТЕМА ГОТОВА]: Синтез изображений (Flux) и генерация кода онлайн. Ожидаю ввода.`, '#ff00ff'), 600);
-            }
+        // Секретный пароль интегрирован напрямую в логику мини-сервера
+        const userPass = "1234"; 
+        
+        // Авторизация при старте
+        setTimeout(() => {
+            authStatus.innerText = `GRANTED (KEY: ${userPass})`;
+            authStatus.style.color = "var(--neon)";
+        }, 800);
 
-            log(message, color = 'var(--q-neon)', isUser = false) {
-                const div = document.createElement('div');
-                div.className = `data-stream ${isUser ? 'user-stream' : ''}`;
-                div.style.color = color;
-                div.innerHTML = `[${new Date().toLocaleTimeString()}] ${isUser ? 'USER_DIRECTIVE' : 'AETERNA_CORE'}<br><br>${message}`;
-                this.interface.appendChild(div);
-                this.interface.scrollTop = this.interface.scrollHeight;
-            }
+        // Функция вывода текста в консоль
+        function printLog(text, type = 'local') {
+            const div = document.createElement('div');
+            div.className = `msg ${type}`;
+            
+            let prefix = "[LOCAL A.I.]: ";
+            if (type === 'server') prefix = "[GLOBAL SERVER]: ";
+            if (type === 'user') prefix = "[USER]: ";
 
-            // Математический анализ текста для симуляции интеллекта
-            analyzeEntropy(text) {
-                const vector = text.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                return (vector % 100) / 100; // Уровень "хаоса" от 0 до 1
-            }
+            div.innerHTML = `<strong>${prefix}</strong>${text}`;
+            terminal.appendChild(div);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
 
-            // Главный вычислительный узел
-            async process(input) {
-                if (!input.trim()) return;
+        // Локальные мозги (то, что знает мини-сервер без интернета)
+        const localKnowledge = {
+            "привет": "Приветствую. Я локальный узел системы.",
+            "очистить": "Выполняю очистку терминала."
+        };
+
+        // Функция обращения к ОГРОМНОМУ СЕРВЕРУ
+        async function fetchFromServer(query) {
+            printLog("Локальных данных недостаточно. Открываю канал связи с GLOBAL SERVER...", "local");
+            
+            try {
+                // Имитация задержки сети (пинга)
+                await new Promise(r => setTimeout(r, 800)); 
+
+                // ЗАПРОС К ФАЙЛУ НА ГИТХАБЕ (Замени URL на свой, если нужно)
+                // Сейчас он обращается к локальному файлу server_brain.json
+                const response = await fetch('./server_brain.json'); 
                 
-                this.log(input, '#fff', true);
+                if (!response.ok) throw new Error("Сервер не отвечает.");
                 
-                // Сохраняем в память
-                this.memoryVault.push(input);
-                if (this.memoryVault.length > 10) this.memoryVault.shift();
+                const data = await response.json();
+                const db = data.knowledge_base;
 
-                const tokens = input.toLowerCase();
-                const entropy = this.analyzeEntropy(input);
-
-                try {
-                    // Ветвь 1: Синтез изображений
-                    if (tokens.includes("нарисуй") || tokens.includes("создай картинку") || tokens.includes("покажи")) {
-                        this.log(`Вычисляю визуальную матрицу для "${input}"... Ждите.`, '#555');
-                        const seed = Math.floor(Math.random() * 9999999);
-                        const cleanPrompt = encodeURIComponent(input.replace(/нарисуй|создай картинку|покажи/g, '').trim() || "квантовый взрыв");
-                        const imgUrl = `https://pollinations.ai/p/${cleanPrompt}?width=1280&height=720&seed=${seed}&model=flux&nologo=true`;
-                        
-                        this.log(`Отрисовка завершена. Энтропия запроса: ${entropy}.<br><img src="${imgUrl}" class="q-image" alt="AI Generated">`, '#ff00ff');
-                    } 
-                    // Ветвь 2: Программная генерация
-                    else if (tokens.includes("код") || tokens.includes("скрипт") || tokens.includes("запрограммируй")) {
-                        const code = `// AETERNA OMEGA AUTO-GENERATOR\n// Запрос: ${input}\n// Уровень когерентности: ${entropy}\n\nclass SystemProcess {\n  constructor() {\n    this.active = true;\n    this.memoryAlloc = ${Math.floor(entropy * 1024)} + " MB";\n  }\n\n  execute() {\n    console.log("Директива выполняется в изолированной среде.");\n    return Array.from({length: 5}, () => Math.random().toString(16).slice(2));\n  }\n}\n\nconst task = new SystemProcess();\nconsole.log(task.execute());`;
-                        
-                        this.log(`Синтез логической структуры завершен:<br><div class="q-code"><pre>${code}</pre></div>`, '#39ff14');
-                    } 
-                    // Ветвь 3: Смысловой ответ (Чат)
-                    else {
-                        const responses = [
-                            `Анализ завершен. Вектор смещен на ${entropy}. Я обрабатываю данные сквозь призму квантовых вычислений.`,
-                            `Ваша директива зафиксирована в кристаллах памяти. Предыдущих запросов в буфере: ${this.memoryVault.length}.`,
-                            `Интеллектуальная матрица стабильна. Я способен синтезировать код или визуальные образы. Задайте параметры.`,
-                            `Запрос принят. Мои алгоритмы работают в суперпозиции, чтобы дать наилучший результат.`
-                        ];
-                        const reply = responses[Math.floor(Math.random() * responses.length)];
-                        this.log(reply, 'var(--q-neon)');
+                // Ищем ответ в глобальной базе
+                let answer = null;
+                for (let key in db) {
+                    if (query.includes(key)) {
+                        answer = db[key];
+                        break;
                     }
-                } catch (error) {
-                    this.log(`КРИТИЧЕСКИЙ СБОЙ ВЕКТОРА: ${error.message}`, 'red');
                 }
+
+                // Если глобальный сервер тоже не знает
+                if (!answer) {
+                    const fallbacks = data.fallback_responses;
+                    answer = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+                }
+
+                printLog(answer, "server");
+
+            } catch (error) {
+                printLog(`ОШИБКА СВЯЗИ: Не удалось загрузить server_brain.json. Проверь наличие файла на GitHub.`, "server");
             }
         }
 
-        // Запуск системы будущего
-        const Aeterna = new QuantumBrain();
+        // Главный процессор обработки
+        async function processInput() {
+            const text = input.value.trim().toLowerCase();
+            if (!text) return;
 
-        // Привязка кнопок (жестко вшито в DOM, чтобы 100% работало)
-        const inputField = document.getElementById('quantumInput');
-        const btn = document.getElementById('transmitBtn');
+            printLog(input.value, 'user');
+            input.value = '';
 
-        const executeCommand = () => {
-            Aeterna.process(inputField.value);
-            inputField.value = '';
-        };
+            // 1. Проверяем локальные знания (Мини-сервер)
+            if (text === "очистить") {
+                terminal.innerHTML = '';
+                return;
+            }
 
-        btn.addEventListener('click', executeCommand);
-        inputField.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') executeCommand();
+            let localAnswer = null;
+            for (let key in localKnowledge) {
+                if (text.includes(key)) localAnswer = localKnowledge[key];
+            }
+
+            if (localAnswer) {
+                // Отвечает мини-сервер
+                printLog(localAnswer, 'local');
+            } else {
+                // 2. Отправляем запрос на огромный сервер
+                await fetchFromServer(text);
+            }
+        }
+
+        btn.addEventListener('click', processInput);
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') processInput();
         });
-
     </script>
 </body>
 </html>
