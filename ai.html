@@ -2,83 +2,216 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>AETERNA | CORE 1234</title>
+    <title>VOID-NET // ACCESS GRANTED</title>
     <style>
-        :root { --neon: #00ffcc; --bg: #020408; --accent: #bd00ff; }
-        body { background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        #terminal { flex: 1; padding: 20px; overflow-y: auto; background: radial-gradient(circle, #0a1122 0%, #020408 100%); }
-        .log { margin-bottom: 10px; border-left: 2px solid var(--neon); padding-left: 15px; font-size: 14px; }
-        .server { border-color: var(--accent); color: #fff; background: rgba(189, 0, 255, 0.05); }
-        .error { border-color: #ff0055; color: #ff0055; }
-        .input-area { padding: 20px; background: #050a14; display: flex; gap: 10px; border-top: 1px solid #1a2a44; }
-        input { flex: 1; background: transparent; border: 1px solid var(--neon); color: #fff; padding: 15px; outline: none; }
-        button { background: var(--neon); color: #000; border: none; padding: 0 30px; cursor: pointer; font-weight: bold; }
+        :root { 
+            --void: #020408; 
+            --neon-violet: #bd00ff; 
+            --neon-cyan: #00f2ff;
+            --error: #ff003c;
+            --terminal-green: #39ff14;
+        }
+
+        body { 
+            background: var(--void); 
+            color: var(--neon-cyan); 
+            font-family: 'Consolas', 'Courier New', monospace; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            overflow: hidden; 
+        }
+
+        /* Глитч-анимация заголовка */
+        .glitch {
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            position: relative;
+            text-shadow: 0.05em 0 0 var(--error), -0.05em -0.025em 0 var(--neon-violet);
+            animation: glitch-anim 500ms infinite;
+        }
+
+        @keyframes glitch-anim {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+
+        header { 
+            padding: 15px 25px; 
+            background: #050a14; 
+            border-bottom: 2px solid var(--neon-violet); 
+            display: flex; 
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Видео-контейнер */
+        #main-frame { 
+            flex: 1; 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+            gap: 20px; 
+            padding: 30px; 
+            overflow-y: auto; 
+            background: radial-gradient(circle at center, #0a1122 0%, #020408 100%);
+            scrollbar-width: thin;
+            scrollbar-color: var(--neon-violet) var(--void);
+        }
+
+        .video-entry { 
+            background: rgba(189, 0, 255, 0.03); 
+            border: 1px solid #1a2a44; 
+            padding: 5px; 
+            position: relative;
+            transition: 0.3s;
+        }
+
+        .video-entry:hover { 
+            border-color: var(--neon-cyan); 
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.2);
+            transform: scale(1.02);
+        }
+
+        .video-entry img { width: 100%; filter: grayscale(0.5) contrast(1.2); }
+        .video-entry:hover img { filter: none; }
+
+        .meta-data { 
+            padding: 10px; 
+            font-size: 12px; 
+        }
+        .v-title { color: #fff; margin-bottom: 5px; height: 35px; overflow: hidden; }
+        .v-stats { color: var(--terminal-green); font-size: 10px; }
+
+        /* Панель ввода */
+        .input-console { 
+            background: #000; 
+            padding: 20px 40px; 
+            border-top: 1px solid var(--neon-violet); 
+            display: flex; 
+            gap: 20px; 
+        }
+
+        .input-console input { 
+            flex: 1; 
+            background: transparent; 
+            border: none; 
+            border-bottom: 1px solid var(--neon-cyan); 
+            color: #fff; 
+            padding: 10px; 
+            font-family: inherit;
+            outline: none;
+        }
+
+        .input-console button { 
+            background: transparent; 
+            border: 1px solid var(--neon-violet); 
+            color: var(--neon-violet); 
+            padding: 10px 30px; 
+            cursor: pointer; 
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .input-console button:hover { background: var(--neon-violet); color: #000; }
+
+        /* Хакерская ошибка */
+        .void-error {
+            color: var(--error);
+            font-weight: bold;
+            padding: 20px;
+            border: 1px dashed var(--error);
+            background: rgba(255, 0, 60, 0.1);
+            grid-column: 1/-1;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
 
-<div id="terminal">
-    <div class="log">>>> СИСТЕМА AETERNA v3.0 // KEY: 1234</div>
-    <div class="log">>>> NODE: electrik2.matveisem4.workers.dev</div>
-</div>
+    <header>
+        <div class="glitch">VOID-NET // NODE_1234</div>
+        <div id="connection-status" style="font-size: 10px; color: var(--terminal-green);">STATUS: STEALTH_MODE</div>
+    </header>
 
-<div class="input-area">
-    <input type="text" id="userInput" placeholder="Введите команду для сервера..." autocomplete="off">
-    <button id="sendBtn">EXECUTE</button>
-</div>
+    <div id="main-frame">
+        <div style="grid-column: 1/-1; text-align: center; margin-top: 150px; opacity: 0.3;">
+            [ СИСТЕМА ПУСТОТЫ ОЖИДАЕТ ВВОД ДАННЫХ... ]<br>
+            ВВЕДИТЕ ЗАПРОС ДЛЯ СКРЫТОГО СКАНИРОВАНИЯ
+        </div>
+    </div>
+
+    <div class="input-console">
+        <input type="text" id="target" placeholder="TYPE_QUERY_HERE..." autocomplete="off">
+        <button id="scanBtn">INFILTRATE</button>
+    </div>
 
 <script>
-    const term = document.getElementById('terminal');
-    const input = document.getElementById('userInput');
-    const btn = document.getElementById('sendBtn');
+    const frame = document.getElementById('main-frame');
+    const input = document.getElementById('target');
+    const btn = document.getElementById('scanBtn');
 
-    // ТВОЙ РАБОЧИЙ АДРЕС ИЗ CLOUDFLARE
-    const WORKER_URL = "https://electrik2.matveisem4.workers.dev/";
+    // Хакерские сообщения об ошибках
+    const VOID_ERRORS = [
+        "CRITICAL_FAILURE: Поток данных разорван.",
+        "ACCESS_DENIED: Глобальный брандмауэр блокирует сигнал.",
+        "VOID_ERROR: Пакеты потеряны в пустоте.",
+        "PROTOCOL_1234_INTERRUPTED: Нестабильное соединение."
+    ];
 
-    function print(text, type = '') {
-        const d = document.createElement('div');
-        d.className = `log ${type}`;
-        d.innerHTML = `[${new Date().toLocaleTimeString()}] ${text}`;
-        term.appendChild(d);
-        term.scrollTop = term.scrollHeight;
-    }
+    async function infiltrate(query) {
+        if(!query) return;
 
-    async function handleRequest() {
-        const val = input.value.trim();
-        if(!val) return;
-        input.value = '';
-
-        print(`USER: ${val}`);
-
+        frame.innerHTML = '<div style="grid-column: 1/-1; text-align: center;">[ СКАНЕР ЗАПУЩЕН: ПОИСК УЯЗВИМОСТЕЙ В СЕТИ... ]</div>';
+        
         try {
-            // Имитация "Спец-Браузера": ищем данные (через прокси, чтобы не было ошибок)
-            print("БРАУЗЕР: Поиск и фильтрация рекламы...");
-            const searchRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://www.google.com/search?q=' + val)}`);
-            const searchData = await searchRes.json();
+            // Используем свободное зеркало Invidious для поиска без ограничений
+            const response = await fetch(`https://invidious.lunar.icu/api/v1/search?q=${encodeURIComponent(query)}`);
             
-            // Отправка на "Огромный Сервер"
-            print("СЕРВЕР: Синхронизация данных...");
-            const response = await fetch(WORKER_URL, {
-                method: 'POST',
-                headers: { 
-                    'Authorization': '1234', 
-                    'Content-Type': 'application/json' 
-                },
-                body: JSON.stringify({ query: val, data: searchData.contents.substring(0, 1000) })
+            if(!response.ok) throw new Error();
+
+            const data = await response.json();
+            frame.innerHTML = '';
+
+            if(data.length === 0) {
+                showError("NULL_DATA: Пустота не вернула результатов.");
+                return;
+            }
+
+            data.forEach(v => {
+                if(v.type === 'video') {
+                    const div = document.createElement('div');
+                    div.className = 'video-entry';
+                    div.innerHTML = `
+                        <a href="https://www.youtube.com/watch?v=${v.videoId}" target="_blank" style="text-decoration:none">
+                            <img src="${v.videoThumbnails[0].url}">
+                            <div class="meta-data">
+                                <div class="v-title">${v.title}</div>
+                                <div class="v-stats">CHANNEL: ${v.author}</div>
+                                <div class="v-stats">UPLOADER_ID: ${v.authorId.substring(0, 10)}...</div>
+                            </div>
+                        </a>
+                    `;
+                    frame.appendChild(div);
+                }
             });
 
-            if (!response.ok) throw new Error(`Ошибка сервера: ${response.status}`);
-
-            const result = await response.json();
-            print(`GLOBAL_SERVER: ${result.verdict}. ${result.summary}`, 'server');
-
         } catch (e) {
-            print(`КРИТИЧЕСКАЯ ОШИБКА: ${e.message}. Убедись, что Worker задеплоен!`, 'error');
+            showError(VOID_ERRORS[Math.floor(Math.random() * VOID_ERRORS.length)]);
         }
     }
 
-    btn.onclick = handleRequest;
-    input.onkeypress = (e) => { if(e.key === 'Enter') handleRequest(); };
+    function showError(msg) {
+        frame.innerHTML = `<div class="void-error">!!! ${msg} !!!</div>`;
+    }
+
+    btn.onclick = () => infiltrate(input.value);
+    input.onkeypress = (e) => { if(e.key === 'Enter') infiltrate(input.value); };
 </script>
 </body>
 </html>
