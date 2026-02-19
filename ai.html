@@ -2,140 +2,83 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AETERNA | SPECIAL BROWSER & SERVER</title>
+    <title>AETERNA | CORE 1234</title>
     <style>
-        :root { --neon: #00ffcc; --dark: #020408; --accent: #bd00ff; }
-        body { background: var(--dark); color: var(--neon); font-family: 'Consolas', 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-        
-        /* Экран Терминала */
-        #terminal { flex: 1; padding: 25px; overflow-y: auto; background: radial-gradient(circle at center, #0a1122 0%, #020408 100%); border-bottom: 2px solid var(--accent); }
-        .log-entry { margin-bottom: 15px; border-left: 2px solid var(--neon); padding-left: 15px; animation: slideIn 0.3s ease-out; }
-        .server-response { border-color: var(--accent); color: #fff; background: rgba(189, 0, 255, 0.05); padding: 10px; border-radius: 4px; }
-        .system-info { color: #555; font-size: 12px; margin-top: 5px; }
-
-        /* Панель управления */
-        .input-zone { padding: 25px; background: #050a14; display: flex; gap: 15px; box-shadow: 0 -10px 30px rgba(0,0,0,0.5); }
-        input { flex: 1; background: transparent; border: 1px solid var(--neon); color: #fff; padding: 15px; font-size: 16px; outline: none; transition: 0.3s; }
-        input:focus { box-shadow: 0 0 15px var(--neon); }
-        button { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 0 35px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.3s; }
-        button:hover { background: var(--accent); color: #000; box-shadow: 0 0 20px var(--accent); }
-
-        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
-        code { color: #39ff14; background: #000; padding: 2px 5px; }
+        :root { --neon: #00ffcc; --bg: #020408; --accent: #bd00ff; }
+        body { background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        #terminal { flex: 1; padding: 20px; overflow-y: auto; background: radial-gradient(circle, #0a1122 0%, #020408 100%); }
+        .log { margin-bottom: 10px; border-left: 2px solid var(--neon); padding-left: 15px; font-size: 14px; }
+        .server { border-color: var(--accent); color: #fff; background: rgba(189, 0, 255, 0.05); }
+        .error { border-color: #ff0055; color: #ff0055; }
+        .input-area { padding: 20px; background: #050a14; display: flex; gap: 10px; border-top: 1px solid #1a2a44; }
+        input { flex: 1; background: transparent; border: 1px solid var(--neon); color: #fff; padding: 15px; outline: none; }
+        button { background: var(--neon); color: #000; border: none; padding: 0 30px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div id="terminal">
-        <div class="log-entry">>>> СИСТЕМА AETERNA v3.0 // SECURITY KEY: 1234</div>
-        <div class="log-entry">>>> ПОДКЛЮЧЕНИЕ К ГЛОБАЛЬНОМУ СЕРВЕРУ: <span style="color:white">electrik2.matveisem4.workers.dev</span></div>
-    </div>
+<div id="terminal">
+    <div class="log">>>> СИСТЕМА AETERNA v3.0 // KEY: 1234</div>
+    <div class="log">>>> NODE: electrik2.matveisem4.workers.dev</div>
+</div>
 
-    <div class="input-zone">
-        <input type="text" id="qInput" placeholder="Введите задачу (например: Напиши код или Найди кто президент)..." autocomplete="off">
-        <button id="execBtn">EXECUTE</button>
-    </div>
+<div class="input-area">
+    <input type="text" id="userInput" placeholder="Введите команду для сервера..." autocomplete="off">
+    <button id="sendBtn">EXECUTE</button>
+</div>
 
 <script>
-    /**
-     * ЦЕНТРАЛЬНЫЙ МОЗГ AETERNA
-     * Объединяет локальный спец-браузер и облачный сервер Cloudflare.
-     */
-    const terminal = document.getElementById('terminal');
-    const input = document.getElementById('qInput');
-    const btn = document.getElementById('execBtn');
+    const term = document.getElementById('terminal');
+    const input = document.getElementById('userInput');
+    const btn = document.getElementById('sendBtn');
 
-    // ТВОЙ ЛИЧНЫЙ СЕРВЕР В CLOUDFLARE
-    const SERVER_URL = "https://electrik2.matveisem4.workers.dev/";
+    // ТВОЙ РАБОЧИЙ АДРЕС ИЗ CLOUDFLARE
+    const WORKER_URL = "https://electrik2.matveisem4.workers.dev/";
 
-    function log(text, isServer = false) {
+    function print(text, type = '') {
         const d = document.createElement('div');
-        d.className = `log-entry ${isServer ? 'server-response' : ''}`;
-        d.innerHTML = `[${new Date().toLocaleTimeString()}] <strong>${isServer ? 'GLOBAL_SERVER' : 'LOCAL_BROWSER'}:</strong><br>${text}`;
-        terminal.appendChild(d);
-        terminal.scrollTop = terminal.scrollHeight;
+        d.className = `log ${type}`;
+        d.innerHTML = `[${new Date().toLocaleTimeString()}] ${text}`;
+        term.appendChild(d);
+        term.scrollTop = term.scrollHeight;
     }
 
-    // --- ФУНКЦИЯ СПЕЦ-БРАУЗЕРА (СМАРТ-ПОИСК БЕЗ РЕКЛАМЫ) ---
-    async function specialBrowserFetch(query) {
-        log(`Анализ сети по вектору: <code>${query}</code>...`);
-        try {
-            // Используем AllOrigins для обхода CORS и получения сырого HTML
-            const proxy = `https://api.allorigins.win/get?url=`;
-            const target = encodeURIComponent(`https://www.google.com/search?q=${query}`);
-            
-            const response = await fetch(proxy + target);
-            if (!response.ok) throw new Error("Сеть недоступна");
-            
-            const json = await response.json();
-            
-            // Очистка контента (Удаляем рекламу, скрипты, навигацию)
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(json.contents, 'text/html');
-            
-            // Удаляем мусорные теги
-            const trash = doc.querySelectorAll('script, style, iframe, footer, nav, .ads, .ad, [role="banner"]');
-            trash.forEach(el => el.remove());
-
-            // Извлекаем только "Самые лучшие слова" (Чистый текст)
-            const cleanText = doc.body.innerText
-                .replace(/\s+/g, ' ') // Убираем лишние пробелы
-                .substring(0, 1500); // Берем первые 1500 символов для анализа
-            
-            log("Мусор отсеян. Пакет данных готов для передачи в Cloudflare.");
-            return cleanText;
-        } catch (e) {
-            log("Ошибка сенсоров: " + e.message);
-            return "NO_DATA";
-        }
-    }
-
-    // --- ГЛАВНЫЙ ПРОЦЕСС ---
-    async function runAeterna() {
-        const query = input.value.trim();
-        if(!query) return;
+    async function handleRequest() {
+        const val = input.value.trim();
+        if(!val) return;
         input.value = '';
 
-        log(`Инициация директивы: "<u>${query}</u>"`, false);
+        print(`USER: ${val}`);
 
-        // 1. Работает Спец-Браузер (Локально)
-        const scrapedData = await specialBrowserFetch(query);
-
-        // 2. Сигнал на Огромный Сервер (Cloudflare)
-        log("Синхронизация с облачным ядром...");
-        
         try {
-            const serverResponse = await fetch(SERVER_URL, {
+            // Имитация "Спец-Браузера": ищем данные (через прокси, чтобы не было ошибок)
+            print("БРАУЗЕР: Поиск и фильтрация рекламы...");
+            const searchRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://www.google.com/search?q=' + val)}`);
+            const searchData = await searchRes.json();
+            
+            // Отправка на "Огромный Сервер"
+            print("СЕРВЕР: Синхронизация данных...");
+            const response = await fetch(WORKER_URL, {
                 method: 'POST',
-                headers: {
-                    'Authorization': '1234',
-                    'Content-Type': 'application/json'
+                headers: { 
+                    'Authorization': '1234', 
+                    'Content-Type': 'application/json' 
                 },
-                body: JSON.stringify({
-                    query: query,
-                    data: scrapedData
-                })
+                body: JSON.stringify({ query: val, data: searchData.contents.substring(0, 1000) })
             });
 
-            if (!serverResponse.ok) {
-                if(serverResponse.status === 403) throw new Error("Ошибка ключа доступа 1234");
-                throw new Error("Сервер не отвечает");
-            }
+            if (!response.ok) throw new Error(`Ошибка сервера: ${response.status}`);
 
-            const result = await serverResponse.json();
-            
-            // Вывод финального умного ответа
-            log(`<strong>СТАТУС: ${result.verdict}</strong><br>${result.summary}<br><div class="system-info">Интеллект: ${result.intellect_level}</div>`, true);
+            const result = await response.json();
+            print(`GLOBAL_SERVER: ${result.verdict}. ${result.summary}`, 'server');
 
-        } catch (err) {
-            log(`КРИТИЧЕСКАЯ ОШИБКА: ${err.message}. Проверь, нажал ли ты кнопку "Deploy" в Cloudflare.`, true);
+        } catch (e) {
+            print(`КРИТИЧЕСКАЯ ОШИБКА: ${e.message}. Убедись, что Worker задеплоен!`, 'error');
         }
     }
 
-    // Слушатели событий
-    btn.onclick = runAeterna;
-    input.onkeypress = (e) => { if(e.key === 'Enter') runAeterna(); };
+    btn.onclick = handleRequest;
+    input.onkeypress = (e) => { if(e.key === 'Enter') handleRequest(); };
 </script>
 </body>
 </html>
