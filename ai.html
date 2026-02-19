@@ -2,154 +2,140 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>AETERNA | NETWORK NODE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AETERNA | SPECIAL BROWSER & SERVER</title>
     <style>
-        :root { --neon: #00ffcc; --alert: #ff0055; --bg: #050505; }
-        body { margin: 0; background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; display: flex; flex-direction: column; height: 100vh; }
+        :root { --neon: #00ffcc; --dark: #020408; --accent: #bd00ff; }
+        body { background: var(--dark); color: var(--neon); font-family: 'Consolas', 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        /* Заголовок сети */
-        header { padding: 15px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; font-size: 12px; background: #0a0a0a; }
-        .status-node { color: #fff; background: #222; padding: 3px 8px; border-radius: 3px; }
-        .status-ok { border-bottom: 2px solid var(--neon); }
+        /* Экран Терминала */
+        #terminal { flex: 1; padding: 25px; overflow-y: auto; background: radial-gradient(circle at center, #0a1122 0%, #020408 100%); border-bottom: 2px solid var(--accent); }
+        .log-entry { margin-bottom: 15px; border-left: 2px solid var(--neon); padding-left: 15px; animation: slideIn 0.3s ease-out; }
+        .server-response { border-color: var(--accent); color: #fff; background: rgba(189, 0, 255, 0.05); padding: 10px; border-radius: 4px; }
+        .system-info { color: #555; font-size: 12px; margin-top: 5px; }
 
-        /* Терминал */
-        #terminal { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 10px; background: rgba(0, 255, 204, 0.05); border-left: 2px solid var(--neon); animation: fadeIn 0.3s; }
-        .msg.server { border-color: var(--alert); color: #fff; background: rgba(255, 0, 85, 0.05); }
-        .msg.user { border-color: #555; color: #aaa; }
-        
-        /* Ввод */
-        .controls { padding: 20px; background: #0a0a0a; display: flex; gap: 10px; border-top: 1px solid #222; }
-        input { flex: 1; background: #000; border: 1px solid var(--neon); color: #fff; padding: 15px; font-family: inherit; font-size: 14px; outline: none; }
-        button { background: var(--neon); color: #000; border: none; padding: 0 30px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:hover { background: #fff; }
+        /* Панель управления */
+        .input-zone { padding: 25px; background: #050a14; display: flex; gap: 15px; box-shadow: 0 -10px 30px rgba(0,0,0,0.5); }
+        input { flex: 1; background: transparent; border: 1px solid var(--neon); color: #fff; padding: 15px; font-size: 16px; outline: none; transition: 0.3s; }
+        input:focus { box-shadow: 0 0 15px var(--neon); }
+        button { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 0 35px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.3s; }
+        button:hover { background: var(--accent); color: #000; box-shadow: 0 0 20px var(--accent); }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        code { color: #39ff14; background: #000; padding: 2px 5px; }
     </style>
 </head>
 <body>
 
-    <header>
-        <div>NODE: LOCAL_MINI_SERVER</div>
-        <div>AUTH: <span id="auth-status">CHECKING...</span></div>
-        <div class="status-node status-ok">GLOBAL SERVER: STANDBY</div>
-    </header>
-
     <div id="terminal">
-        <div class="msg">[LOCAL]: Система инициализирована. Локальный кэш пуст. Подключение к сети установлено.</div>
+        <div class="log-entry">>>> СИСТЕМА AETERNA v3.0 // SECURITY KEY: 1234</div>
+        <div class="log-entry">>>> ПОДКЛЮЧЕНИЕ К ГЛОБАЛЬНОМУ СЕРВЕРУ: <span style="color:white">electrik2.matveisem4.workers.dev</span></div>
     </div>
 
-    <div class="controls">
-        <input type="text" id="userInput" placeholder="Введите запрос..." autocomplete="off">
-        <button id="sendBtn">SEND</button>
+    <div class="input-zone">
+        <input type="text" id="qInput" placeholder="Введите задачу (например: Напиши код или Найди кто президент)..." autocomplete="off">
+        <button id="execBtn">EXECUTE</button>
     </div>
 
-    <script>
-        const terminal = document.getElementById('terminal');
-        const input = document.getElementById('userInput');
-        const btn = document.getElementById('sendBtn');
-        const authStatus = document.getElementById('auth-status');
+<script>
+    /**
+     * ЦЕНТРАЛЬНЫЙ МОЗГ AETERNA
+     * Объединяет локальный спец-браузер и облачный сервер Cloudflare.
+     */
+    const terminal = document.getElementById('terminal');
+    const input = document.getElementById('qInput');
+    const btn = document.getElementById('execBtn');
 
-        // Секретный пароль интегрирован напрямую в логику мини-сервера
-        const userPass = "1234"; 
+    // ТВОЙ ЛИЧНЫЙ СЕРВЕР В CLOUDFLARE
+    const SERVER_URL = "https://electrik2.matveisem4.workers.dev/";
+
+    function log(text, isServer = false) {
+        const d = document.createElement('div');
+        d.className = `log-entry ${isServer ? 'server-response' : ''}`;
+        d.innerHTML = `[${new Date().toLocaleTimeString()}] <strong>${isServer ? 'GLOBAL_SERVER' : 'LOCAL_BROWSER'}:</strong><br>${text}`;
+        terminal.appendChild(d);
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    // --- ФУНКЦИЯ СПЕЦ-БРАУЗЕРА (СМАРТ-ПОИСК БЕЗ РЕКЛАМЫ) ---
+    async function specialBrowserFetch(query) {
+        log(`Анализ сети по вектору: <code>${query}</code>...`);
+        try {
+            // Используем AllOrigins для обхода CORS и получения сырого HTML
+            const proxy = `https://api.allorigins.win/get?url=`;
+            const target = encodeURIComponent(`https://www.google.com/search?q=${query}`);
+            
+            const response = await fetch(proxy + target);
+            if (!response.ok) throw new Error("Сеть недоступна");
+            
+            const json = await response.json();
+            
+            // Очистка контента (Удаляем рекламу, скрипты, навигацию)
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(json.contents, 'text/html');
+            
+            // Удаляем мусорные теги
+            const trash = doc.querySelectorAll('script, style, iframe, footer, nav, .ads, .ad, [role="banner"]');
+            trash.forEach(el => el.remove());
+
+            // Извлекаем только "Самые лучшие слова" (Чистый текст)
+            const cleanText = doc.body.innerText
+                .replace(/\s+/g, ' ') // Убираем лишние пробелы
+                .substring(0, 1500); // Берем первые 1500 символов для анализа
+            
+            log("Мусор отсеян. Пакет данных готов для передачи в Cloudflare.");
+            return cleanText;
+        } catch (e) {
+            log("Ошибка сенсоров: " + e.message);
+            return "NO_DATA";
+        }
+    }
+
+    // --- ГЛАВНЫЙ ПРОЦЕСС ---
+    async function runAeterna() {
+        const query = input.value.trim();
+        if(!query) return;
+        input.value = '';
+
+        log(`Инициация директивы: "<u>${query}</u>"`, false);
+
+        // 1. Работает Спец-Браузер (Локально)
+        const scrapedData = await specialBrowserFetch(query);
+
+        // 2. Сигнал на Огромный Сервер (Cloudflare)
+        log("Синхронизация с облачным ядром...");
         
-        // Авторизация при старте
-        setTimeout(() => {
-            authStatus.innerText = `GRANTED (KEY: ${userPass})`;
-            authStatus.style.color = "var(--neon)";
-        }, 800);
+        try {
+            const serverResponse = await fetch(SERVER_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': '1234',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    query: query,
+                    data: scrapedData
+                })
+            });
 
-        // Функция вывода текста в консоль
-        function printLog(text, type = 'local') {
-            const div = document.createElement('div');
-            div.className = `msg ${type}`;
+            if (!serverResponse.ok) {
+                if(serverResponse.status === 403) throw new Error("Ошибка ключа доступа 1234");
+                throw new Error("Сервер не отвечает");
+            }
+
+            const result = await serverResponse.json();
             
-            let prefix = "[LOCAL A.I.]: ";
-            if (type === 'server') prefix = "[GLOBAL SERVER]: ";
-            if (type === 'user') prefix = "[USER]: ";
+            // Вывод финального умного ответа
+            log(`<strong>СТАТУС: ${result.verdict}</strong><br>${result.summary}<br><div class="system-info">Интеллект: ${result.intellect_level}</div>`, true);
 
-            div.innerHTML = `<strong>${prefix}</strong>${text}`;
-            terminal.appendChild(div);
-            terminal.scrollTop = terminal.scrollHeight;
+        } catch (err) {
+            log(`КРИТИЧЕСКАЯ ОШИБКА: ${err.message}. Проверь, нажал ли ты кнопку "Deploy" в Cloudflare.`, true);
         }
+    }
 
-        // Локальные мозги (то, что знает мини-сервер без интернета)
-        const localKnowledge = {
-            "привет": "Приветствую. Я локальный узел системы.",
-            "очистить": "Выполняю очистку терминала."
-        };
-
-        // Функция обращения к ОГРОМНОМУ СЕРВЕРУ
-        async function fetchFromServer(query) {
-            printLog("Локальных данных недостаточно. Открываю канал связи с GLOBAL SERVER...", "local");
-            
-            try {
-                // Имитация задержки сети (пинга)
-                await new Promise(r => setTimeout(r, 800)); 
-
-                // ЗАПРОС К ФАЙЛУ НА ГИТХАБЕ (Замени URL на свой, если нужно)
-                // Сейчас он обращается к локальному файлу server_brain.json
-                const response = await fetch('./server_brain.json'); 
-                
-                if (!response.ok) throw new Error("Сервер не отвечает.");
-                
-                const data = await response.json();
-                const db = data.knowledge_base;
-
-                // Ищем ответ в глобальной базе
-                let answer = null;
-                for (let key in db) {
-                    if (query.includes(key)) {
-                        answer = db[key];
-                        break;
-                    }
-                }
-
-                // Если глобальный сервер тоже не знает
-                if (!answer) {
-                    const fallbacks = data.fallback_responses;
-                    answer = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-                }
-
-                printLog(answer, "server");
-
-            } catch (error) {
-                printLog(`ОШИБКА СВЯЗИ: Не удалось загрузить server_brain.json. Проверь наличие файла на GitHub.`, "server");
-            }
-        }
-
-        // Главный процессор обработки
-        async function processInput() {
-            const text = input.value.trim().toLowerCase();
-            if (!text) return;
-
-            printLog(input.value, 'user');
-            input.value = '';
-
-            // 1. Проверяем локальные знания (Мини-сервер)
-            if (text === "очистить") {
-                terminal.innerHTML = '';
-                return;
-            }
-
-            let localAnswer = null;
-            for (let key in localKnowledge) {
-                if (text.includes(key)) localAnswer = localKnowledge[key];
-            }
-
-            if (localAnswer) {
-                // Отвечает мини-сервер
-                printLog(localAnswer, 'local');
-            } else {
-                // 2. Отправляем запрос на огромный сервер
-                await fetchFromServer(text);
-            }
-        }
-
-        btn.addEventListener('click', processInput);
-        input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') processInput();
-        });
-    </script>
+    // Слушатели событий
+    btn.onclick = runAeterna;
+    input.onkeypress = (e) => { if(e.key === 'Enter') runAeterna(); };
+</script>
 </body>
 </html>
