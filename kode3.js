@@ -1,12 +1,12 @@
 export const MemoryCore = {
-    history: [],
+    vault: new Map(),
     
-    save(user, bot) {
-        this.history.push({ user, bot, time: Date.now() });
-        if(this.history.length > 10) this.history.shift(); // Храним 10 шагов
+    store(id, data) {
+        const timestamp = performance.now();
+        this.vault.set(id, { data, timestamp, integrity: Math.random().toFixed(4) });
     },
 
-    getContext() {
-        return this.history.map(h => `User: ${h.user} | AI: ${h.bot}`).join('\n');
+    getSnapshot() {
+        return Array.from(this.vault.values()).slice(-1)[0];
     }
 };
