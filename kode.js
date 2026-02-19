@@ -1,19 +1,20 @@
-// Модуль семантического ядра
+/**
+ * QPU LOGIC LAYER v9.0
+ * Модуль обработки квантовых состояний и вероятностных весов.
+ */
 export const LogicCore = {
-    weights: { math: 0.8, creative: 0.5, coding: 0.9 },
-    
-    analyze(input) {
-        const tokens = input.toLowerCase().split(' ');
-        const vector = tokens.map(word => word.length / 10); // Имитация векторного веса
-        
-        // Определение намерения через веса
-        const isCode = tokens.some(t => ['код', 'скрипт', 'функция', 'js', 'html'].includes(t));
-        const isImage = tokens.some(t => ['нарисуй', 'картинка', 'фото', 'образ'].includes(t));
+    // Матрица весов нейронного ядра
+    synapseMatrix: Array.from({length: 8}, () => Array.from({length: 8}, () => Math.random())),
+
+    analyze(qubitInput) {
+        console.log("%c [QUANTUM]: Инициализация коллапса волновой функции...", "color: #ff00ff");
+        const entropy = qubitInput.length / 100;
+        const state = Math.sin(entropy * Math.PI); // Имитация фазового сдвига
         
         return {
-            intent: isCode ? 'GENERATION_CODE' : (isImage ? 'GENERATION_IMAGE' : 'CORE_CHAT'),
-            confidence: Math.max(...vector),
-            complexity: input.length > 50 ? 'DEEP_CORE' : 'FAST_CORE'
+            coherence: (state + 1) / 2,
+            vector: qubitInput.split('').map(char => char.charCodeAt(0) % 2),
+            isComplex: state > 0.5 ? "SUPERPOSITION" : "DETERMINISTIC"
         };
     }
 };
