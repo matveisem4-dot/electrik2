@@ -2,242 +2,139 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VOID Network | Smart Browser</title>
+    <title>VOID-NET // NEURAL SYSTEM</title>
     <style>
-        :root {
-            --bg: #f4f7f9;
-            --ui-panel: #ffffff;
-            --accent: #007bff;
-            --text: #333;
-            --border: #d1d9e0;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-            background: var(--bg);
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            color: var(--text);
-        }
-
-        /* Панель управления (Адресная строка) */
-        .browser-header {
-            background: var(--ui-panel);
-            padding: 10px 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            border-bottom: 1px solid var(--border);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-
-        .nav-buttons { display: flex; gap: 8px; }
-        .circle-btn { width: 12px; height: 12px; border-radius: 50%; background: #ddd; }
+        :root { --bg: #f0f2f5; --panel: #ffffff; --accent: #007bff; --text: #333; --border: #d1d9e0; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        .address-bar {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            background: #f0f2f5;
-            border-radius: 20px;
-            padding: 8px 15px;
-            border: 1px solid transparent;
-            transition: 0.2s;
-        }
+        /* Адресная строка */
+        header { background: var(--panel); padding: 10px 20px; border-bottom: 1px solid var(--border); display: flex; gap: 15px; align-items: center; }
+        .address-bar { flex: 1; background: #e4e6eb; border-radius: 20px; padding: 8px 15px; display: flex; align-items: center; }
+        .address-bar input { width: 100%; border: none; background: transparent; outline: none; font-size: 14px; }
 
-        .address-bar:focus-within {
-            background: #fff;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
-        }
+        /* Рабочая зона */
+        .content { display: flex; flex: 1; }
+        
+        /* Визуализация нейронки (Вход-Скрытый-Выход) */
+        .neural-engine { width: 400px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+        .layer-box { padding: 15px; border-bottom: 1px solid #eee; font-family: monospace; font-size: 11px; }
+        .layer-title { font-weight: bold; color: var(--accent); margin-bottom: 5px; text-transform: uppercase; }
+        .data-stream { height: 60px; overflow: hidden; color: #888; background: #fafafa; padding: 5px; border-radius: 4px; border: 1px inset #eee; }
 
-        .address-bar input {
-            width: 100%;
-            border: none;
-            background: transparent;
-            outline: none;
-            font-size: 14px;
-            color: var(--text);
-        }
+        /* Главный экран чата */
+        #chat-display { flex: 1; padding: 20px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; gap: 15px; }
+        .bubble { padding: 12px 16px; border-radius: 18px; max-width: 80%; line-height: 1.4; font-size: 15px; }
+        .u-msg { background: var(--accent); color: white; align-self: flex-end; }
+        .ai-msg { background: #e4e6eb; color: black; align-self: flex-start; }
 
-        /* Основная рабочая зона */
-        .main-container {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
-
-        /* Окно браузера */
-        #web-view {
-            flex: 1;
-            border: none;
-            background: #fff;
-        }
-
-        /* Панель Искусственного Интеллекта */
-        .ai-sidebar {
-            width: 350px;
-            background: var(--ui-panel);
-            border-left: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            transition: 0.3s;
-        }
-
-        .ai-header {
-            padding: 15px;
-            font-weight: bold;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        #ai-chat {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            font-size: 14px;
-        }
-
-        .msg { padding: 10px 14px; border-radius: 15px; max-width: 85%; }
-        .user-msg { background: var(--accent); color: #fff; align-self: flex-end; }
-        .ai-msg { background: #f0f2f5; color: var(--text); align-self: flex-start; border: 1px solid #e0e0e0; }
-
-        .ai-input-area {
-            padding: 15px;
-            border-top: 1px solid var(--border);
-            display: flex;
-            gap: 10px;
-        }
-
-        .ai-input-area input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            outline: none;
-        }
-
-        .ai-input-area button {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 0 15px;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
-        /* Заглушка для поиска */
-        .welcome-screen {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: #888;
-        }
+        .input-area { padding: 20px; border-top: 1px solid var(--border); background: white; display: flex; gap: 10px; }
+        input#ai-input { flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; outline: none; }
+        button#send { background: var(--accent); color: white; border: none; padding: 0 20px; border-radius: 8px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <header class="browser-header">
-        <div class="nav-buttons">
-            <div class="circle-btn" style="background: #ff5f56;"></div>
-            <div class="circle-btn" style="background: #ffbd2e;"></div>
-            <div class="circle-btn" style="background: #27c93f;"></div>
-        </div>
+    <header>
+        <div style="font-weight: bold; color: var(--accent);">VOID-NET</div>
         <div class="address-bar">
-            <span style="margin-right: 10px; opacity: 0.5;">🔒</span>
-            <input type="text" id="urlInput" placeholder="Введите адрес сайта или запрос в Google..." value="https://google.com">
+            <span style="margin-right:8px">🔒</span>
+            <input type="text" id="url-bar" value="https://neural.void-net.internal/core-1234" readonly>
         </div>
-        <button id="goBtn" style="display:none"></button>
     </header>
 
-    <div class="main-container">
-        <div id="browser-content" style="flex: 1;">
-            <iframe id="web-view" src="" style="width: 100%; height: 100%; display: none;"></iframe>
-            <div id="home-view" class="welcome-screen">
-                <h1>VOID Network</h1>
-                <p>Введите адрес сайта в строке выше, чтобы начать просмотр.</p>
-            </div>
-        </div>
+    <div class="content">
+        <main id="chat-display">
+            <div class="bubble ai-msg">СИСТЕМА ГОТОВА. Введите запрос для активации нейронных слоев. Пароль: 1234 подтвержден.</div>
+        </main>
 
-        <aside class="ai-sidebar">
-            <div class="ai-header">
-                <span>AI Assistant</span>
-                <span style="font-size: 10px; color: green;">● Online</span>
+        <aside class="neural-engine">
+            <div style="padding: 15px; background: #f8f9fa; border-bottom: 1px solid var(--border); font-weight: bold;">NEURAL MONITOR (1234)</div>
+            
+            <div class="layer-box">
+                <div class="layer-title">Входной слой (Input)</div>
+                <div id="in-layer" class="data-stream">ОЖИДАНИЕ...</div>
             </div>
-            <div id="ai-chat">
-                <div class="msg ai-msg">Привет! Я твой встроенный ИИ. Я помогу тебе найти информацию или разобрать контент сайта.</div>
+
+            <div class="layer-box">
+                <div class="layer-title">Скрытые слои (Hidden)</div>
+                <div id="hidden-layer" class="data-stream">ОЖИДАНИЕ...</div>
             </div>
-            <div class="ai-input-area">
-                <input type="text" id="aiInput" placeholder="Спроси меня о чем угодно...">
-                <button id="aiSend">-></button>
+
+            <div class="layer-box">
+                <div class="layer-title">Выходной слой (Output)</div>
+                <div id="out-layer" class="data-stream">ОЖИДАНИЕ...</div>
+            </div>
+
+            <div style="padding: 20px; font-size: 12px; color: #999;">
+                * Нейронка переводит текст в цифровые векторы, подбирает веса и восстанавливает ответ.
             </div>
         </aside>
     </div>
 
-    <script>
-        const urlInput = document.getElementById('urlInput');
-        const webView = document.getElementById('web-view');
-        const homeView = document.getElementById('home-view');
-        const aiChat = document.getElementById('ai-chat');
-        const aiInput = document.getElementById('aiInput');
+    <div class="input-area">
+        <input type="text" id="ai-input" placeholder="Введите ваш запрос..." autocomplete="off">
+        <button id="send">ОТПРАВИТЬ</button>
+    </div>
 
-        // Логика Адресной Строки
-        urlInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                let url = urlInput.value.trim();
-                if (!url.startsWith('http')) {
-                    url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
-                }
-                webView.src = url;
-                webView.style.display = 'block';
-                homeView.style.display = 'none';
-                
-                addAiMsg("Вы перешли на сайт. Хотите, чтобы я проанализировал его содержимое?");
-            }
-        });
+<script>
+    const chat = document.getElementById('chat-display');
+    const input = document.getElementById('ai-input');
+    const sendBtn = document.getElementById('send');
+    
+    // Мониторы слоев
+    const inMon = document.getElementById('in-layer');
+    const hidMon = document.getElementById('hidden-layer');
+    const outMon = document.getElementById('out-layer');
 
-        // Логика ИИ (Мини-мозг)
-        function addAiMsg(text, isUser = false) {
-            const m = document.createElement('div');
-            m.className = `msg ${isUser ? 'user-msg' : 'ai-msg'}`;
-            m.innerText = text;
-            aiChat.appendChild(m);
-            aiChat.scrollTop = aiChat.scrollHeight;
+    function addBubble(text, type) {
+        const b = document.createElement('div');
+        b.className = `bubble ${type === 'user' ? 'u-msg' : 'ai-msg'}`;
+        b.innerText = text;
+        chat.appendChild(b);
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    // ТВОЯ ЛОГИКА: Текст -> Цифры -> Подбор -> Текст
+    async function processNeuralNetwork(text) {
+        // 1. ВХОДНОЙ СЛОЙ: Текст в цифры (ASCII)
+        const tokens = text.split('').map(c => c.charCodeAt(0));
+        inMon.innerHTML = tokens.join(' ');
+
+        // 2. СКРЫТЫЙ СЛОЙ: Подбор и мутация цифр
+        let hiddenData = [...tokens];
+        hidMon.innerHTML = "ПРОЦЕСС: ";
+        for(let i=0; i<5; i++) {
+            hiddenData = hiddenData.map(n => Math.floor(n * 1.2 + Math.random() * 10));
+            hidMon.innerHTML += hiddenData.slice(0, 5).join('.') + " | ";
+            await new Promise(r => setTimeout(r, 100)); // Задержка для видимости работы
         }
 
-        async function askAI() {
-            const text = aiInput.value.trim();
-            if (!text) return;
-            
-            addAiMsg(text, true);
-            aiInput.value = '';
+        // 3. ВЫХОДНОЙ СЛОЙ: Цифры обратно в ответ
+        // Генерируем "умный" ответ на основе входных данных
+        let response = "";
+        if(text.toLowerCase().includes("привет")) response = "Система 1234 приветствует тебя. Каналы стабильны.";
+        else if(text.toLowerCase().includes("кто ты")) response = "Я — встроенная нейросеть VOID-NET, работающая на весах 1234.";
+        else response = "Запрос обработан. Код ответа: " + hiddenData[0] + ". Информации достаточно.";
 
-            // Симуляция работы "Мини-мозга"
-            setTimeout(() => {
-                if (text.toLowerCase().includes("кто") || text.toLowerCase().includes("что")) {
-                    addAiMsg("Я провожу поиск в глобальной сети по вашему запросу...");
-                    // Здесь можно подключить твой Cloudflare Worker
-                    addAiMsg("На основе моих данных, это важный объект/личность в текущем контексте.");
-                } else {
-                    addAiMsg("Принято. Я обработал ваш запрос и готов помочь с дополнительной информацией.");
-                }
-            }, 600);
-        }
+        const outTokens = response.split('').map(c => c.charCodeAt(0));
+        outMon.innerHTML = outTokens.join(' ');
 
-        document.getElementById('aiSend').onclick = askAI;
-        aiInput.onkeypress = (e) => { if (e.key === 'Enter') askAI(); };
+        return response;
+    }
 
-    </script>
+    async function handle() {
+        const val = input.value.trim();
+        if(!val) return;
+        
+        addBubble(val, 'user');
+        input.value = '';
+
+        const reply = await processNeuralNetwork(val);
+        setTimeout(() => addBubble(reply, 'ai'), 500);
+    }
+
+    sendBtn.onclick = handle;
+    input.onkeypress = (e) => { if(e.key === 'Enter') handle(); };
+</script>
 </body>
 </html>
