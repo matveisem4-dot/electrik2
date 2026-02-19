@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AETERNA MESH // BROWSER</title>
+    <style>
+        body { margin: 0; display: flex; height: 100vh; font-family: sans-serif; background: #000; }
+        #ai-sidebar { width: 300px; background: #111; color: #0f8; border-right: 2px solid #0f8; padding: 20px; display: flex; flex-direction: column; }
+        #web-view { flex: 1; border: none; background: #fff; }
+        input { background: #222; border: 1px solid #0f8; color: #fff; padding: 10px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div id="ai-sidebar">
+        <h3>AETERNA MESH</h3>
+        <p style="font-size: 10px;">СТАТУС: ОБУЧЕНА (>95%)</p>
+        <div id="chat" style="flex:1; overflow-y:auto; font-size: 13px;"></div>
+        <input type="text" id="cmd" placeholder="Команда (например: ютуб)">
+    </div>
+    <iframe id="web-view" src="https://google.com/search?igu=1"></iframe>
+
+    <script>
+        const chat = document.getElementById('chat');
+        const cmd = document.getElementById('cmd');
+        const web = document.getElementById('web-view');
+
+        cmd.onkeypress = (e) => {
+            if(e.key === 'Enter') {
+                const val = cmd.value.toLowerCase();
+                chat.innerHTML += `<div>> ${val}</div>`;
+                
+                // Логика навигации
+                if(val.includes("ютуб")) {
+                    // Используем зеркало, которое открывается в iframe!
+                    web.src = "https://yewtu.be/feed/trending"; 
+                    chat.innerHTML += `<div style="color:white">Ядро решило: Переход на свободный YouTube.</div>`;
+                } else if (val.includes("гугл")) {
+                    web.src = "https://www.google.com/search?igu=1";
+                }
+                cmd.value = '';
+            }
+        }
+    </script>
+</body>
+</html>
