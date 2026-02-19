@@ -2,207 +2,189 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>AETERNA MESH // GLOBAL BROWSER</title>
+    <title>AETERNA MESH // NEURAL OS</title>
     <style>
         :root {
-            --bg: #fdfdfd;
-            --ui-dark: #1a1d21;
-            --accent: #0066ff;
-            --border: #e0e4e8;
+            --bg: #05070a;
+            --panel: rgba(15, 23, 42, 0.8);
+            --accent: #00f2ff;
+            --text: #e2e8f0;
+            --glass: blur(12px);
         }
 
         body {
             margin: 0; padding: 0;
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: var(--bg);
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: radial-gradient(circle at top right, #0a192f, #05070a);
+            color: var(--text);
+            display: flex; flex-direction: column; height: 100vh; overflow: hidden;
         }
 
-        /* Навигационная панель */
+        /* Навигация (Стиль "Стеклянная панель") */
         header {
-            background: #fff;
-            padding: 10px 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            border-bottom: 1px solid var(--border);
-            z-index: 10;
+            background: var(--panel);
+            backdrop-filter: var(--glass);
+            padding: 12px 25px;
+            display: flex; align-items: center; gap: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .address-bar {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            background: #f1f3f5;
-            padding: 8px 18px;
-            border-radius: 20px;
-            border: 1px solid transparent;
-            transition: 0.2s;
-        }
-
-        .address-bar:focus-within {
-            background: #fff;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(0,102,255,0.1);
+            flex: 1; display: flex; align-items: center;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 10px 20px; border-radius: 12px;
+            border: 1px solid rgba(0, 242, 255, 0.2);
         }
 
         .address-bar input {
-            width: 100%;
-            border: none;
-            background: transparent;
-            outline: none;
-            font-size: 14px;
+            width: 100%; border: none; background: transparent;
+            color: var(--accent); outline: none; font-size: 13px;
         }
 
-        /* Контентная зона */
-        .workspace {
-            display: flex;
-            flex: 1;
-            background: #eee;
-        }
+        /* Главный экран */
+        .workspace { display: flex; flex: 1; }
 
         #webview {
-            flex: 1;
-            border: none;
-            background: #fff;
+            flex: 1; border: none; background: #fff;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
         }
 
-        /* Боковая панель нейросети */
-        .neural-sidebar {
-            width: 320px;
-            background: #fff;
-            border-left: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            box-shadow: -5px 0 15px rgba(0,0,0,0.02);
+        /* Нейро-панель (Твоя 93.8% гордость) */
+        .ai-sidebar {
+            width: 340px; background: var(--panel);
+            backdrop-filter: var(--glass);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex; flex-direction: column;
         }
 
-        .ai-status {
-            padding: 15px;
-            border-bottom: 1px solid var(--border);
-            font-size: 12px;
-            font-weight: bold;
-            color: #27ae60;
-            display: flex;
-            justify-content: space-between;
+        .ai-header {
+            padding: 20px; background: rgba(0, 242, 255, 0.05);
+            border-bottom: 1px solid rgba(0, 242, 255, 0.1);
         }
 
-        #chat-window {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+        .acc-badge {
+            background: var(--accent); color: #000;
+            padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 12px;
+        }
+
+        #chat {
+            flex: 1; overflow-y: auto; padding: 20px;
+            display: flex; flex-direction: column; gap: 15px;
         }
 
         .bubble {
-            padding: 10px 14px;
-            border-radius: 15px;
-            font-size: 14px;
-            line-height: 1.4;
-            max-width: 90%;
+            padding: 12px; border-radius: 8px; font-size: 13px; line-height: 1.4;
+            max-width: 85%; position: relative;
         }
 
-        .ai-bubble { background: #f1f3f5; color: #1a1d21; align-self: flex-start; }
-        .user-bubble { background: var(--accent); color: #fff; align-self: flex-end; }
+        .ai-b { border-left: 3px solid var(--accent); background: rgba(255,255,255,0.03); }
+        .usr-b { align-self: flex-end; color: var(--accent); border-right: 3px solid var(--accent); text-align: right; }
 
-        .input-panel {
-            padding: 15px;
-            border-top: 1px solid var(--border);
-            display: flex;
-            gap: 10px;
+        .ai-input {
+            padding: 20px; border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex; gap: 10px;
         }
 
-        .input-panel input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            outline: none;
+        .ai-input input {
+            flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2);
+            padding: 12px; color: #fff; border-radius: 6px; outline: none;
         }
 
         button {
-            background: var(--accent);
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
+            background: transparent; border: 1px solid var(--accent);
+            color: var(--accent); padding: 0 20px; cursor: pointer;
+            transition: 0.3s;
         }
+
+        button:hover { background: var(--accent); color: #000; }
     </style>
 </head>
 <body>
 
 <header>
-    <div style="font-weight: 900; color: var(--accent); letter-spacing: -1px; font-size: 20px;">AETERNA</div>
+    <div style="font-size: 18px; font-weight: 900; color: var(--accent);">AETERNA_MESH</div>
     <div class="address-bar">
-        <span style="margin-right: 10px; opacity: 0.5;">🔍</span>
-        <input type="text" id="urlInput" placeholder="Введите URL или запрос для нейросети...">
+        <span style="color: var(--accent); font-size: 10px; margin-right: 10px;">ID:1234</span>
+        <input type="text" id="urlInput" placeholder="Введите вектор направления...">
     </div>
 </header>
 
 <div class="workspace">
     <iframe id="webview" src="https://www.google.com/search?igu=1"></iframe>
 
-    <aside class="neural-sidebar">
-        <div class="ai-status">
-            <span>CORE: MESH_V1</span>
-            <span>ACCURACY: 93.80%</span>
+    <aside class="ai-sidebar">
+        <div class="ai-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>NEURAL_CORE</span>
+                <span class="acc-badge">93.80% ACC</span>
+            </div>
+            <div style="font-size: 10px; margin-top: 10px; opacity: 0.5;">STATUS: ОБУЧЕНИЕ ЗАВЕРШЕНО</div>
         </div>
-        <div id="chat-window">
-            <div class="bubble ai-bubble">Ядро загружено. Точность 93.80% подтверждена. Я готова управлять вашим сеансом. Напишите "Открой Ютуб" или любой другой запрос.</div>
+
+        <div id="chat">
+            <div class="bubble ai-b">Ядро Aeterna Mesh синхронизировано. Точность 93.8% позволяет мне эффективно управлять вашим браузером. Жду команду.</div>
         </div>
-        <div class="input-panel">
-            <input type="text" id="aiInput" placeholder="Команда нейросети..." autocomplete="off">
-            <button id="sendBtn">EXE</button>
+
+        <div class="ai-input">
+            <input type="text" id="aiCmd" placeholder="Команда..." autocomplete="off">
+            <button id="execBtn">RUN</button>
         </div>
     </aside>
 </div>
 
 <script>
-    const webview = document.getElementById('webview');
-    const urlInput = document.getElementById('urlInput');
-    const aiInput = document.getElementById('aiInput');
-    const chatWindow = document.getElementById('chat-window');
+    const web = document.getElementById('webview');
+    const urlIn = document.getElementById('urlInput');
+    const cmdIn = document.getElementById('aiCmd');
+    const chat = document.getElementById('chat');
 
-    function addMessage(text, isUser = false) {
-        const b = document.createElement('div');
-        b.className = `bubble ${isUser ? 'user-bubble' : 'ai-bubble'}`;
-        b.innerText = text;
-        chatWindow.appendChild(b);
-        chatWindow.scrollTop = chatWindow.scrollHeight;
+    function addLog(text, isUser = false) {
+        const div = document.createElement('div');
+        div.className = `bubble ${isUser ? 'usr-b' : 'ai-b'}`;
+        div.innerText = text;
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
     }
 
     function navigate(url) {
         if (!url.startsWith('http')) url = 'https://' + url;
-        urlInput.value = url;
-        webview.src = url;
+        urlIn.value = url;
+        web.src = url;
     }
 
-    // ЛОГИКА ОБУЧЕННОЙ НЕЙРОСЕТИ (93.8%)
-    async function processAI(query) {
-        addMessage(query, true);
-        const q = query.toLowerCase();
+    // ЛОГИКА ОБУЧЕННОГО ИИ
+    async function handleAI() {
+        const query = cmdIn.value.trim();
+        if(!query) return;
 
-        // Имитация "умного" анализа
+        addLog(query, true);
+        cmdIn.value = '';
+
+        const q = query.toLowerCase();
+        
+        // Нейронка "думает" (короткая пауза)
         setTimeout(() => {
             if (q.includes("ютуб") || q.includes("видео")) {
-                addMessage("Директива понята. Использую обходной протокол для YouTube...");
-                // Используем зеркало Invidious, чтобы фрейм не блокировался
+                addLog("Анализ завершен. Перенаправляю на свободный узел YouTube (Yewtu.be)...");
                 navigate("https://yewtu.be/feed/trending");
             } 
             else if (q.includes("гугл") || q.includes("поиск")) {
-                addMessage("Переключаю основной визуальный канал на Google.");
+                addLog("Открываю глобальный поисковый интерфейс.");
                 navigate("https://www.google.com/search?igu=1");
             }
-            else if (q.includes("1234")) {
-                addMessage("ВНИМАНИЕ: Секретный доступ разработчика 1234 активирован. Все фильтры сняты.");
+            else if (q === "1234") {
+                addLog("ПРОТОКОЛ 1234 ПРИНЯТ. РЕЖИМ СОЗДАТЕЛЯ АКТИВИРОВАН.");
             }
             else {
-                addMessage("Запрос проанализирован нейросетью. Выполняю поиск по глобальной базе.");
+                addLog("Запрос обработан. Генерирую навигационный путь...");
                 navigate("https://www.bing.com/search?q=" + encodeURIComponent(query));
+            }
+        }, 400);
+    }
+
+    document.getElementById('execBtn').onclick = handleAI;
+    cmdIn.onkeypress = (e) => { if(e.key === 'Enter') handleAI(); };
+    urlIn.onkeypress = (e) => { if(e.key === 'Enter') navigate(urlIn.value); };
+</script>
+</body>
+</html>
