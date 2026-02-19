@@ -1,7 +1,8 @@
 export const LogicCore = {
-    analyze: (text) => {
-        const triggers = ["привет", "как дела", "кто ты"];
-        const found = triggers.some(t => text.toLowerCase().includes(t));
-        return { isCommon: found, level: Math.floor(Math.random() * 100) };
+    detectIntent: (text) => {
+        const t = text.toLowerCase();
+        if (t.includes("нарисуй") || t.includes("картинка")) return "IMAGE";
+        if (t.includes("код") || t.includes("скрипт")) return "CODE";
+        return "CHAT";
     }
 };
