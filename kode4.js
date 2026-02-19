@@ -1,36 +1,28 @@
 import { LogicCore } from './kode.js';
 import { CreativeCore } from './kode2.js';
-import { MemoryCore } from './kode3.js';
+import { MemoryCore } from './memory.js'; // Убедись, что имя файла совпадает
 
 export const SuperBrain = {
-    async process(input) {
-        console.log("%c [BRAIN START] Активация нейронных связей...", "color: #00f2ff");
+    async compute(request) {
+        // Шаг 1: Квантовый анализ
+        const analysis = LogicCore.analyze(request);
         
-        // 1. Анализ смысла
-        const analysis = LogicCore.analyze(input);
-        
-        // 2. Учет контекста из памяти
-        const context = MemoryCore.getContext();
-        
-        let finalResponse = "";
-        let type = "text";
+        // Шаг 2: Определение вектора действия
+        const tokens = request.toLowerCase();
+        let result = { type: 'text', data: '' };
 
-        // 3. Логическое ветвление (Decision Tree)
-        if (analysis.intent === 'GENERATION_IMAGE') {
-            finalResponse = await CreativeCore.draw(input);
-            type = "image";
-        } 
-        else if (analysis.intent === 'GENERATION_CODE') {
-            finalResponse = CreativeCore.generateSmartCode(input);
-            type = "code";
-        } 
-        else {
-            // Имитация "умного" текстового ответа на основе весов
-            finalResponse = `Анализ завершен. Контекст: ${analysis.complexity}. На основе ваших предыдущих запросов и текущего веса (${analysis.confidence}), я предлагаю решение: Система 1234 оптимизирована под ваш i5.`;
-            type = "text";
+        if (tokens.includes("нарисуй") || tokens.includes("визуал")) {
+            result.data = await CreativeCore.manifestImage(request);
+            result.type = 'image';
+        } else if (tokens.includes("код") || tokens.includes("скрипт")) {
+            result.data = CreativeCore.generateQuantumCode(request);
+            result.type = 'code';
+        } else {
+            result.data = `Квантовый анализ завершен. Состояние когерентности: ${analysis.coherence.toFixed(4)}. Система Aeterna-1234 готова к выполнению директив.`;
+            result.type = 'text';
         }
 
-        MemoryCore.save(input, finalResponse.toString().substring(0, 50));
-        return { content: finalResponse, type: type, metadata: analysis };
+        MemoryCore.store(Date.now(), result.data);
+        return { ...result, analysis };
     }
 };
