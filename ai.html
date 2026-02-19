@@ -2,216 +2,242 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>VOID-NET // ACCESS GRANTED</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VOID Network | Smart Browser</title>
     <style>
-        :root { 
-            --void: #020408; 
-            --neon-violet: #bd00ff; 
-            --neon-cyan: #00f2ff;
-            --error: #ff003c;
-            --terminal-green: #39ff14;
+        :root {
+            --bg: #f4f7f9;
+            --ui-panel: #ffffff;
+            --accent: #007bff;
+            --text: #333;
+            --border: #d1d9e0;
         }
 
-        body { 
-            background: var(--void); 
-            color: var(--neon-cyan); 
-            font-family: 'Consolas', 'Courier New', monospace; 
-            margin: 0; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-            overflow: hidden; 
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            color: var(--text);
         }
 
-        /* Глитч-анимация заголовка */
-        .glitch {
-            font-size: 1.2rem;
+        /* Панель управления (Адресная строка) */
+        .browser-header {
+            background: var(--ui-panel);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .nav-buttons { display: flex; gap: 8px; }
+        .circle-btn { width: 12px; height: 12px; border-radius: 50%; background: #ddd; }
+        
+        .address-bar {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background: #f0f2f5;
+            border-radius: 20px;
+            padding: 8px 15px;
+            border: 1px solid transparent;
+            transition: 0.2s;
+        }
+
+        .address-bar:focus-within {
+            background: #fff;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+        }
+
+        .address-bar input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            outline: none;
+            font-size: 14px;
+            color: var(--text);
+        }
+
+        /* Основная рабочая зона */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Окно браузера */
+        #web-view {
+            flex: 1;
+            border: none;
+            background: #fff;
+        }
+
+        /* Панель Искусственного Интеллекта */
+        .ai-sidebar {
+            width: 350px;
+            background: var(--ui-panel);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transition: 0.3s;
+        }
+
+        .ai-header {
+            padding: 15px;
             font-weight: bold;
-            text-transform: uppercase;
-            position: relative;
-            text-shadow: 0.05em 0 0 var(--error), -0.05em -0.025em 0 var(--neon-violet);
-            animation: glitch-anim 500ms infinite;
-        }
-
-        @keyframes glitch-anim {
-            0% { transform: translate(0); }
-            20% { transform: translate(-2px, 2px); }
-            40% { transform: translate(-2px, -2px); }
-            60% { transform: translate(2px, 2px); }
-            80% { transform: translate(2px, -2px); }
-            100% { transform: translate(0); }
-        }
-
-        header { 
-            padding: 15px 25px; 
-            background: #050a14; 
-            border-bottom: 2px solid var(--neon-violet); 
-            display: flex; 
+            border-bottom: 1px solid var(--border);
+            display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        /* Видео-контейнер */
-        #main-frame { 
-            flex: 1; 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
-            gap: 20px; 
-            padding: 30px; 
-            overflow-y: auto; 
-            background: radial-gradient(circle at center, #0a1122 0%, #020408 100%);
-            scrollbar-width: thin;
-            scrollbar-color: var(--neon-violet) var(--void);
+        #ai-chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            font-size: 14px;
         }
 
-        .video-entry { 
-            background: rgba(189, 0, 255, 0.03); 
-            border: 1px solid #1a2a44; 
-            padding: 5px; 
-            position: relative;
-            transition: 0.3s;
+        .msg { padding: 10px 14px; border-radius: 15px; max-width: 85%; }
+        .user-msg { background: var(--accent); color: #fff; align-self: flex-end; }
+        .ai-msg { background: #f0f2f5; color: var(--text); align-self: flex-start; border: 1px solid #e0e0e0; }
+
+        .ai-input-area {
+            padding: 15px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
         }
 
-        .video-entry:hover { 
-            border-color: var(--neon-cyan); 
-            box-shadow: 0 0 15px rgba(0, 242, 255, 0.2);
-            transform: scale(1.02);
-        }
-
-        .video-entry img { width: 100%; filter: grayscale(0.5) contrast(1.2); }
-        .video-entry:hover img { filter: none; }
-
-        .meta-data { 
-            padding: 10px; 
-            font-size: 12px; 
-        }
-        .v-title { color: #fff; margin-bottom: 5px; height: 35px; overflow: hidden; }
-        .v-stats { color: var(--terminal-green); font-size: 10px; }
-
-        /* Панель ввода */
-        .input-console { 
-            background: #000; 
-            padding: 20px 40px; 
-            border-top: 1px solid var(--neon-violet); 
-            display: flex; 
-            gap: 20px; 
-        }
-
-        .input-console input { 
-            flex: 1; 
-            background: transparent; 
-            border: none; 
-            border-bottom: 1px solid var(--neon-cyan); 
-            color: #fff; 
-            padding: 10px; 
-            font-family: inherit;
+        .ai-input-area input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
             outline: none;
         }
 
-        .input-console button { 
-            background: transparent; 
-            border: 1px solid var(--neon-violet); 
-            color: var(--neon-violet); 
-            padding: 10px 30px; 
-            cursor: pointer; 
-            font-weight: bold;
-            letter-spacing: 2px;
+        .ai-input-area button {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 0 15px;
+            border-radius: 8px;
+            cursor: pointer;
         }
 
-        .input-console button:hover { background: var(--neon-violet); color: #000; }
-
-        /* Хакерская ошибка */
-        .void-error {
-            color: var(--error);
-            font-weight: bold;
-            padding: 20px;
-            border: 1px dashed var(--error);
-            background: rgba(255, 0, 60, 0.1);
-            grid-column: 1/-1;
-            text-align: center;
+        /* Заглушка для поиска */
+        .welcome-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #888;
         }
     </style>
 </head>
 <body>
 
-    <header>
-        <div class="glitch">VOID-NET // NODE_1234</div>
-        <div id="connection-status" style="font-size: 10px; color: var(--terminal-green);">STATUS: STEALTH_MODE</div>
+    <header class="browser-header">
+        <div class="nav-buttons">
+            <div class="circle-btn" style="background: #ff5f56;"></div>
+            <div class="circle-btn" style="background: #ffbd2e;"></div>
+            <div class="circle-btn" style="background: #27c93f;"></div>
+        </div>
+        <div class="address-bar">
+            <span style="margin-right: 10px; opacity: 0.5;">🔒</span>
+            <input type="text" id="urlInput" placeholder="Введите адрес сайта или запрос в Google..." value="https://google.com">
+        </div>
+        <button id="goBtn" style="display:none"></button>
     </header>
 
-    <div id="main-frame">
-        <div style="grid-column: 1/-1; text-align: center; margin-top: 150px; opacity: 0.3;">
-            [ СИСТЕМА ПУСТОТЫ ОЖИДАЕТ ВВОД ДАННЫХ... ]<br>
-            ВВЕДИТЕ ЗАПРОС ДЛЯ СКРЫТОГО СКАНИРОВАНИЯ
+    <div class="main-container">
+        <div id="browser-content" style="flex: 1;">
+            <iframe id="web-view" src="" style="width: 100%; height: 100%; display: none;"></iframe>
+            <div id="home-view" class="welcome-screen">
+                <h1>VOID Network</h1>
+                <p>Введите адрес сайта в строке выше, чтобы начать просмотр.</p>
+            </div>
         </div>
+
+        <aside class="ai-sidebar">
+            <div class="ai-header">
+                <span>AI Assistant</span>
+                <span style="font-size: 10px; color: green;">● Online</span>
+            </div>
+            <div id="ai-chat">
+                <div class="msg ai-msg">Привет! Я твой встроенный ИИ. Я помогу тебе найти информацию или разобрать контент сайта.</div>
+            </div>
+            <div class="ai-input-area">
+                <input type="text" id="aiInput" placeholder="Спроси меня о чем угодно...">
+                <button id="aiSend">-></button>
+            </div>
+        </aside>
     </div>
 
-    <div class="input-console">
-        <input type="text" id="target" placeholder="TYPE_QUERY_HERE..." autocomplete="off">
-        <button id="scanBtn">INFILTRATE</button>
-    </div>
+    <script>
+        const urlInput = document.getElementById('urlInput');
+        const webView = document.getElementById('web-view');
+        const homeView = document.getElementById('home-view');
+        const aiChat = document.getElementById('ai-chat');
+        const aiInput = document.getElementById('aiInput');
 
-<script>
-    const frame = document.getElementById('main-frame');
-    const input = document.getElementById('target');
-    const btn = document.getElementById('scanBtn');
-
-    // Хакерские сообщения об ошибках
-    const VOID_ERRORS = [
-        "CRITICAL_FAILURE: Поток данных разорван.",
-        "ACCESS_DENIED: Глобальный брандмауэр блокирует сигнал.",
-        "VOID_ERROR: Пакеты потеряны в пустоте.",
-        "PROTOCOL_1234_INTERRUPTED: Нестабильное соединение."
-    ];
-
-    async function infiltrate(query) {
-        if(!query) return;
-
-        frame.innerHTML = '<div style="grid-column: 1/-1; text-align: center;">[ СКАНЕР ЗАПУЩЕН: ПОИСК УЯЗВИМОСТЕЙ В СЕТИ... ]</div>';
-        
-        try {
-            // Используем свободное зеркало Invidious для поиска без ограничений
-            const response = await fetch(`https://invidious.lunar.icu/api/v1/search?q=${encodeURIComponent(query)}`);
-            
-            if(!response.ok) throw new Error();
-
-            const data = await response.json();
-            frame.innerHTML = '';
-
-            if(data.length === 0) {
-                showError("NULL_DATA: Пустота не вернула результатов.");
-                return;
-            }
-
-            data.forEach(v => {
-                if(v.type === 'video') {
-                    const div = document.createElement('div');
-                    div.className = 'video-entry';
-                    div.innerHTML = `
-                        <a href="https://www.youtube.com/watch?v=${v.videoId}" target="_blank" style="text-decoration:none">
-                            <img src="${v.videoThumbnails[0].url}">
-                            <div class="meta-data">
-                                <div class="v-title">${v.title}</div>
-                                <div class="v-stats">CHANNEL: ${v.author}</div>
-                                <div class="v-stats">UPLOADER_ID: ${v.authorId.substring(0, 10)}...</div>
-                            </div>
-                        </a>
-                    `;
-                    frame.appendChild(div);
+        // Логика Адресной Строки
+        urlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                let url = urlInput.value.trim();
+                if (!url.startsWith('http')) {
+                    url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
                 }
-            });
+                webView.src = url;
+                webView.style.display = 'block';
+                homeView.style.display = 'none';
+                
+                addAiMsg("Вы перешли на сайт. Хотите, чтобы я проанализировал его содержимое?");
+            }
+        });
 
-        } catch (e) {
-            showError(VOID_ERRORS[Math.floor(Math.random() * VOID_ERRORS.length)]);
+        // Логика ИИ (Мини-мозг)
+        function addAiMsg(text, isUser = false) {
+            const m = document.createElement('div');
+            m.className = `msg ${isUser ? 'user-msg' : 'ai-msg'}`;
+            m.innerText = text;
+            aiChat.appendChild(m);
+            aiChat.scrollTop = aiChat.scrollHeight;
         }
-    }
 
-    function showError(msg) {
-        frame.innerHTML = `<div class="void-error">!!! ${msg} !!!</div>`;
-    }
+        async function askAI() {
+            const text = aiInput.value.trim();
+            if (!text) return;
+            
+            addAiMsg(text, true);
+            aiInput.value = '';
 
-    btn.onclick = () => infiltrate(input.value);
-    input.onkeypress = (e) => { if(e.key === 'Enter') infiltrate(input.value); };
-</script>
+            // Симуляция работы "Мини-мозга"
+            setTimeout(() => {
+                if (text.toLowerCase().includes("кто") || text.toLowerCase().includes("что")) {
+                    addAiMsg("Я провожу поиск в глобальной сети по вашему запросу...");
+                    // Здесь можно подключить твой Cloudflare Worker
+                    addAiMsg("На основе моих данных, это важный объект/личность в текущем контексте.");
+                } else {
+                    addAiMsg("Принято. Я обработал ваш запрос и готов помочь с дополнительной информацией.");
+                }
+            }, 600);
+        }
+
+        document.getElementById('aiSend').onclick = askAI;
+        aiInput.onkeypress = (e) => { if (e.key === 'Enter') askAI(); };
+
+    </script>
 </body>
 </html>
