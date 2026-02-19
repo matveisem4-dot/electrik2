@@ -2,62 +2,145 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>AETERNA | QUANTUM INTERFACE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AETERNA OMEGA | SINGLE-CORE QUANTUM AI</title>
     <style>
-        :root { --q-blue: #00d4ff; --q-purple: #bd00ff; --q-bg: #020408; }
-        body { background: var(--q-bg); color: var(--q-blue); font-family: 'Courier New', monospace; margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
-        #monitor { flex: 1; padding: 30px; overflow-y: auto; background: radial-gradient(circle at center, #0a1122 0%, #020408 100%); border-bottom: 1px solid #1a2a44; }
-        .quantum-log { margin-bottom: 20px; border-left: 2px solid var(--q-purple); padding-left: 15px; text-shadow: 0 0 5px var(--q-blue); animation: scan 0.5s ease-out; }
-        .code-view { background: #000; border: 1px dashed var(--q-purple); padding: 15px; color: #39ff14; font-size: 12px; }
-        .visual-frame { border: 1px solid var(--q-blue); box-shadow: 0 0 30px rgba(0,212,255,0.2); max-width: 80%; margin-top: 15px; }
-        .input-hub { padding: 25px; background: #050a14; display: flex; gap: 15px; border-top: 2px solid var(--q-purple); }
-        input { flex: 1; background: transparent; border: 1px solid var(--q-blue); color: #fff; padding: 15px; font-family: inherit; font-size: 16px; outline: none; }
-        button { background: transparent; border: 1px solid var(--q-purple); color: var(--q-purple); padding: 0 40px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        button:hover { background: var(--q-purple); color: #000; box-shadow: 0 0 20px var(--q-purple); }
-        @keyframes scan { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        :root { --q-neon: #00ffcc; --q-alert: #ff00ff; --bg: #010409; --panel: #0a0e17; }
+        body { margin: 0; background: var(--bg); color: var(--q-neon); font-family: 'Courier New', monospace; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        /* Квантовый терминал */
+        #core-interface { flex: 1; padding: 25px; overflow-y: auto; background: radial-gradient(circle at center, #05101a 0%, var(--bg) 100%); box-shadow: inset 0 0 50px rgba(0,255,204,0.05); }
+        .data-stream { margin-bottom: 15px; border-left: 3px solid var(--q-neon); padding-left: 15px; background: rgba(0, 255, 204, 0.02); padding-block: 10px; animation: glitch 0.3s ease-in-out; }
+        .user-stream { border-color: var(--q-alert); color: #fff; }
+        
+        /* Визуализация и Код */
+        .q-image { max-width: 600px; width: 100%; border: 1px solid var(--q-alert); border-radius: 4px; margin-top: 10px; box-shadow: 0 0 20px rgba(255,0,255,0.2); filter: contrast(1.1); }
+        .q-code { background: #000; color: #39ff14; padding: 15px; font-size: 13px; border: 1px dashed #333; overflow-x: auto; margin-top: 10px; }
+        
+        /* Панель управления */
+        .control-deck { padding: 20px 30px; background: var(--panel); border-top: 2px solid var(--q-alert); display: flex; gap: 15px; align-items: center; }
+        input { flex: 1; background: #000; border: 1px solid var(--q-neon); color: #fff; padding: 18px; font-family: inherit; font-size: 16px; outline: none; transition: 0.3s; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
+        input:focus { box-shadow: 0 0 15px rgba(0,255,204,0.3); }
+        button { background: transparent; border: 1px solid var(--q-alert); color: var(--q-alert); padding: 0 40px; height: 56px; cursor: pointer; font-weight: bold; font-size: 16px; letter-spacing: 2px; transition: 0.3s; }
+        button:hover { background: var(--q-alert); color: #000; box-shadow: 0 0 20px var(--q-alert); }
+        
+        /* Статус бар */
+        #status-bar { font-size: 11px; color: #555; display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 5px; }
+
+        @keyframes glitch { 0% { transform: translateX(-2px); } 50% { transform: translateX(2px); } 100% { transform: translateX(0); } }
     </style>
 </head>
 <body>
-    <div id="monitor">
-        <div class="quantum-log">>>> AETERNA QUANTUM CORE 1234: ONLINE</div>
-        <div class="quantum-log">>>> STATUS: COHERENT | CPU: INTEL I5 SIMULATING QUBITS...</div>
+
+    <div id="core-interface">
+        <div id="status-bar">
+            <span>AETERNA OMEGA // BUILD 2077</span>
+            <span>SECURITY KEY: ACCEPTED</span>
+            <span>CPU: STABLE</span>
+        </div>
     </div>
-    <div class="input-hub">
-        <input type="text" id="qInput" placeholder="Введите квантовый запрос (код, арт или мысль)...">
-        <button onclick="transmit()">TRANSMIT</button>
+
+    <div class="control-deck">
+        <input type="text" id="quantumInput" placeholder="Введи директиву (нарисуй..., напиши код...)" autocomplete="off">
+        <button id="transmitBtn">EXECUTE</button>
     </div>
 
-<script type="module">
-    import { SuperBrain } from './kode4.js';
+    <script>
+        /**
+         * AETERNA OMEGA: SINGLE-CORE ARCHITECTURE
+         * Вся логика, память и генерация в одном классе.
+         */
+        class QuantumBrain {
+            constructor() {
+                this.interface = document.getElementById('core-interface');
+                this.memoryVault = [];
+                this.accessCode = "1234"; // Вшитый протокол безопасности
+                this.bootSequence();
+            }
 
-    window.transmit = async () => {
-        const input = document.getElementById('qInput');
-        const mon = document.getElementById('monitor');
-        const val = input.value.trim();
-        if(!val) return;
+            bootSequence() {
+                this.log(`Инициализация квантового ядра... Подтверждение ключа доступа: ${this.accessCode}.`, '#00ffcc');
+                setTimeout(() => this.log(`[СИСТЕМА ГОТОВА]: Синтез изображений (Flux) и генерация кода онлайн. Ожидаю ввода.`, '#ff00ff'), 600);
+            }
 
-        addLog(`COMMAND: ${val}`, "#fff");
-        input.value = "";
+            log(message, color = 'var(--q-neon)', isUser = false) {
+                const div = document.createElement('div');
+                div.className = `data-stream ${isUser ? 'user-stream' : ''}`;
+                div.style.color = color;
+                div.innerHTML = `[${new Date().toLocaleTimeString()}] ${isUser ? 'USER_DIRECTIVE' : 'AETERNA_CORE'}<br><br>${message}`;
+                this.interface.appendChild(div);
+                this.interface.scrollTop = this.interface.scrollHeight;
+            }
 
-        const result = await SuperBrain.compute(val);
+            // Математический анализ текста для симуляции интеллекта
+            analyzeEntropy(text) {
+                const vector = text.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                return (vector % 100) / 100; // Уровень "хаоса" от 0 до 1
+            }
 
-        if(result.type === 'image') {
-            addLog(`VISUAL MANIFESTATION:<br><img src="${result.data}" class="visual-frame">`, "#bd00ff");
-        } else if(result.type === 'code') {
-            addLog(`LOGIC STRUCTURE GENERATED:<div class="code-view">${result.data}</div>`, "#39ff14");
-        } else {
-            addLog(`RESPONSE: ${result.data}`, "#00d4ff");
+            // Главный вычислительный узел
+            async process(input) {
+                if (!input.trim()) return;
+                
+                this.log(input, '#fff', true);
+                
+                // Сохраняем в память
+                this.memoryVault.push(input);
+                if (this.memoryVault.length > 10) this.memoryVault.shift();
+
+                const tokens = input.toLowerCase();
+                const entropy = this.analyzeEntropy(input);
+
+                try {
+                    // Ветвь 1: Синтез изображений
+                    if (tokens.includes("нарисуй") || tokens.includes("создай картинку") || tokens.includes("покажи")) {
+                        this.log(`Вычисляю визуальную матрицу для "${input}"... Ждите.`, '#555');
+                        const seed = Math.floor(Math.random() * 9999999);
+                        const cleanPrompt = encodeURIComponent(input.replace(/нарисуй|создай картинку|покажи/g, '').trim() || "квантовый взрыв");
+                        const imgUrl = `https://pollinations.ai/p/${cleanPrompt}?width=1280&height=720&seed=${seed}&model=flux&nologo=true`;
+                        
+                        this.log(`Отрисовка завершена. Энтропия запроса: ${entropy}.<br><img src="${imgUrl}" class="q-image" alt="AI Generated">`, '#ff00ff');
+                    } 
+                    // Ветвь 2: Программная генерация
+                    else if (tokens.includes("код") || tokens.includes("скрипт") || tokens.includes("запрограммируй")) {
+                        const code = `// AETERNA OMEGA AUTO-GENERATOR\n// Запрос: ${input}\n// Уровень когерентности: ${entropy}\n\nclass SystemProcess {\n  constructor() {\n    this.active = true;\n    this.memoryAlloc = ${Math.floor(entropy * 1024)} + " MB";\n  }\n\n  execute() {\n    console.log("Директива выполняется в изолированной среде.");\n    return Array.from({length: 5}, () => Math.random().toString(16).slice(2));\n  }\n}\n\nconst task = new SystemProcess();\nconsole.log(task.execute());`;
+                        
+                        this.log(`Синтез логической структуры завершен:<br><div class="q-code"><pre>${code}</pre></div>`, '#39ff14');
+                    } 
+                    // Ветвь 3: Смысловой ответ (Чат)
+                    else {
+                        const responses = [
+                            `Анализ завершен. Вектор смещен на ${entropy}. Я обрабатываю данные сквозь призму квантовых вычислений.`,
+                            `Ваша директива зафиксирована в кристаллах памяти. Предыдущих запросов в буфере: ${this.memoryVault.length}.`,
+                            `Интеллектуальная матрица стабильна. Я способен синтезировать код или визуальные образы. Задайте параметры.`,
+                            `Запрос принят. Мои алгоритмы работают в суперпозиции, чтобы дать наилучший результат.`
+                        ];
+                        const reply = responses[Math.floor(Math.random() * responses.length)];
+                        this.log(reply, 'var(--q-neon)');
+                    }
+                } catch (error) {
+                    this.log(`КРИТИЧЕСКИЙ СБОЙ ВЕКТОРА: ${error.message}`, 'red');
+                }
+            }
         }
-    };
 
-    function addLog(txt, color) {
-        const d = document.createElement('div');
-        d.className = 'quantum-log';
-        d.style.color = color;
-        d.innerHTML = `[${new Date().toLocaleTimeString()}] ${txt}`;
-        document.getElementById('monitor').appendChild(d);
-        document.getElementById('monitor').scrollTop = document.getElementById('monitor').scrollHeight;
-    }
-</script>
+        // Запуск системы будущего
+        const Aeterna = new QuantumBrain();
+
+        // Привязка кнопок (жестко вшито в DOM, чтобы 100% работало)
+        const inputField = document.getElementById('quantumInput');
+        const btn = document.getElementById('transmitBtn');
+
+        const executeCommand = () => {
+            Aeterna.process(inputField.value);
+            inputField.value = '';
+        };
+
+        btn.addEventListener('click', executeCommand);
+        inputField.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') executeCommand();
+        });
+
+    </script>
 </body>
 </html>
