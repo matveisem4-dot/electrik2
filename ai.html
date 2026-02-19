@@ -2,139 +2,123 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>CYBERMIND ULTIMATE ENGINE</title>
+    <title>CYBERMIND | ACTIVE LOADING</title>
     <style>
-        :root { --neon: #00f2ff; --green: #39ff14; --dark: #05070a; }
-        body { background: var(--dark); color: #fff; font-family: 'Consolas', monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        :root { --neon: #00f2ff; --green: #39ff14; --dark: #05070a; --warn: #ffcc00; }
+        body { background: var(--dark); color: #fff; font-family: 'Consolas', monospace; margin: 0; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
         
-        /* Дизайн терминала */
-        #terminal { flex: 1; padding: 20px; overflow-y: auto; background: rgba(0,0,0,0.8); border: 1px solid #1a2a3a; margin: 10px; box-shadow: inset 0 0 20px #000; }
-        .log-entry { margin-bottom: 8px; border-left: 2px solid #1a2a3a; padding-left: 10px; animation: blink 0.1s; }
+        /* Экран загрузки */
+        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: 0.5s; }
+        .progress-container { width: 300px; height: 4px; background: #1a2a3a; margin: 20px; border-radius: 2px; overflow: hidden; }
+        #progress-bar { width: 0%; height: 100%; background: var(--neon); box-shadow: 0 0 10px var(--neon); transition: 0.3s; }
         
-        /* Модули */
-        .modules-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px; }
-        .module { border: 1px solid #1a2a3a; padding: 10px; font-size: 10px; text-align: center; color: #444; }
-        .module.active { border-color: var(--neon); color: var(--neon); box-shadow: 0 0 10px rgba(0,242,255,0.2); }
+        /* Основной интерфейс */
+        #terminal { flex: 1; padding: 20px; overflow-y: auto; font-size: 14px; color: #ccc; }
+        .log { margin-bottom: 5px; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* Ввод */
-        .input-area { background: #0a0d14; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #1a2a3a; }
-        input { flex: 1; background: #000; border: 1px solid #1a2a3a; color: var(--green); padding: 12px; font-family: inherit; outline: none; }
-        button { background: transparent; border: 1px solid var(--neon); color: var(--neon); padding: 0 20px; cursor: pointer; text-transform: uppercase; }
-        button:hover { background: var(--neon); color: #000; }
-        button:disabled { border-color: #333; color: #333; }
+        .controls { padding: 20px; background: #0a1016; display: flex; gap: 10px; border-top: 1px solid #1a2a3a; }
+        input { flex: 1; background: #000; border: 1px solid #1a2a3a; color: var(--green); padding: 12px; outline: none; }
+        button { background: var(--neon); color: #000; border: none; padding: 0 25px; cursor: pointer; font-weight: bold; }
+        button:disabled { background: #333; cursor: not-allowed; }
+
+        .system-text { color: var(--warn); font-size: 10px; }
     </style>
 </head>
 <body>
 
-<div class="modules-grid">
-    <div id="mod-logic" class="module">LOGIC_CORE</div>
-    <div id="mod-creative" class="module">CREATIVE_SYNAPSE</div>
-    <div id="mod-neural" class="module">NEURAL_TRANSFORMER</div>
-    <div id="mod-integrator" class="module">INTEGRATOR_UNIT</div>
+<div id="loader">
+    <div style="letter-spacing: 5px; color: var(--neon);">СИНХРОНИЗАЦИЯ МОЗГОВ...</div>
+    <div class="progress-container"><div id="progress-bar"></div></div>
+    <div id="load-status" class="system-text">Инициализация модулей...</div>
 </div>
 
 <div id="terminal">
-    <div class="log-entry" style="color: var(--neon);">[SYSTEM]: Ожидание команды активации. Пароль подтвержден: 1234.</div>
+    <div class="log" style="color: var(--neon);">[SYSTEM]: Добро пожаловать, Создатель. Протокол 1234 активен.</div>
 </div>
 
-<div class="input-area">
-    <input type="text" id="userInput" placeholder="Введите запрос для нейронки..." disabled>
-    <button id="bootBtn" onclick="bootAll()">АКТИВИРОВАТЬ</button>
+<div class="controls">
+    <input type="text" id="userInput" placeholder="Пиши сюда..." disabled>
     <button id="sendBtn" onclick="process()" disabled>SEND</button>
 </div>
 
 <script type="module">
     import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1';
 
-    // --- МОДУЛЬ 1: LOGIC CORE ---
-    const LogicCore = {
-        analyze(text) {
-            return { tokens: text.split(' ').length, complexity: text.length > 30 ? 0.9 : 0.4 };
-        }
-    };
+    const bar = document.getElementById('progress-bar');
+    const status = document.getElementById('load-status');
+    const loader = document.getElementById('loader');
+    const input = document.getElementById('userInput');
+    const btn = document.getElementById('sendBtn');
 
-    // --- МОДУЛЬ 2: CREATIVE CORE ---
-    const CreativeCore = {
-        style(text) {
-            const styles = ["Технократ", "Философ", "Хакер"];
-            return styles[text.length % 3];
-        }
-    };
+    let ai;
 
-    // --- МОДУЛЬ 3: NEURAL CORE (Самый тяжелый) ---
-    let pipe = null;
-    const NeuralCore = {
-        async init(cb) {
-            cb("Загрузка весов нейронки...");
-            pipe = await pipeline('text2text-generation', 'Xenova/LaMini-Flan-T5-78M');
-            return true;
-        },
-        async think(text) {
-            const res = await pipe(text, { max_new_tokens: 60, temperature: 0.7 });
-            return res[0].generated_text;
-        }
-    };
+    // ШОУ ЗАГРУЗКИ
+    async function init() {
+        try {
+            // Имитируем проверку железа для i5
+            status.innerText = "Анализ CPU: Intel i5 обнаружен. Оптимизация потоков...";
+            await new Promise(r => setTimeout(r, 1000));
 
-    // --- МОДУЛЬ 4: INTEGRATOR (Сборщик) ---
-    window.bootAll = async () => {
-        const btn = document.getElementById('bootBtn');
-        btn.disabled = true;
-        
-        log("Запуск протокола синхронизации...", "#888");
-        
-        // Включаем модули по очереди
-        const mods = ['mod-logic', 'mod-creative', 'mod-neural', 'mod-integrator'];
-        for (let m of mods) {
-            document.getElementById(m).classList.add('active');
-            log(`Синхронизация ${m}... OK`, varColor(m));
-            await new Promise(r => setTimeout(r, 400));
-        }
+            ai = await pipeline('text2text-generation', 'Xenova/LaMini-Flan-T5-78M', {
+                progress_callback: (p) => {
+                    const percent = Math.round(p.progress || 0);
+                    bar.style.width = percent + '%';
+                    status.innerText = `Загрузка нейронных связей: ${percent}% [${(p.loaded / 1024 / 1024).toFixed(1)}MB]`;
+                    
+                    if (percent > 20 && percent < 40) log("Подключение Logic Core...", "#555");
+                    if (percent > 50 && percent < 70) log("Активация Creative Synapse...", "#555");
+                    if (percent > 80) log("Сборка Integrator Unit...", "#555");
+                }
+            });
 
-        // Инициализация нейронки
-        await NeuralCore.init(log);
-        
-        log(">>> НЕЙРОНКА СОБРАНА ИЗ ЧАСТЕЙ. Я СЛУШАЮ.", "#39ff14");
-        document.getElementById('userInput').disabled = false;
-        document.getElementById('sendBtn').disabled = false;
-        btn.innerText = "ONLINE";
-    };
+            // Убираем экран загрузки
+            loader.style.opacity = '0';
+            setTimeout(() => {
+                loader.style.display = 'none';
+                input.disabled = false;
+                btn.disabled = false;
+                log(">>> ВСЕ СИСТЕМЫ ОНЛАЙН. МОЗГ СОБРАН.", "#39ff14");
+            }, 500);
+
+        } catch (e) {
+            status.innerText = "ОШИБКА ЗАГРУЗКИ. Проверь интернет.";
+            log("Критическая ошибка: " + e.message, "red");
+        }
+    }
 
     window.process = async () => {
-        const input = document.getElementById('userInput');
         const text = input.value.trim();
         if(!text) return;
-
+        
         log(`USER: ${text}`, "#fff");
         input.value = '';
+        btn.disabled = true;
 
-        // Работают все части одновременно
-        const l = LogicCore.analyze(text);
-        const c = CreativeCore.style(text);
+        log("... Думаю всеми частями мозга ...", "#444");
         
-        log(`[LOGIC]: Токенов: ${l.tokens}, Сложность: ${l.complexity}`, "#555");
-        log(`[CREATIVE]: Стиль: ${c}`, "#555");
-        log("... Нейронная сеть обрабатывает запрос ...", varColor('mod-neural'));
-
-        const response = await NeuralCore.think(text);
+        // Нейронка отвечает
+        const result = await ai(text, { max_new_tokens: 100, temperature: 0.7 });
         
-        log(`[CYBERMIND]: ${response}`, "#39ff14");
+        log(`CYBERMIND: ${result[0].generated_text}`, "#39ff14");
+        btn.disabled = false;
     };
 
     function log(txt, color = "#ccc") {
         const t = document.getElementById('terminal');
         const d = document.createElement('div');
-        d.className = 'log-entry';
+        d.className = 'log';
         d.style.color = color;
         d.innerText = `[${new Date().toLocaleTimeString()}] ${txt}`;
         t.appendChild(d);
         t.scrollTop = t.scrollHeight;
     }
 
-    function varColor(m) {
-        if(m.includes('logic')) return '#00f2ff';
-        if(m.includes('neural')) return '#ff00ff';
-        return '#39ff14';
-    }
+    // Запуск процесса при открытии
+    init();
+
+    // Enter для ввода
+    input.addEventListener("keypress", (e) => { if(e.key === "Enter") window.process(); });
 </script>
 
 </body>
