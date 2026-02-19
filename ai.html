@@ -2,138 +2,133 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>VOID-NET // NEURAL SYSTEM</title>
+    <title>VOID-NET // NEURAL LEARNING</title>
     <style>
-        :root { --bg: #f0f2f5; --panel: #ffffff; --accent: #007bff; --text: #333; --border: #d1d9e0; }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        :root { --main: #007bff; --bg: #f5f7fb; --panel: #ffffff; --text: #333; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; flex-direction: column; height: 100vh; color: var(--text); }
         
-        /* Адресная строка */
-        header { background: var(--panel); padding: 10px 20px; border-bottom: 1px solid var(--border); display: flex; gap: 15px; align-items: center; }
-        .address-bar { flex: 1; background: #e4e6eb; border-radius: 20px; padding: 8px 15px; display: flex; align-items: center; }
-        .address-bar input { width: 100%; border: none; background: transparent; outline: none; font-size: 14px; }
-
-        /* Рабочая зона */
-        .content { display: flex; flex: 1; }
+        header { background: var(--panel); padding: 12px 25px; border-bottom: 1px solid #d1d9e0; display: flex; align-items: center; justify-content: space-between; }
+        .logo { font-weight: 800; color: var(--main); font-size: 1.2rem; }
         
-        /* Визуализация нейронки (Вход-Скрытый-Выход) */
-        .neural-engine { width: 400px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; }
-        .layer-box { padding: 15px; border-bottom: 1px solid #eee; font-family: monospace; font-size: 11px; }
-        .layer-title { font-weight: bold; color: var(--accent); margin-bottom: 5px; text-transform: uppercase; }
-        .data-stream { height: 60px; overflow: hidden; color: #888; background: #fafafa; padding: 5px; border-radius: 4px; border: 1px inset #eee; }
+        .container { display: flex; flex: 1; overflow: hidden; }
+        
+        /* Монитор обучения */
+        .learning-monitor { width: 380px; background: var(--panel); border-left: 1px solid #d1d9e0; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .stat-card { background: #f8f9fa; border: 1px solid #eee; padding: 10px; border-radius: 8px; font-family: monospace; }
+        .progress-bar { height: 6px; background: #eee; border-radius: 3px; overflow: hidden; margin-top: 10px; }
+        .progress-fill { height: 100%; background: var(--main); width: 0%; transition: 0.2s; }
 
-        /* Главный экран чата */
-        #chat-display { flex: 1; padding: 20px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; gap: 15px; }
-        .bubble { padding: 12px 16px; border-radius: 18px; max-width: 80%; line-height: 1.4; font-size: 15px; }
-        .u-msg { background: var(--accent); color: white; align-self: flex-end; }
-        .ai-msg { background: #e4e6eb; color: black; align-self: flex-start; }
+        /* Чат */
+        #display { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: white; }
+        .msg { padding: 12px 18px; border-radius: 20px; max-width: 75%; font-size: 15px; line-height: 1.5; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .user { background: var(--main); color: white; align-self: flex-end; }
+        .ai { background: #e9ecef; color: black; align-self: flex-start; }
 
-        .input-area { padding: 20px; border-top: 1px solid var(--border); background: white; display: flex; gap: 10px; }
-        input#ai-input { flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; outline: none; }
-        button#send { background: var(--accent); color: white; border: none; padding: 0 20px; border-radius: 8px; cursor: pointer; }
+        .input-box { padding: 20px; background: white; border-top: 1px solid #d1d9e0; display: flex; gap: 10px; }
+        input { flex: 1; padding: 14px; border: 1px solid #ddd; border-radius: 10px; outline: none; }
+        button { background: var(--main); color: white; border: none; padding: 0 25px; border-radius: 10px; cursor: pointer; font-weight: 600; }
     </style>
 </head>
 <body>
 
-    <header>
-        <div style="font-weight: bold; color: var(--accent);">VOID-NET</div>
-        <div class="address-bar">
-            <span style="margin-right:8px">🔒</span>
-            <input type="text" id="url-bar" value="https://neural.void-net.internal/core-1234" readonly>
+<header>
+    <div class="logo">VOID-NET // NEURAL CORE</div>
+    <div style="font-size: 12px; color: #888;">PASS_KEY: 1234 // STATUS: ACTIVE</div>
+</header>
+
+<div class="container">
+    <main id="display">
+        <div class="msg ai">Система готова к обучению. Введите запрос, чтобы запустить эпохи подбора параметров.</div>
+    </main>
+
+    <aside class="learning-monitor">
+        <h3 style="margin:0; font-size: 16px;">Мониторинг обучения</h3>
+        
+        <div class="stat-card">
+            <div style="color: var(--main);">ЭПОХИ (EPOCHS): <span id="epoch-count">0/50</span></div>
+            <div class="progress-bar"><div id="epoch-fill" class="progress-fill"></div></div>
         </div>
-    </header>
 
-    <div class="content">
-        <main id="chat-display">
-            <div class="bubble ai-msg">СИСТЕМА ГОТОВА. Введите запрос для активации нейронных слоев. Пароль: 1234 подтвержден.</div>
-        </main>
+        <div class="stat-card">
+            <div style="color: #e67e22;">ПОГРЕШНОСТЬ (LOSS):</div>
+            <div id="loss-value">0.0000</div>
+        </div>
 
-        <aside class="neural-engine">
-            <div style="padding: 15px; background: #f8f9fa; border-bottom: 1px solid var(--border); font-weight: bold;">NEURAL MONITOR (1234)</div>
-            
-            <div class="layer-box">
-                <div class="layer-title">Входной слой (Input)</div>
-                <div id="in-layer" class="data-stream">ОЖИДАНИЕ...</div>
-            </div>
+        <div class="stat-card">
+            <div style="color: #27ae60;">ВХОДНЫЕ ТОКЕНЫ:</div>
+            <div id="tokens-view" style="word-break: break-all; font-size: 10px;">WAITING...</div>
+        </div>
 
-            <div class="layer-box">
-                <div class="layer-title">Скрытые слои (Hidden)</div>
-                <div id="hidden-layer" class="data-stream">ОЖИДАНИЕ...</div>
-            </div>
+        <div style="font-size: 11px; color: #999; line-height: 1.4;">
+            * Нейронка переводит текст в векторы, сравнивает их с базой знаний и минимизирует ошибку (Loss), пока ответ не станет понятным.
+        </div>
+    </aside>
+</div>
 
-            <div class="layer-box">
-                <div class="layer-title">Выходной слой (Output)</div>
-                <div id="out-layer" class="data-stream">ОЖИДАНИЕ...</div>
-            </div>
-
-            <div style="padding: 20px; font-size: 12px; color: #999;">
-                * Нейронка переводит текст в цифровые векторы, подбирает веса и восстанавливает ответ.
-            </div>
-        </aside>
-    </div>
-
-    <div class="input-area">
-        <input type="text" id="ai-input" placeholder="Введите ваш запрос..." autocomplete="off">
-        <button id="send">ОТПРАВИТЬ</button>
-    </div>
+<div class="input-box">
+    <input type="text" id="userInput" placeholder="Напишите что-нибудь..." autocomplete="off">
+    <button id="runBtn">ЗАПУСТИТЬ ОБУЧЕНИЕ</button>
+</div>
 
 <script>
-    const chat = document.getElementById('chat-display');
-    const input = document.getElementById('ai-input');
-    const sendBtn = document.getElementById('send');
+    const display = document.getElementById('display');
+    const input = document.getElementById('userInput');
+    const runBtn = document.getElementById('runBtn');
     
-    // Мониторы слоев
-    const inMon = document.getElementById('in-layer');
-    const hidMon = document.getElementById('hidden-layer');
-    const outMon = document.getElementById('out-layer');
+    const epochText = document.getElementById('epoch-count');
+    const epochFill = document.getElementById('epoch-fill');
+    const lossText = document.getElementById('loss-value');
+    const tokenText = document.getElementById('tokens-view');
 
-    function addBubble(text, type) {
-        const b = document.createElement('div');
-        b.className = `bubble ${type === 'user' ? 'u-msg' : 'ai-msg'}`;
-        b.innerText = text;
-        chat.appendChild(b);
-        chat.scrollTop = chat.scrollHeight;
+    function print(text, type) {
+        const d = document.createElement('div');
+        d.className = `msg ${type}`;
+        d.innerText = text;
+        display.appendChild(d);
+        display.scrollTop = display.scrollHeight;
     }
 
-    // ТВОЯ ЛОГИКА: Текст -> Цифры -> Подбор -> Текст
-    async function processNeuralNetwork(text) {
-        // 1. ВХОДНОЙ СЛОЙ: Текст в цифры (ASCII)
-        const tokens = text.split('').map(c => c.charCodeAt(0));
-        inMon.innerHTML = tokens.join(' ');
+    async function neuralInference(text) {
+        // Превращаем текст в "цифры" для монитора
+        const tokens = text.split('').map(c => c.charCodeAt(0)).join('.');
+        tokenText.innerText = tokens;
 
-        // 2. СКРЫТЫЙ СЛОЙ: Подбор и мутация цифр
-        let hiddenData = [...tokens];
-        hidMon.innerHTML = "ПРОЦЕСС: ";
-        for(let i=0; i<5; i++) {
-            hiddenData = hiddenData.map(n => Math.floor(n * 1.2 + Math.random() * 10));
-            hidMon.innerHTML += hiddenData.slice(0, 5).join('.') + " | ";
-            await new Promise(r => setTimeout(r, 100)); // Задержка для видимости работы
+        // Цикл "Эпох Обучения"
+        let loss = 1.0000;
+        for(let i = 1; i <= 50; i++) {
+            loss -= 0.018 + (Math.random() * 0.005);
+            if(loss < 0.001) loss = 0.0001;
+
+            epochText.innerText = `${i}/50`;
+            epochFill.style.width = `${(i/50)*100}%`;
+            lossText.innerText = loss.toFixed(4);
+
+            // Скорость обучения (чуть быстрее в конце)
+            await new Promise(r => setTimeout(r, 40 - (i/2)));
         }
 
-        // 3. ВЫХОДНОЙ СЛОЙ: Цифры обратно в ответ
-        // Генерируем "умный" ответ на основе входных данных
-        let response = "";
-        if(text.toLowerCase().includes("привет")) response = "Система 1234 приветствует тебя. Каналы стабильны.";
-        else if(text.toLowerCase().includes("кто ты")) response = "Я — встроенная нейросеть VOID-NET, работающая на весах 1234.";
-        else response = "Запрос обработан. Код ответа: " + hiddenData[0] + ". Информации достаточно.";
-
-        const outTokens = response.split('').map(c => c.charCodeAt(0));
-        outMon.innerHTML = outTokens.join(' ');
-
-        return response;
+        // Выдача "красивого" ответа после обучения
+        if(text.toLowerCase().includes("привет")) return "Здравствуйте! Нейросеть успешно завершила 50 эпох обучения и готова к работе. Как я могу вам помочь?";
+        if(text.toLowerCase().includes("кто ты")) return "Я — адаптивный интеллект VOID-NET. Моя задача — фильтровать данные и выдавать чистые ответы без рекламы.";
+        return "Анализ завершен. Параметры оптимизированы под ваш запрос. Я поняла вашу мысль и готова продолжать диалог.";
     }
 
     async function handle() {
         const val = input.value.trim();
         if(!val) return;
-        
-        addBubble(val, 'user');
-        input.value = '';
 
-        const reply = await processNeuralNetwork(val);
-        setTimeout(() => addBubble(reply, 'ai'), 500);
+        print(val, 'user');
+        input.value = '';
+        runBtn.disabled = true;
+
+        const result = await neuralInference(val);
+        setTimeout(() => {
+            print(result, 'ai');
+            runBtn.disabled = false;
+        }, 300);
     }
 
-    sendBtn.onclick = handle;
+    runBtn.onclick = handle;
     input.onkeypress = (e) => { if(e.key === 'Enter') handle(); };
 </script>
 </body>
