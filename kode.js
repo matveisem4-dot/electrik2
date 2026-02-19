@@ -1,6 +1,7 @@
 export const LogicCore = {
     analyze: (text) => {
-        const complexity = text.length > 20 ? "ВЫСОКАЯ" : "НИЗКАЯ";
-        return { complexity, score: Math.random().toFixed(2) };
+        const triggers = ["привет", "как дела", "кто ты"];
+        const found = triggers.some(t => text.toLowerCase().includes(t));
+        return { isCommon: found, level: Math.floor(Math.random() * 100) };
     }
 };
