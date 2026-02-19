@@ -1,8 +1,13 @@
-// CYBERMIND WEB-ENGINE (JS-Only AI)
-import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1';
+import { LogicCore } from './kode.js';
+import { CreativeCore } from './kode2.js';
+import { KnowledgeCore } from './kode3.js';
 
-async function bootAI() {
-    const model = await pipeline('text2text-generation', 'Xenova/LaMini-Flan-T5-78M');
-    const out = await model("Hello, who are you?", { max_new_tokens: 50 });
-    console.log("AI Response:", out[0].generated_text);
-}
+export const SuperBrain = {
+    think: (userInput) => {
+        const L = LogicCore.analyze(userInput);
+        const C = CreativeCore.getMood();
+        const K = KnowledgeCore.process(userInput);
+
+        return `[РЕЗУЛЬТАТ]: Логика (${L.complexity}), Настроение (${C}), Слов обработано: ${K.wordCount}. Система 1234 готова!`;
+    }
+};
