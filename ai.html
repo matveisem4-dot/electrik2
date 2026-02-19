@@ -2,126 +2,161 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>THE 1234 PROTOCOL | Multi-Core AI</title>
+    <title>CYBERMIND | MODULAR ASSEMBLY</title>
     <style>
-        :root { --neon: #00f2ff; --bg: #05070a; --panel: #10141b; }
-        body { background: var(--bg); color: #00f2ff; font-family: 'Consolas', monospace; margin: 0; display: flex; height: 100vh; }
+        :root { --neon-blue: #00f2ff; --neon-green: #39ff14; --bg: #05070a; }
+        body { background: var(--bg); color: #fff; font-family: 'Consolas', monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; }
         
-        /* Панель выбора ядер */
-        .sidebar { width: 260px; background: var(--panel); border-right: 1px solid var(--neon); padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        .core-btn { 
-            background: rgba(0, 242, 255, 0.05); border: 1px solid #1a2a3a; color: #888; 
-            padding: 15px; cursor: pointer; text-align: left; transition: 0.3s; font-size: 12px;
-        }
-        .core-btn:hover { border-color: var(--neon); color: var(--neon); box-shadow: 0 0 10px rgba(0,242,255,0.2); }
-        .core-btn.active { background: rgba(0, 242, 255, 0.2); color: #fff; border-color: var(--neon); }
+        /* Заголовок и Статус */
+        header { padding: 20px; border-bottom: 1px solid #1a2a3a; display: flex; justify-content: space-between; align-items: center; background: #0a0d14; }
+        .status-badge { padding: 5px 15px; border: 1px solid #444; color: #444; border-radius: 20px; font-size: 12px; }
+        .status-active { border-color: var(--neon-green); color: var(--neon-green); box-shadow: 0 0 10px rgba(57, 255, 20, 0.2); }
 
-        /* Окно терминала */
-        main { flex: 1; display: flex; flex-direction: column; padding: 20px; }
-        #terminal { 
-            flex: 1; background: rgba(0,0,0,0.5); border: 1px solid #1a2a3a; 
-            padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
-            box-shadow: inset 0 0 20px rgba(0,0,0,1);
-        }
-        .msg { padding: 5px 0; animation: scan 0.2s ease-out; }
-        @keyframes scan { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        /* Рабочая область */
+        main { flex: 1; display: flex; overflow: hidden; }
         
-        .user-label { color: #fff; font-weight: bold; }
-        .core-label { font-weight: bold; text-transform: uppercase; margin-right: 10px; }
+        /* Схема модулей (Лево) */
+        .modules-map { width: 300px; padding: 20px; background: rgba(0,0,0,0.3); border-right: 1px solid #1a2a3a; }
+        .module-card { 
+            padding: 15px; margin-bottom: 15px; border: 1px solid #1a2a3a; border-radius: 5px; 
+            font-size: 11px; opacity: 0.5; transition: 0.5s; 
+        }
+        .module-card.online { opacity: 1; border-color: var(--neon-blue); }
+        .module-name { color: var(--neon-blue); font-weight: bold; margin-bottom: 5px; display: block; }
 
-        /* Поле ввода */
-        .input-box { display: flex; gap: 10px; margin-top: 20px; background: var(--panel); padding: 10px; border: 1px solid #1a2a3a; }
-        input { flex: 1; background: transparent; border: none; color: #fff; outline: none; font-family: inherit; font-size: 16px; }
+        /* Терминал (Право) */
+        .terminal-container { flex: 1; display: flex; flex-direction: column; padding: 20px; }
+        #output { flex: 1; overflow-y: auto; background: #000; border: 1px solid #1a2a3a; padding: 15px; font-size: 14px; line-height: 1.5; color: #ccc; }
+        
+        /* Управление */
+        .controls { padding: 20px; background: #0a0d14; display: flex; gap: 10px; border-top: 1px solid #1a2a3a; }
+        input { flex: 1; background: #05070a; border: 1px solid #1a2a3a; padding: 12px; color: #fff; outline: none; border-radius: 4px; }
+        input:focus { border-color: var(--neon-blue); }
+        button { background: transparent; border: 1px solid var(--neon-blue); color: var(--neon-blue); padding: 10px 20px; cursor: pointer; font-family: inherit; font-weight: bold; }
+        button:hover { background: var(--neon-blue); color: #000; }
+        button:disabled { border-color: #444; color: #444; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
-<div class="sidebar">
-    <h3 style="margin:0 0 10px 0; font-size: 14px;">AVAILABLE CORES:</h3>
-    <button class="core-btn active" onclick="setCore('quantum', this)">[01] AETERNA-QUANTUM<br><small>Вероятностная логика</small></button>
-    <button class="core-btn" onclick="setCore('void', this)">[02] VOID-WALKER 3D<br><small>Геометрический анализ</small></button>
-    <button class="core-btn" onclick="setCore('synapse', this)">[03] SYNAPSE ZERO<br><small>Чистая нейросеть</small></button>
-    <button class="core-btn" onclick="setCore('ai', this)">[04] CYBERMIND-TEXT<br><small>Языковая модель</small></button>
-    <div style="margin-top:auto; font-size: 10px; opacity: 0.5;">STATUS: SECURITY_LEVEL_1234</div>
-</div>
+<header>
+    <div style="font-size: 20px; letter-spacing: 3px;">CYBERMIND <span style="font-size: 10px; color: #555;">v2.0-MODULAR</span></div>
+    <div id="main-status" class="status-badge">OFFLINE</div>
+</header>
 
 <main>
-    <div id="terminal">
-        <div class="msg"><span style="color:#888;">[SYSTEM]: Все модули синхронизированы. Выберите ядро и отправьте запрос.</span></div>
+    <div class="modules-map">
+        <h4 style="color: #555; font-size: 10px; text-transform: uppercase;">Системные модули:</h4>
+        <div id="m1" class="module-card"><span class="module-name">LOGIC_CORE</span>Анализ структуры и математических связей запроса.</div>
+        <div id="m2" class="module-card"><span class="module-name">CREATIVE_SYNAPSE</span>Генерация вариативности и эмоционального окраса.</div>
+        <div id="m3" class="module-card"><span class="module-name">KNOWLEDGE_BASE</span>Поиск сущностей и извлечение контекста (Токены).</div>
+        <div id="m4" class="module-card"><span class="module-name">INTEGRATOR_UNIT</span>Сборка данных от всех модулей в один ответ.</div>
+        <button id="bootBtn" style="width: 100%; margin-top: 10px;" onclick="bootSystem()">АКТИВИРОВАТЬ НЕЙРОНКУ</button>
     </div>
-    <div class="input-box">
-        <span style="color:var(--neon)">>>></span>
-        <input type="text" id="userInput" placeholder="Введите команду для активного ядра..." autofocus>
+
+    <div class="terminal-container">
+        <div id="output">
+            <div style="color: #444;">[SYSTEM]: Ожидание активации модулей... Пароль: 1234</div>
+        </div>
+        <div class="controls">
+            <input type="text" id="userInput" placeholder="Введите сообщение..." disabled>
+            <button id="sendBtn" onclick="processQuery()" disabled>SEND</button>
+        </div>
     </div>
 </main>
 
-<script type="module">
-    // Подгружаем библиотеку для 4-го ядра
-    import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1';
-    window.aiPipeline = pipeline;
-</script>
-
 <script>
-    let currentCore = 'quantum';
-    let aiModel = null;
-    const terminal = document.getElementById('terminal');
-    const input = document.getElementById('userInput');
+    // --- ЧАСТИ МОЗГА (МОДУЛИ) ---
 
-    function setCore(core, btn) {
-        currentCore = core;
-        document.querySelectorAll('.core-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        addLog(`Переключение на ядро: ${core.toUpperCase()}`, "#888");
+    const LogicCore = {
+        analyze: (text) => {
+            const complexity = text.length > 20 ? "HIGH" : "NORMAL";
+            return { type: "LOGIC", complexity, factor: Math.random().toFixed(2) };
+        }
+    };
+
+    const CreativeCore = {
+        feel: () => {
+            const moods = ["CALM", "BRIGHT", "COLD", "ENERGETIC"];
+            return { mood: moods[Math.floor(Math.random() * moods.length)], temp: 0.7 };
+        }
+    };
+
+    const KnowledgeCore = {
+        scan: (text) => {
+            const tokens = text.split(' ').length;
+            return { entities: tokens, relay: "VERIFIED" };
+        }
+    };
+
+    // --- ГЛАВНЫЙ СБОРЩИК (INTEGRATOR) ---
+    
+    let isOnline = false;
+
+    function bootSystem() {
+        const btn = document.getElementById('bootBtn');
+        btn.innerText = "ЗАГРУЗКА...";
+        btn.disabled = true;
+
+        let delay = 0;
+        const modules = ['m1', 'm2', 'm3', 'm4'];
+        
+        modules.forEach((id, index) => {
+            setTimeout(() => {
+                document.getElementById(id).classList.add('online');
+                print(`Модуль ${id.toUpperCase()} синхронизирован...`, "#00f2ff");
+                if (index === modules.length - 1) finishBoot();
+            }, delay += 600);
+        });
     }
 
-    function addLog(text, color = "#00f2ff", label = "SYSTEM") {
+    function finishBoot() {
+        isOnline = true;
+        document.getElementById('main-status').innerText = "ONLINE";
+        document.getElementById('main-status').classList.add('status-active');
+        document.getElementById('userInput').disabled = false;
+        document.getElementById('sendBtn').disabled = false;
+        document.getElementById('bootBtn').innerText = "СИСТЕМА АКТИВНА";
+        print(">>> ВСЕ ЧАСТИ МОЗГА ОБЪЕДИНЕНЫ. Я ГОТОВ.", "#39ff14");
+    }
+
+    function print(text, color = "#ccc") {
+        const out = document.getElementById('output');
         const div = document.createElement('div');
-        div.className = 'msg';
-        div.innerHTML = `<span class="core-label" style="color:${color}">[${label}]</span> ${text}`;
-        terminal.appendChild(div);
-        terminal.scrollTop = terminal.scrollHeight;
+        div.style.color = color;
+        div.style.marginBottom = "5px";
+        div.innerHTML = `<span>[${new Date().toLocaleTimeString()}]</span> ${text}`;
+        out.appendChild(div);
+        out.scrollTop = out.scrollHeight;
     }
 
-    async function processCommand() {
-        const val = input.value.trim();
-        if (!val) return;
+    async function processQuery() {
+        const input = document.getElementById('userInput');
+        const text = input.value.trim();
+        if (!text) return;
 
-        // Показываем сообщение пользователя
-        const uDiv = document.createElement('div');
-        uDiv.className = 'msg';
-        uDiv.innerHTML = `<span class="user-label">[USER]</span> ${val}`;
-        terminal.appendChild(uDiv);
+        print(`USER: ${text}`, "#fff");
         input.value = '';
 
-        // Логика разных ядер
-        switch(currentCore) {
-            case 'quantum':
-                const qRes = Math.random() > 0.5 ? "СОСТОЯНИЕ_1 (ИСТИНА)" : "СОСТОЯНИЕ_0 (ЛОЖЬ)";
-                addLog(`Квантовый анализ "${val}": ответ находится в суперпозиции. Результат измерения: ${qRes}`, "#ff00ff", "QUANTUM");
-                break;
+        // Имитация работы всех модулей одновременно
+        const lData = LogicCore.analyze(text);
+        const cData = CreativeCore.feel();
+        const kData = KnowledgeCore.scan(text);
 
-            case 'void':
-                const dist = (Math.random() * 20).toFixed(2);
-                addLog(`Проверка вектора "${val}": препятствие обнаружено на дистанции ${dist} units. Координаты Z смещены.`, "#00d4ff", "VOID");
-                break;
+        print("... Сборка данных из модулей ...", "#444");
 
-            case 'synapse':
-                const weight = (Math.random()).toFixed(5);
-                addLog(`Нейрон активирован на запрос "${val}". Сила синапса: ${weight}. Решение принято на основе весов.`, "#ccff00", "SYNAPSE");
-                break;
-
-            case 'ai':
-                addLog("Загрузка текстовых нейронов... ждите.", "#fff", "AI");
-                if (!aiModel) {
-                    aiModel = await window.aiPipeline('text2text-generation', 'Xenova/LaMini-Flan-T5-78M');
-                }
-                const output = await aiModel(val, { max_new_tokens: 50 });
-                addLog(output[0].generated_text, "#fff", "AI");
-                break;
-        }
+        // Финальный "умный" ответ
+        setTimeout(() => {
+            const finalAnswer = `[ОТВЕТ]: Я проанализировал твой запрос через Logic (${lData.complexity}) и Creative (${cData.mood}). Найдено ${kData.entities} смысловых узла. Мой вердикт: система работает стабильно, интеллект на уровне 1234%. Что дальше?`;
+            print(finalAnswer, "#39ff14");
+        }, 800);
     }
 
-    input.onkeypress = (e) => { if(e.key === 'Enter') processCommand(); };
+    // Обработка Enter
+    document.getElementById('userInput').addEventListener("keypress", (e) => {
+        if (e.key === "Enter") processQuery();
+    });
 </script>
+
 </body>
 </html>
