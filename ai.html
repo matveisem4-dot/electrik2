@@ -2,387 +2,119 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NeuroEngine X - Monolith</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEURO MONOLITH - LOCAL CORE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap');
-
-        body { 
-            background: #020202; 
-            color: #ffffff; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            height: 100vh; 
-            display: flex; 
-            flex-direction: column; 
-            overflow: hidden; 
-        }
-
-        /* Анимация появления */
-        .message-fade {
-            animation: fadeIn 0.4s ease-out forwards;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Кастомный скролл */
-        .chat-area { 
-            flex: 1; 
-            overflow-y: auto; 
-            padding: 20px; 
-            scrollbar-width: none;
-        }
-        .chat-area::-webkit-scrollbar { display: none; }
-
-        /* Дизайн Code Vault */
-        .code-vault {
-            background: #0d1117;
-            border: 1px solid #30363d;
-            border-radius: 16px;
-            margin: 15px 0;
-            overflow: hidden;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-        }
-        .code-header {
-            background: #161b22;
-            padding: 12px 18px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #30363d;
-        }
-        .code-lang-tag {
-            font-family: 'Fira Code', monospace;
-            font-size: 11px;
-            font-weight: 700;
-            color: #58a6ff;
-            text-transform: uppercase;
-        }
-        .copy-btn {
-            background: #21262d;
-            color: #c9d1d9;
-            padding: 5px 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            border: 1px solid #30363d;
-        }
-        .copy-btn:hover { background: #30363d; color: #fff; }
-        .copy-btn:active { transform: scale(0.92); }
-
-        .code-body {
-            padding: 18px;
-            overflow-x: auto;
-            font-family: 'Fira Code', monospace;
-            font-size: 13.5px;
-            line-height: 1.6;
-            color: #e6edf3;
-            white-space: pre;
-        }
-
-        /* Подсветка синтаксиса */
-        .sh-kw { color: #ff7b72; font-weight: 500; } /* Keyword */
-        .sh-fn { color: #d2a8ff; } /* Function */
-        .sh-st { color: #a5d6ff; } /* String */
-        .sh-cm { color: #8b949e; font-style: italic; } /* Comment */
-        .sh-nm { color: #f0883e; } /* Number */
-
-        /* Инпут */
-        .bottom-nav {
-            background: linear-gradient(to top, #020202 80%, transparent);
-            padding: 15px 20px 35px 20px;
-        }
-        .input-container {
-            background: #121212;
-            border: 1px solid #282828;
-            border-radius: 24px;
-            display: flex;
-            align-items: flex-end;
-            padding: 6px;
-            transition: 0.3s;
-        }
-        .input-container:focus-within {
-            border-color: #4f46e5;
-            box-shadow: 0 0 15px rgba(79, 70, 229, 0.2);
-        }
-
-        textarea {
-            flex: 1;
-            background: transparent;
-            border: none;
-            outline: none;
-            color: #fff;
-            padding: 10px 14px;
-            font-size: 16px;
-            resize: none;
-            max-height: 160px;
-        }
-
-        .icon-btn {
-            width: 44px;
-            height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 18px;
-            color: #666;
-            transition: 0.2s;
-            cursor: pointer;
-        }
-        .icon-btn:hover { color: #fff; background: #222; }
-        .send-btn { background: #4f46e5; color: #fff !important; }
-        
-        .mic-active {
-            background: #ef4444 !important;
-            color: #fff !important;
-            animation: pulse 1s infinite;
-        }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-
-        /* Видео */
-        .video-box {
-            border-radius: 20px;
-            overflow: hidden;
-            border: 1px solid #333;
-            margin: 10px 0;
-            background: #000;
-        }
+        body { background: #050505; color: #e5e7eb; font-family: 'Inter', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .chat-container { flex: 1; overflow-y: auto; padding: 1.5rem; scrollbar-width: none; }
+        .chat-container::-webkit-scrollbar { display: none; }
+        .message { margin-bottom: 1.5rem; animation: fadeInUp 0.3s ease; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .input-bar { background: #0a0a0a; border-top: 1px solid #1a1a1a; padding: 1rem 1.5rem; display: flex; align-items: center; gap: 0.75rem; }
+        #progress-bar { position: fixed; top: 0; left: 0; height: 2px; background: #6366f1; transition: width 0.3s; z-index: 1000; }
+        .pass-overlay { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
-    <header class="h-16 px-6 flex items-center justify-between border-b border-white/5 bg-black/40 backdrop-blur-md">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                <i class="fas fa-brain text-white text-lg"></i>
-            </div>
-            <div>
-                <h1 class="font-black text-sm uppercase tracking-widest">Neuro Monolith</h1>
-                <span class="text-[9px] text-green-500 font-bold uppercase tracking-tighter">Ready for Code</span>
-            </div>
+    <div id="progress-bar" style="width: 0%"></div>
+
+    <div id="lock" class="pass-overlay">
+        <div class="mb-6 w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-indigo-500/20">
+            <i class="fas fa-brain text-white text-3xl"></i>
         </div>
-        <button onclick="location.reload()" class="icon-btn"><i class="fas fa-rotate"></i></button>
+        <input type="password" id="pInput" class="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-center outline-none focus:border-indigo-500 transition mb-4" placeholder="Введите код">
+        <button onclick="checkPass()" class="text-xs font-bold text-zinc-500 hover:text-white uppercase tracking-widest">Активация системы</button>
+    </div>
+
+    <header class="p-4 border-b border-white/5 bg-black/50 backdrop-blur-xl flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg"><i class="fas fa-brain text-xs"></i></div>
+            <span class="font-black text-xs tracking-widest uppercase">Neuro Engine X</span>
+        </div>
+        <div id="engine-status" class="text-[9px] font-bold text-yellow-500 uppercase px-3 py-1 bg-yellow-500/10 rounded-full">Ядро: Ожидание...</div>
     </header>
 
-    <div id="chat" class="chat-area space-y-6">
-        <div class="bg-indigo-500/10 border border-indigo-500/20 p-5 rounded-3xl message-fade">
-            <h3 class="text-indigo-400 font-bold mb-1">Ядро NeuroEngine X обновлено.</h3>
-            <p class="text-xs text-zinc-400 leading-relaxed">
-                • Код теперь выводится единым блоком.<br>
-                • Копирование захватывает только чистый синтаксис.<br>
-                • Голосовой ввод и видео-рендер оптимизированы.
-            </p>
+    <div id="chat" class="chat-container">
+        <div class="bg-indigo-600/10 border border-indigo-600/20 p-4 rounded-2xl text-xs text-indigo-300 mb-6">
+            <i class="fas fa-info-circle mr-2"></i> Система «Монолит» запущена локально. API не используется. <br>
+            Вся нагрузка ложится на ваше устройство. Хостинг GitHub Pages только хранит интерфейс.
         </div>
     </div>
 
-    <div id="loader" class="hidden px-8 py-2">
-        <div class="flex items-center gap-3">
-            <div class="flex gap-1">
-                <div class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce"></div>
-                <div class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                <div class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-            </div>
-            <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Сборка ответа...</span>
-        </div>
+    <div class="input-bar">
+        <input type="text" id="userInput" placeholder="Сначала загрузите мозги..." class="flex-1 bg-transparent outline-none text-sm" disabled>
+        <button id="sendBtn" onclick="sendMessage()" class="w-10 h-10 bg-indigo-600 rounded-xl opacity-20 transition" disabled>
+            <i class="fas fa-arrow-up"></i>
+        </button>
     </div>
 
-    <div class="bottom-nav">
-        <div class="input-container">
-            <div onclick="toggleMode('img')" id="img-trigger" class="icon-btn">
-                <i class="fas fa-camera"></i>
-            </div>
-            <div onclick="toggleVoice()" id="mic-trigger" class="icon-btn">
-                <i class="fas fa-microphone"></i>
-            </div>
-            <textarea id="prompt" rows="1" placeholder="Запрос..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
-            <div onclick="send()" class="icon-btn send-btn">
-                <i class="fas fa-arrow-up"></i>
-            </div>
-        </div>
-    </div>
+    <script type="module">
+        import * as webllm from "https://esm.run/@mlc-ai/web-llm";
 
-    <script>
-        const apiKey = ""; 
         const chat = document.getElementById('chat');
-        const promptInput = document.getElementById('prompt');
-        const loader = document.getElementById('loader');
-        
-        let isImageMode = false;
-        let isRecording = false;
+        const input = document.getElementById('userInput');
+        const btn = document.getElementById('sendBtn');
+        const status = document.getElementById('engine-status');
+        const progress = document.getElementById('progress-bar');
 
-        // Распознавание голоса
-        const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let recognition;
-        if(Speech) {
-            recognition = new Speech();
-            recognition.lang = 'ru-RU';
-            recognition.onresult = (e) => {
-                promptInput.value = e.results[0][0].transcript;
-                send();
-            };
-            recognition.onend = () => {
-                isRecording = false;
-                document.getElementById('mic-trigger').classList.remove('mic-active');
-            };
+        // Модель (мозги): используем маленькую Llama-3 для скорости
+        const model = "Llama-3-8B-Instruct-q4f16_1-MLC"; 
+        const engine = new webllm.MLCEngine();
+
+        window.checkPass = async () => {
+            if(document.getElementById('pInput').value === "1234") {
+                document.getElementById('lock').style.display = 'none';
+                initEngine();
+            } else { alert("Неверный код"); }
         }
 
-        function toggleVoice() {
-            if(!recognition) return;
-            if(isRecording) {
-                recognition.stop();
-            } else {
-                isRecording = true;
-                document.getElementById('mic-trigger').classList.add('mic-active');
-                recognition.start();
-            }
+        async function initEngine() {
+            engine.setInitProgressCallback((report) => {
+                progress.style.width = (report.progress * 100) + "%";
+                status.innerText = `Загрузка: ${Math.round(report.progress * 100)}%`;
+                if(report.progress === 1) {
+                    status.innerText = "Система Онлайн";
+                    status.className = "text-[9px] font-bold text-green-500 uppercase px-3 py-1 bg-green-500/10 rounded-full";
+                    input.disabled = false;
+                    input.placeholder = "Напишите запрос...";
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-20');
+                }
+            });
+            await engine.reload(model);
         }
 
-        function toggleMode(type) {
-            isImageMode = !isImageMode;
-            document.getElementById('img-trigger').style.color = isImageMode ? '#4f46e5' : '#666';
-            promptInput.placeholder = isImageMode ? "Опиши изображение..." : "Запрос...";
-        }
-
-        async function send() {
-            const val = promptInput.value.trim();
+        window.sendMessage = async () => {
+            const val = input.value.trim();
             if(!val) return;
 
             addMsg(val, 'user');
-            promptInput.value = '';
-            promptInput.style.height = 'auto';
-            loader.classList.remove('hidden');
+            input.value = "";
+            const aiDiv = addMsg("Обработка нейронами...", 'ai');
+            
+            let fullReply = "";
+            const chunks = await engine.chat.completions.create({
+                messages: [{ role: "user", content: val }],
+                stream: true,
+            });
 
-            try {
-                if(isImageMode || /рисуй|фото/i.test(val)) {
-                    await genImage(val);
-                } else if(/видео/i.test(val)) {
-                    await genVideo(val);
-                } else {
-                    await genText(val);
-                }
-            } catch (e) {
-                addMsg("Ошибка в ядре Monolith. Проверьте соединение.", 'ai');
+            for await (const chunk of chunks) {
+                fullReply += chunk.choices[0]?.delta?.content || "";
+                aiDiv.innerText = fullReply;
+                chat.scrollTop = chat.scrollHeight;
             }
-
-            loader.classList.add('hidden');
-            if(isImageMode) toggleMode();
         }
 
-        async function genText(q) {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: q }] }],
-                    systemInstruction: { parts: [{ text: "Ты NeuroEngine X. Генерируй полный ответ сразу. Если есть код, всегда используй формат ```язык ... ```. Не дроби код на части." }] }
-                })
-            });
-            const data = await res.json();
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Нет данных.";
-            addMsg(text, 'ai');
-        }
-
-        async function genImage(q) {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ instances: { prompt: q }, parameters: { sampleCount: 1 } })
-            });
-            const data = await res.json();
-            const b64 = data.predictions?.[0]?.bytesBase64Encoded;
-            if(b64) addVisual(`data:image/png;base64,${b64}`, 'img');
-        }
-
-        function genVideo(q) {
-            addMsg("Инициализация видео-рендера...", 'ai');
-            setTimeout(() => {
-                addVisual("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4", 'video', q);
-            }, 2000);
-        }
-
-        function addMsg(content, role) {
-            const div = document.createElement('div');
-            div.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} message-fade`;
-            
-            let html = content.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-            
-            // Монолитная сборка блоков кода
-            html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (m, lang, code) => {
-                const pure = code.trim();
-                const highlighted = pure
-                    .replace(/\b(const|let|var|function|return|if|else|for|while|import|export|class|async|await)\b/g, '<span class="sh-kw">$1</span>')
-                    .replace(/(['"`])(.*?)\1/g, '<span class="sh-st">$1$2$1</span>')
-                    .replace(/\b(\w+)(?=\()/g, '<span class="sh-fn">$1</span>')
-                    .replace(/\/\/.*/g, '<span class="sh-cm">$&</span>')
-                    .replace(/\b\d+\b/g, '<span class="sh-nm">$&</span>');
-
-                return `
-                    <div class="code-vault">
-                        <div class="code-header">
-                            <span class="code-lang-tag">${lang || 'SOURCE'}</span>
-                            <div class="copy-btn" onclick="copyCode(this, \`${pure.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">COPY CODE</div>
-                        </div>
-                        <div class="code-body"><code>${highlighted}</code></div>
-                    </div>
-                `;
-            });
-
-            div.innerHTML = `
-                <div class="max-w-[90%] p-4 rounded-3xl text-[15px] leading-relaxed shadow-lg ${role === 'user' ? 'bg-indigo-600 rounded-tr-none' : 'bg-zinc-900 border border-white/5 rounded-tl-none'}">
-                    ${html.replace(/\n/g, '<br>')}
-                </div>
-            `;
-            chat.appendChild(div);
-            chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' });
-        }
-
-        function addVisual(url, type, prompt = "") {
-            const div = document.createElement('div');
-            div.className = "message-fade";
-            if(type === 'img') {
-                div.innerHTML = `
-                    <div class="bg-zinc-900 p-1.5 rounded-3xl border border-white/5 max-w-[90%] overflow-hidden shadow-2xl">
-                        <img src="${url}" class="rounded-2xl w-full">
-                        <div class="p-3 flex justify-between items-center text-[10px] font-bold text-zinc-500 uppercase">
-                            <span>ART RENDER</span>
-                            <a href="${url}" download="ai_render.png" class="text-indigo-400">DOWNLOAD</a>
-                        </div>
-                    </div>
-                `;
-            } else {
-                div.innerHTML = `
-                    <div class="video-box shadow-2xl max-w-[95%]">
-                        <video class="w-full" autoplay loop muted playsinline><source src="${url}" type="video/mp4"></video>
-                        <div class="p-3 bg-zinc-900 text-[10px] font-bold text-zinc-500 uppercase">VIDEO: ${prompt}</div>
-                    </div>
-                `;
-            }
-            chat.appendChild(div);
-            chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' });
-        }
-
-        function copyCode(btn, code) {
-            const el = document.createElement('textarea');
-            el.value = code;
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-            
-            const originalText = btn.innerText;
-            btn.innerText = "COPIED ✅";
-            btn.style.borderColor = "#3fb950";
-            btn.style.color = "#3fb950";
-            setTimeout(() => {
-                btn.innerText = originalText;
-                btn.style.borderColor = "#30363d";
-                btn.style.color = "#c9d1d9";
-            }, 2000);
+        function addMsg(text, role) {
+            const d = document.createElement('div');
+            d.className = `message flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+            d.innerHTML = `<div class="max-w-[85%] p-4 rounded-2xl text-sm ${role === 'user' ? 'bg-indigo-600' : 'bg-zinc-900 border border-white/5'}">${text}</div>`;
+            chat.appendChild(d);
+            chat.scrollTop = chat.scrollHeight;
+            return d.querySelector('div');
         }
     </script>
 </body>
