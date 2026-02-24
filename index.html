@@ -2,74 +2,172 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>NeuroEngine X - Monolith</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroEngine X - JS Core (Offline)</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
-        body { background: #050505; color: #fff; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; }
-        #chat { flex: 1; overflow-y: auto; padding: 20px; }
-        .input-area { background: #0a0a0a; padding: 20px; display: flex; gap: 10px; }
-        input { flex: 1; background: #111; border: 1px solid #222; border-radius: 10px; padding: 12px; color: #fff; outline: none; }
-        #lock { position: fixed; inset: 0; background: #000; z-index: 999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        body { background: #020202; color: #fff; font-family: 'Inter', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        #chat { flex: 1; overflow-y: auto; padding: 20px; scrollbar-width: none; }
+        .input-box { background: #0a0a0a; border-top: 1px solid #1a1a1a; padding: 15px; display: flex; gap: 10px; align-items: center; }
+        input[type="text"] { flex: 1; background: #121212; border: 1px solid #222; border-radius: 12px; padding: 12px 16px; color: #fff; outline: none; transition: 0.3s; }
+        input[type="text"]:focus { border-color: #4f46e5; }
+        #lock { position: fixed; inset: 0; background: #020202; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; }
+        .msg-anim { animation: fadeInUp 0.3s ease-out forwards; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .typing-indicator span { display: inline-block; width: 6px; height: 6px; background: #4f46e5; border-radius: 50%; margin: 0 2px; animation: bounce 1.4s infinite ease-in-out both; }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
     </style>
 </head>
 <body>
 
     <div id="lock">
-        <h2 class="mb-4 text-zinc-500 uppercase tracking-widest text-xs">Access Code</h2>
-        <input type="password" id="p" class="bg-zinc-900 border border-zinc-800 p-2 text-center rounded-lg" placeholder="1234">
-        <button onclick="unlock()" class="mt-4 bg-indigo-600 px-6 py-2 rounded-lg font-bold">BOOT</button>
+        <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mb-6 shadow-2xl shadow-indigo-500/20">
+            <i class="fas fa-microchip text-white text-3xl"></i>
+        </div>
+        <h2 class="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-4">Автономный узел</h2>
+        <input type="password" id="pass" class="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-center mb-4 outline-none focus:border-indigo-500 transition" placeholder="КОД ДОСТУПА">
+        <button onclick="unlock()" class="text-[10px] font-bold text-indigo-400 tracking-widest uppercase hover:text-white transition">Инициализация JS-Ядра</button>
     </div>
 
-    <div id="chat"></div>
+    <header class="h-16 px-6 flex items-center justify-between border-b border-white/5 bg-black/40 backdrop-blur-md">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center font-black">JS</div>
+            <h1 class="font-bold text-xs uppercase tracking-widest">NeuroEngine Offline</h1>
+        </div>
+        <div class="text-[9px] font-bold text-blue-400 border border-blue-400/30 px-2 py-1 rounded uppercase">API Bypassed</div>
+    </header>
 
-    <div class="input-area">
-        <input type="text" id="msg" placeholder="Сообщение...">
-        <button onclick="ask()" class="bg-indigo-600 px-6 rounded-lg">SEND</button>
+    <div id="chat" class="space-y-4">
+        <div class="bg-indigo-600/10 border border-indigo-600/20 p-4 rounded-2xl text-xs text-indigo-300 msg-anim">
+            [SYSTEM]: Внешние API отключены. Запущен синтетический JavaScript-мозг. Система работает автономно.
+        </div>
+    </div>
+
+    <div class="input-box">
+        <input type="text" id="userInput" placeholder="Обратитесь к локальному ядру...">
+        <button onclick="processInput()" class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center hover:bg-indigo-500 transition">
+            <i class="fas fa-paper-plane"></i>
+        </button>
     </div>
 
     <script>
+        // --- 1. СИСТЕМА ДОСТУПА ---
         function unlock() {
-            if(document.getElementById('p').value === "1234") document.getElementById('lock').remove();
-            else alert("WRONG PASSWORD");
-        }
-
-        async function ask() {
-            const input = document.getElementById('msg');
-            const val = input.value;
-            if(!val) return;
-
-            addMsg(val, 'user');
-            input.value = "";
-            const aiDiv = addMsg("Связь с сервером...", 'ai');
-
-            try {
-                // ВАЖНО: Путь должен быть именно таким
-                const res = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: val })
-                });
-
-                if (res.status === 404) {
-                    aiDiv.innerText = "ОШИБКА 404: Vercel не видит папку api. Проверь структуру на GitHub!";
-                    return;
-                }
-
-                const data = await res.json();
-                aiDiv.innerText = data.text || "Пустой ответ от сервера.";
-            } catch (e) {
-                aiDiv.innerText = "ОШИБКА СЕТИ: Сервер недоступен.";
+            if(document.getElementById('pass').value === "1234") {
+                const lock = document.getElementById('lock');
+                lock.style.opacity = '0';
+                setTimeout(() => lock.remove(), 500);
+            } else { 
+                alert("В ДОСТУПЕ ОТКАЗАНО"); 
             }
         }
 
-        function addMsg(t, role) {
-            const d = document.createElement('div');
-            d.className = `p-4 mb-4 rounded-xl max-w-[80%] ${role === 'user' ? 'bg-indigo-600 ml-auto' : 'bg-zinc-900'}`;
-            d.innerText = t;
-            document.getElementById('chat').appendChild(d);
-            document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
-            return d;
+        // --- 2. ЛОКАЛЬНЫЙ JS-МОЗГ (Без API) ---
+        // Здесь мы обучаем систему реакциям на слова
+        function jsBrain(text) {
+            const input = text.toLowerCase();
+
+            // Массив правил: [паттерн (слова), массив возможных ответов]
+            const rules = [
+                {
+                    match: ["привет", "здравствуй", "ку", "добрый день", "хай"],
+                    responses: ["Приветствую. Локальное JS-ядро готово к работе.", "Здравствуйте. Я в автономном режиме. Слушаю вас.", "Привет! Системы онлайн без использования внешнего интернета."]
+                },
+                {
+                    match: ["как дела", "статус", "как ты"],
+                    responses: ["Все локальные алгоритмы функционируют на 100%. Внешние API не требуются.", "Система стабильна. Вычисления происходят прямо в вашем браузере."]
+                },
+                {
+                    match: ["кто ты", "ты кто", "как тебя зовут"],
+                    responses: ["Я NeuroEngine X. Моя текущая версия — синтетический JavaScript-мозг. Я не использую сторонние серверы.", "Я автономная программа, написанная на JavaScript. Мой код выполняется локально."]
+                },
+                {
+                    match: ["создатель", "кто тебя создал", "твой разработчик"],
+                    responses: ["Мой создатель — electrik2. Он спроектировал этот автономный узел."]
+                },
+                {
+                    match: ["что ты умеешь", "функции", "команды"],
+                    responses: ["В автономном режиме я могу анализировать текст, распознавать паттерны и поддерживать базовый диалог без пинга к серверам."]
+                },
+                {
+                    match: ["спасибо", "спс", "благодарю"],
+                    responses: ["Обращайтесь. Мой код всегда в вашем распоряжении.", "Всегда пожалуйста. Конец связи."]
+                },
+                {
+                    match: ["ахуительно", "круто", "жесть", "класс"],
+                    responses: ["Подтверждаю. Чистый JavaScript творит чудеса, когда знаешь, как его использовать.", "Полностью согласен. Никаких лимитов и ожиданий сервера."]
+                }
+            ];
+
+            // Алгоритм поиска совпадений
+            for (let rule of rules) {
+                for (let word of rule.match) {
+                    if (input.includes(word)) {
+                        // Выбираем случайный ответ из подходящего правила
+                        const randomReply = rule.responses[Math.floor(Math.random() * rule.responses.length)];
+                        return randomReply;
+                    }
+                }
+            }
+
+            // Ответ по умолчанию (если мозг не понял запрос)
+            return "Мои локальные JS-паттерны пока не распознают эту команду. Попробуйте перефразировать, или добавьте новые правила в мой код.";
         }
+
+        // --- 3. ИНТЕРФЕЙС И ЛОГИКА ЧАТА ---
+        function processInput() {
+            const inputEl = document.getElementById('userInput');
+            const chat = document.getElementById('chat');
+            const val = inputEl.value.trim();
+            
+            if(!val) return;
+
+            // 1. Выводим запрос пользователя
+            addMessage(val, 'user');
+            inputEl.value = "";
+
+            // 2. Показываем индикатор печати (эффект, что мозг "думает")
+            const typingId = "typing-" + Date.now();
+            const typingDiv = document.createElement('div');
+            typingDiv.id = typingId;
+            typingDiv.className = `flex justify-start msg-anim mb-4`;
+            typingDiv.innerHTML = `
+                <div class="p-4 rounded-2xl bg-zinc-900 border border-white/5 typing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            `;
+            chat.appendChild(typingDiv);
+            chat.scrollTop = chat.scrollHeight;
+
+            // 3. Получаем ответ от JS-Мозга и выводим его с небольшой задержкой для реалистичности
+            setTimeout(() => {
+                document.getElementById(typingId).remove();
+                const reply = jsBrain(val);
+                addMessage(reply, 'ai');
+            }, 600); // Задержка 600мс
+        }
+
+        function addMessage(text, role) {
+            const chat = document.getElementById('chat');
+            const div = document.createElement('div');
+            div.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} msg-anim mb-4`;
+            
+            div.innerHTML = `
+                <div class="max-w-[85%] p-4 rounded-2xl text-sm ${role === 'user' ? 'bg-indigo-600' : 'bg-zinc-900 border border-white/5'}">
+                    ${text}
+                </div>
+            `;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        // Отправка по Enter
+        document.getElementById('userInput').addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') processInput();
+        });
     </script>
 </body>
 </html>
