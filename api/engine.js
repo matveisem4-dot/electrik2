@@ -1,10 +1,7 @@
 export default async function handler(req, res) {
-    // Разрешаем запросы со всех доменов (CORS)
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    
     const { prompt, type } = req.query;
 
-    if (!prompt) return res.status(400).json({ error: "No prompt" });
+    if (!prompt) return res.status(400).send("No prompt provided");
 
     try {
         if (type === 'text') {
@@ -13,13 +10,100 @@ export default async function handler(req, res) {
             return res.status(200).send(data);
         }
 
-        const seed = Math.floor(Math.random() * 1000000);
-        // Используем прямые ссылки, которые точно работают
+        // Для медиа: создаем стабильный URL
+        const seed = Math.floor(Math.random() * 99999);
         const model = type === 'video' ? 'video' : 'flux';
-        const url = `https://pollinations.ai/p/${encodeURIComponent(prompt)}?seed=${seed}&model=${model}`;
+        const mediaUrl = `https://pollinations.ai/p/${encodeURIComponent(prompt)}?seed=${seed}&model=${model}`;
         
-        return res.status(200).json({ url: url });
-    } catch (e) {
-        return res.status(500).json({ error: "Engine error", details: e.message });
+        return res.status(200).json({ url: mediaUrl });
+    } catch (error) {
+        return res.status(500).send("Core error: " + error.message);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
