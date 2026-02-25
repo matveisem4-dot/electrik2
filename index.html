@@ -2,58 +2,58 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>NeuroEngine Global | Vercel</title>
+    <title>Monolith OS | Vercel</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #020202; color: #fff; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; }
-        #chat { flex: 1; overflow-y: auto; padding: 20px; }
-        .msg { background: #111; padding: 15px; border-radius: 15px; margin-bottom: 10px; border: 1px solid #222; max-width: 85%; }
+        body { background: #000; color: #fff; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; height: 100vh; display: flex; flex-direction: column; }
+        #chat { flex: 1; overflow-y: auto; padding: 20px; scrollbar-width: none; }
+        .bubble { background: #111; border: 1px solid #222; padding: 12px 18px; border-radius: 15px; margin-bottom: 10px; max-width: 80%; line-height: 1.5; }
         .user { background: #4f46e5; margin-left: auto; border: none; }
-        img, video { border-radius: 10px; margin-top: 10px; width: 100%; max-width: 500px; }
+        img, video { border-radius: 8px; margin-top: 10px; border: 1px solid #333; width: 100%; }
     </style>
 </head>
 <body>
-    <header class="p-4 border-b border-white/10 text-[10px] uppercase tracking-widest text-zinc-500">
-        Status: <span class="text-green-500">Node Active</span> | Domain: electrik2.vercel.app
+    <header class="p-4 border-b border-white/10 text-[10px] uppercase tracking-[3px] text-zinc-500">
+        System: <span class="text-indigo-500">Active</span> | electrik2.vercel.app
     </header>
     <div id="chat"></div>
-    <div class="p-5 bg-black border-t border-white/5 flex gap-3">
-        <input type="text" id="in" class="flex-1 bg-zinc-900 rounded-xl p-4 outline-none border border-transparent focus:border-indigo-500" placeholder="Спросите меня о чем угодно...">
-        <button onclick="send()" class="bg-indigo-600 px-8 rounded-xl font-bold">ОТПРАВИТЬ</button>
+    <div class="p-4 bg-zinc-950 border-t border-white/5 flex gap-2">
+        <input type="text" id="userInput" class="flex-1 bg-zinc-900 rounded-lg p-3 outline-none focus:ring-1 ring-indigo-500" placeholder="Запрос...">
+        <button onclick="send()" class="bg-indigo-600 px-6 py-2 rounded-lg font-bold hover:bg-indigo-500">GO</button>
     </div>
 
     <script>
         async function send() {
-            const input = document.getElementById('in');
+            const input = document.getElementById('userInput');
             const chat = document.getElementById('chat');
             const val = input.value.trim();
             if(!val) return;
 
-            chat.innerHTML += `<div class="msg user">${val}</div>`;
+            chat.innerHTML += `<div class="bubble user">${val}</div>`;
             input.value = "";
             chat.scrollTop = chat.scrollHeight;
 
-            const type = val.toLowerCase().includes("нарисуй") ? "image" : (val.toLowerCase().includes("видео") ? "video" : "text");
-            
+            const isMedia = val.toLowerCase().includes("нарисуй") || val.toLowerCase().includes("видео");
+            const type = val.toLowerCase().includes("видео") ? "video" : (val.toLowerCase().includes("нарисуй") ? "image" : "text");
+
             try {
-                // ВАЖНО: запрашиваем через наш прокси
                 const res = await fetch(`/api/engine?prompt=${encodeURIComponent(val)}&type=${type}`);
-                
                 if (type === 'text') {
-                    const text = await res.text();
-                    chat.innerHTML += `<div class="msg">${text}</div>`;
+                    const data = await res.text();
+                    chat.innerHTML += `<div class="bubble">${data}</div>`;
                 } else {
                     const data = await res.json();
-                    const media = type === 'image' 
+                    const content = type === 'image' 
                         ? `<img src="${data.url}">` 
                         : `<video src="${data.url}" controls autoplay loop></video>`;
-                    chat.innerHTML += `<div class="msg">Генерация завершена:<br>${media}</div>`;
+                    chat.innerHTML += `<div class="bubble">Запрос выполнен:<br>${content}</div>`;
                 }
-            } catch(e) {
-                chat.innerHTML += `<div class="msg text-red-500">Ошибка: Не удалось связаться с ядром.</div>`;
+            } catch (e) {
+                chat.innerHTML += `<div class="bubble text-red-500">Системная ошибка. Проверьте Deployment на Vercel.</div>`;
             }
             chat.scrollTop = chat.scrollHeight;
         }
+        document.getElementById('userInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') send(); });
     </script>
 </body>
 </html>
