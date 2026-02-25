@@ -2,32 +2,57 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Monolith OS</title>
+    <title>NeuroEngine Monolith | Vercel Node</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #050505; color: #fff; font-family: 'Inter', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        #chat { flex: 1; overflow-y: auto; padding: 20px; scrollbar-width: none; }
+        .input-box { background: #0a0a0a; border-top: 1px solid #1a1a1a; padding: 20px; display: flex; gap: 10px; }
+        input { flex: 1; background: #111; border: 1px solid #222; border-radius: 12px; padding: 12px 20px; color: #fff; outline: none; }
+        .bubble { background: #111; border: 1px solid #222; padding: 15px; border-radius: 18px; max-width: 80%; margin-bottom: 15px; font-size: 14px; }
+        img, video { border-radius: 12px; margin-top: 10px; border: 1px solid #333; }
+    </style>
 </head>
-<body class="bg-black text-green-500 font-mono p-10">
-    <div id="output" class="mb-5"></div>
-    <input type="text" id="cmd" class="bg-transparent border-b border-green-500 outline-none w-full" placeholder="Введите директиву...">
+<body>
+    <header class="p-5 border-b border-white/5 font-bold text-xs tracking-widest uppercase opacity-50">
+        Monolith Core Status: <span class="text-green-500">Online (Vercel)</span>
+    </header>
+    <div id="chat"></div>
+    <div class="input-box">
+        <input type="text" id="userInput" placeholder="Введите директиву (нарисуй, видео или вопрос)...">
+        <button onclick="send()" class="bg-indigo-600 px-6 py-2 rounded-xl hover:bg-indigo-500 transition">Ввод</button>
+    </div>
 
     <script>
-        document.getElementById('cmd').addEventListener('keypress', async (e) => {
-            if (e.key === 'Enter') {
-                const val = e.target.value;
-                e.target.value = "";
-                
-                // Обращение к ТВОЕМУ движку
-                const type = val.includes("нарисуй") ? "image" : (val.includes("видео") ? "video" : "text");
+        async function send() {
+            const input = document.getElementById('userInput');
+            const val = input.value.trim();
+            if(!val) return;
+
+            addMsg(val, 'user');
+            input.value = "";
+
+            const type = val.toLowerCase().includes("нарисуй") ? "image" : (val.toLowerCase().includes("видео") ? "video" : "text");
+            
+            try {
                 const res = await fetch(`/api/engine?prompt=${encodeURIComponent(val)}&type=${type}`);
-                
                 if (type === 'text') {
                     const text = await res.text();
-                    document.getElementById('output').innerHTML += `<div>> ${text}</div>`;
+                    addMsg(text, 'ai');
                 } else {
                     const data = await res.json();
-                    document.getElementById('output').innerHTML += `<div><img src="${data.url}" class="w-64 mt-2"></div>`;
+                    addMsg(`Генерация завершена: <br><${type === 'image' ? 'img' : 'video'} src="${data.url}" ${type === 'video' ? 'controls autoplay loop' : ''}>`, 'ai');
                 }
+            } catch(e) {
+                addMsg("Ошибка связи с сервером Vercel", 'ai');
             }
-        });
+        }
+
+        function addMsg(text, role) {
+            const chat = document.getElementById('chat');
+            chat.innerHTML += `<div class="bubble ${role === 'user' ? 'ml-auto bg-indigo-600 border-none' : ''}">${text}</div>`;
+            chat.scrollTop = chat.scrollHeight;
+        }
     </script>
 </body>
 </html>
