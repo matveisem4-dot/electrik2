@@ -3,180 +3,221 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HEXA | Secure P2P</title>
+    <title>HEXA OS v3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background: #09090b; color: #fafafa; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
-        .glass { background: rgba(24, 24, 27, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
-        #chat-area::-webkit-scrollbar { width: 4px; }
-        #chat-area::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
-        .msg { max-width: 80%; padding: 10px 14px; border-radius: 18px; font-size: 14px; margin-bottom: 5px; animation: slideUp 0.2s ease-out; }
-        .my { background: #2563eb; align-self: flex-end; border-bottom-right-radius: 4px; }
-        .other { background: #27272a; align-self: flex-start; border-bottom-left-radius: 4px; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        :root { --accent: #2563eb; }
+        body { background: #09090b; color: #e4e4e7; font-family: 'Inter', sans-serif; height: 100vh; display: flex; overflow: hidden; }
+        .sidebar { width: 300px; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; background: #0c0c0e; }
+        .chat-main { flex: 1; display: flex; flex-direction: column; background: #09090b; }
+        .contact-card { cursor: pointer; transition: 0.2s; border-radius: 12px; margin: 4px 8px; padding: 12px; }
+        .contact-card:hover { background: rgba(255,255,255,0.03); }
+        .contact-card.active { background: rgba(37, 99, 235, 0.15); border-left: 3px solid var(--accent); }
+        #messages::-webkit-scrollbar { width: 4px; }
+        #messages::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+        .call-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        video { width: 300px; border-radius: 16px; border: 2px solid var(--accent); background: #000; }
+        @media (max-width: 768px) { .sidebar { width: 80px; } .contact-info { display: none; } }
     </style>
 </head>
 <body>
 
-    <div id="loginScreen" class="fixed inset-0 z-[100] bg-zinc-950 flex items-center justify-center p-6">
-        <div class="glass p-8 rounded-3xl w-full max-w-md shadow-2xl">
-            <div class="w-16 h-16 bg-blue-600 rounded-2xl mb-6 mx-auto flex items-center justify-center text-3xl font-bold">H</div>
-            <h2 class="text-2xl font-bold text-center mb-2">Добро пожаловать</h2>
-            <p class="text-zinc-500 text-center text-sm mb-8">Придумайте свой уникальный ID для входа</p>
-            <input type="text" id="myIdInput" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-4 outline-none focus:ring-2 ring-blue-600 transition" placeholder="Ваш ник (например 1234)">
-            <button onclick="initPeer()" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-bold transition">ВОЙТИ В СИСТЕМУ</button>
+    <div id="loginScreen" class="fixed inset-0 z-[2000] bg-zinc-950 flex items-center justify-center p-6">
+        <div class="bg-zinc-900 p-8 rounded-3xl w-full max-w-md border border-white/5">
+            <h2 class="text-2xl font-bold mb-6 text-center">Вход в HEXA</h2>
+            <input type="text" id="myIdInput" class="w-full bg-black border border-zinc-800 rounded-xl p-4 mb-4 outline-none focus:ring-2 ring-blue-600" placeholder="Ваш ID (напр. 1234)">
+            <button onclick="startEngine()" class="w-full bg-blue-600 py-4 rounded-xl font-bold">ВОЙТИ</button>
         </div>
     </div>
 
-    <div id="mainApp" class="hidden h-full flex flex-col">
-        <header class="h-16 border-b border-white/5 flex items-center justify-between px-6 glass">
-            <div class="flex items-center gap-3">
-                <div id="onlineStatus" class="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span id="displayMyId" class="text-sm font-bold opacity-70"></span>
+    <aside class="sidebar">
+        <div class="p-4 border-b border-white/5 flex justify-between items-center">
+            <span class="font-bold text-xs tracking-widest text-blue-500">HEXA CHATS</span>
+            <button onclick="addNewContact()" class="text-zinc-500 hover:text-white"><i class="fas fa-user-plus"></i></button>
+        </div>
+        <div id="contactList" class="flex-1 overflow-y-auto py-2">
             </div>
-            <div class="flex gap-2">
-                <input type="text" id="targetId" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1 text-xs outline-none" placeholder="ID друга">
-                <button onclick="requestConnection()" class="bg-zinc-800 p-2 rounded-lg text-blue-400 hover:bg-zinc-700 transition"><i class="fas fa-plus"></i></button>
+        <div class="p-4 bg-black/50 text-[10px] text-zinc-600">
+            MY ID: <span id="myIdDisplay" class="text-zinc-400">---</span>
+        </div>
+    </aside>
+
+    <main class="chat-main">
+        <header id="chatHeader" class="h-16 border-b border-white/5 flex items-center justify-between px-6 bg-zinc-900/30 hidden">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-xs font-bold" id="headerAvatar">?</div>
+                <span class="font-bold text-sm" id="headerName">Выберите чат</span>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="makeCall()" class="text-zinc-400 hover:text-green-500 transition"><i class="fas fa-video"></i></button>
+                <button class="text-zinc-400 hover:text-white"><i class="fas fa-info-circle"></i></button>
             </div>
         </header>
 
-        <main id="chat-area" class="flex-1 overflow-y-auto p-6 flex flex-col gap-2">
-            </main>
+        <div id="messages" class="flex-1 overflow-y-auto p-6 flex flex-col gap-2">
+            </div>
 
-        <footer class="p-4 glass">
-            <div class="max-w-4xl mx-auto flex gap-3">
-                <input type="text" id="msgInput" class="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 outline-none focus:border-blue-500" placeholder="Ваше сообщение...">
-                <button onclick="send()" class="bg-blue-600 px-6 rounded-xl font-bold"><i class="fas fa-paper-plane"></i></button>
+        <footer id="chatFooter" class="p-4 bg-zinc-900/50 border-t border-white/5 hidden">
+            <div class="flex gap-3">
+                <input type="text" id="msgIn" class="flex-1 bg-black border border-zinc-800 rounded-xl px-4 py-2 outline-none focus:border-blue-600" placeholder="Сообщение...">
+                <button onclick="send()" class="bg-blue-600 px-6 rounded-xl"><i class="fas fa-paper-plane"></i></button>
             </div>
         </footer>
-    </div>
+    </main>
 
-    <div id="requestModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[200] p-6 backdrop-blur-sm">
-        <div class="glass p-6 rounded-3xl w-full max-w-sm text-center">
-            <div class="text-4xl mb-4">👋</div>
-            <h3 id="requestText" class="text-lg font-bold mb-6"></h3>
-            <div class="flex gap-3">
-                <button onclick="rejectRequest()" class="flex-1 bg-zinc-800 py-3 rounded-xl font-bold hover:bg-zinc-700 transition">ОТКЛОНИТЬ</button>
-                <button onclick="acceptRequest()" class="flex-1 bg-blue-600 py-3 rounded-xl font-bold hover:bg-blue-500 transition">ПРИНЯТЬ</button>
-            </div>
+    <div id="callUI" class="call-overlay">
+        <div class="flex flex-wrap justify-center gap-4">
+            <video id="remoteVideo" autoplay playsinline></video>
+            <video id="localVideo" autoplay muted playsinline class="w-32"></video>
         </div>
+        <button onclick="endCall()" class="mt-10 bg-red-600 w-16 h-16 rounded-full text-white shadow-lg shadow-red-500/20">
+            <i class="fas fa-phone-slash"></i>
+        </button>
     </div>
 
     <script>
-        let peer, conn;
-        let pendingConn = null;
-        let blockedPeers = new Set();
-        let acceptedPeers = new Set();
+        let peer, conn, currentChatId;
+        let contacts = JSON.parse(localStorage.getItem('hexa_contacts') || "[]");
+        let activeConnections = {};
 
-        function initPeer() {
-            const myId = document.getElementById('myIdInput').value.trim();
-            if (!myId) return alert("Введите ID");
-
-            peer = new Peer(myId);
-
-            peer.on('open', (id) => {
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('mainApp').style.display = 'flex';
-                document.getElementById('displayMyId').innerText = "ВЫ: " + id;
-            });
-
-            peer.on('error', (err) => {
-                if(err.type === 'unavailable-id') alert("Этот ID уже занят. Выберите другой.");
-                else alert("Ошибка: " + err.type);
-            });
-
-            // Входящее подключение
-            peer.on('connection', (c) => {
-                if (blockedPeers.has(c.peer)) {
-                    c.close();
-                    return;
-                }
-                
-                if (!acceptedPeers.has(c.peer)) {
-                    pendingConn = c;
-                    showRequest(c.peer);
-                } else {
-                    conn = c;
-                    setupConn();
-                }
-            });
+        // Запуск при загрузке
+        window.onload = () => {
+            const saved = localStorage.getItem('hexa_my_id');
+            if(saved) {
+                document.getElementById('myIdInput').value = saved;
+                startEngine();
+            }
         }
 
-        function showRequest(id) {
-            document.getElementById('requestText').innerText = `Пользователь ${id} хочет начать чат с вами`;
-            document.getElementById('requestModal').style.display = 'flex';
-        }
-
-        function acceptRequest() {
-            acceptedPeers.add(pendingConn.peer);
-            conn = pendingConn;
-            document.getElementById('requestModal').style.display = 'none';
-            setupConn();
-            addMsg(`Вы приняли запрос от ${conn.peer}`, 'sys');
-            conn.send("[SYSTEM]: Запрос принят. Теперь мы можем общаться.");
-        }
-
-        function rejectRequest() {
-            blockedPeers.add(pendingConn.peer);
-            pendingConn.send("[SYSTEM]: Запрос отклонен.");
-            pendingConn.close();
-            document.getElementById('requestModal').style.display = 'none';
-            pendingConn = null;
-        }
-
-        function requestConnection() {
-            const targetId = document.getElementById('targetId').value.trim();
-            if (!targetId) return;
+        function startEngine() {
+            const id = document.getElementById('myIdInput').value.trim();
+            if(!id) return;
+            localStorage.setItem('hexa_my_id', id);
             
-            addMsg(`Отправка запроса к ${targetId}...`, 'sys');
-            conn = peer.connect(targetId);
-            setupConn();
+            peer = new Peer(id);
+            peer.on('open', (myId) => {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('myIdDisplay').innerText = myId;
+                renderContacts();
+            });
+
+            peer.on('connection', c => {
+                if(!contacts.includes(c.peer)) {
+                    if(confirm(`Пользователь ${c.peer} хочет написать вам. Добавить?`)) {
+                        addContactToList(c.peer);
+                    } else return;
+                }
+                activeConnections[c.peer] = c;
+                setupConnection(c);
+            });
+
+            peer.on('call', async call => {
+                if(confirm(`Вам звонит ${call.peer}!`)) {
+                    const s = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
+                    document.getElementById('callUI').style.display = 'flex';
+                    document.getElementById('localVideo').srcObject = s;
+                    call.answer(s);
+                    call.on('stream', rs => document.getElementById('remoteVideo').srcObject = rs);
+                }
+            });
         }
 
-        function setupConn() {
-            conn.on('data', (data) => {
-                if (data.includes("[SYSTEM]: Запрос отклонен")) {
-                    addMsg("Ваш запрос был отклонен.", 'sys');
-                    conn.close();
-                } else if (data.includes("[SYSTEM]: Запрос принят")) {
-                    addMsg("Собеседник принял ваш запрос!", 'sys');
-                    acceptedPeers.add(conn.peer);
+        function addNewContact() {
+            const id = prompt("Введите ID друга:");
+            if(id && id !== localStorage.getItem('hexa_my_id')) {
+                addContactToList(id);
+            }
+        }
+
+        function addContactToList(id) {
+            if(!contacts.includes(id)) {
+                contacts.push(id);
+                localStorage.setItem('hexa_contacts', JSON.stringify(contacts));
+                renderContacts();
+            }
+        }
+
+        function renderContacts() {
+            const list = document.getElementById('contactList');
+            list.innerHTML = '';
+            contacts.forEach(id => {
+                const div = document.createElement('div');
+                div.className = `contact-card flex items-center gap-3 ${currentChatId === id ? 'active' : ''}`;
+                div.onclick = () => openChat(id);
+                div.innerHTML = `
+                    <div class="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-xs font-bold">${id[0].toUpperCase()}</div>
+                    <div class="contact-info flex-1">
+                        <div class="text-sm font-bold">${id}</div>
+                        <div class="text-[10px] text-zinc-500">Нажмите, чтобы открыть</div>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function openChat(id) {
+            currentChatId = id;
+            document.getElementById('chatHeader').classList.remove('hidden');
+            document.getElementById('chatFooter').classList.remove('hidden');
+            document.getElementById('headerName').innerText = id;
+            document.getElementById('headerAvatar').innerText = id[0].toUpperCase();
+            document.getElementById('messages').innerHTML = `<div class="text-center text-[10px] text-zinc-600 uppercase my-4">Чат с ${id} открыт</div>`;
+            renderContacts();
+
+            if(!activeConnections[id]) {
+                const c = peer.connect(id);
+                activeConnections[id] = c;
+                setupConnection(c);
+            }
+        }
+
+        function setupConnection(c) {
+            c.on('data', data => {
+                if(currentChatId === c.peer) {
+                    addBubble(data, 'peer');
                 } else {
-                    addMsg(data, 'other');
+                    alert(`Новое сообщение от ${c.peer}`);
                 }
             });
         }
 
         function send() {
-            const input = document.getElementById('msgInput');
-            if (!input.value || !conn) return;
+            const input = document.getElementById('msgIn');
+            const msg = input.value.trim();
+            if(!msg || !currentChatId) return;
             
-            if (!acceptedPeers.has(conn.peer)) {
-                addMsg("Вы не можете писать, пока запрос не принят.", "sys");
-                return;
-            }
-
-            conn.send(input.value);
-            addMsg(input.value, 'my');
+            activeConnections[currentChatId].send(msg);
+            addBubble(msg, 'me');
             input.value = "";
         }
 
-        function addMsg(text, type) {
-            const chat = document.getElementById('chat-area');
+        function addBubble(text, type) {
+            const area = document.getElementById('messages');
             const div = document.createElement('div');
-            if (type === 'sys') {
-                div.className = "text-center text-[10px] text-zinc-600 uppercase my-2 tracking-widest";
-            } else {
-                div.className = `msg ${type === 'my' ? 'my' : 'other'}`;
-            }
+            div.className = `p-3 rounded-2xl max-w-[80%] text-sm ${type === 'me' ? 'bg-blue-600 self-end' : 'bg-zinc-800 self-start'}`;
             div.innerText = text;
-            chat.appendChild(div);
-            chat.scrollTop = chat.scrollHeight;
+            area.appendChild(div);
+            area.scrollTop = area.scrollHeight;
         }
 
-        document.getElementById('msgInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') send(); });
+        async function makeCall() {
+            if(!currentChatId) return;
+            const s = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
+            document.getElementById('callUI').style.display = 'flex';
+            document.getElementById('localVideo').srcObject = s;
+            const call = peer.call(currentChatId, s);
+            call.on('stream', rs => document.getElementById('remoteVideo').srcObject = rs);
+        }
+
+        function endCall() {
+            document.getElementById('callUI').style.display = 'none';
+            const s = document.getElementById('localVideo').srcObject;
+            if(s) s.getTracks().forEach(t => t.stop());
+        }
+
+        document.getElementById('msgIn').addEventListener('keypress', (e) => { if(e.key === 'Enter') send(); });
     </script>
 </body>
 </html>
