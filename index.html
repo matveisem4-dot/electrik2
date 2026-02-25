@@ -2,58 +2,100 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Monolith OS | Vercel</title>
+    <title>Monolith Messenger | OS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #000; color: #fff; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; height: 100vh; display: flex; flex-direction: column; }
-        #chat { flex: 1; overflow-y: auto; padding: 20px; scrollbar-width: none; }
-        .bubble { background: #111; border: 1px solid #222; padding: 12px 18px; border-radius: 15px; margin-bottom: 10px; max-width: 80%; line-height: 1.5; }
+        body { background: #050505; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; }
+        #chat { height: calc(100vh - 160px); overflow-y: auto; padding: 20px; scrollbar-width: none; }
+        .bubble { background: #111; border: 1px solid #222; padding: 12px; border-radius: 15px; margin-bottom: 10px; max-width: 75%; position: relative; }
         .user { background: #4f46e5; margin-left: auto; border: none; }
-        img, video { border-radius: 8px; margin-top: 10px; border: 1px solid #333; width: 100%; }
+        #video-grid { position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 100; }
+        video { width: 200px; border-radius: 12px; border: 2px solid #4f46e5; background: #000; }
+        .call-btn { background: #ef4444; width: 50px; height: 50px; border-radius: 50%; display: flex; items-center justify-center; transition: 0.3s; }
+        .call-btn:hover { transform: scale(1.1); }
     </style>
 </head>
 <body>
-    <header class="p-4 border-b border-white/10 text-[10px] uppercase tracking-[3px] text-zinc-500">
-        System: <span class="text-indigo-500">Active</span> | electrik2.vercel.app
+
+    <header class="h-16 border-b border-white/5 flex items-center justify-between px-6 bg-black/50 backdrop-blur">
+        <div class="flex items-center gap-2">
+            <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <span class="text-xs font-bold tracking-widest">MONOLITH MESSENGER</span>
+        </div>
+        <div class="flex gap-4">
+            <button onclick="startCall('audio')" class="text-zinc-400 hover:text-white"><i class="fas fa-phone"></i> 📞</button>
+            <button onclick="startCall('video')" class="text-zinc-400 hover:text-white"><i class="fas fa-video"></i> 📹</button>
+        </div>
     </header>
-    <div id="chat"></div>
-    <div class="p-4 bg-zinc-950 border-t border-white/5 flex gap-2">
-        <input type="text" id="userInput" class="flex-1 bg-zinc-900 rounded-lg p-3 outline-none focus:ring-1 ring-indigo-500" placeholder="Запрос...">
-        <button onclick="send()" class="bg-indigo-600 px-6 py-2 rounded-lg font-bold hover:bg-indigo-500">GO</button>
+
+    <div id="video-grid">
+        <video id="localVideo" autoplay muted playsinline></video>
+        <video id="remoteVideo" autoplay playsinline></video>
+    </div>
+
+    <div id="chat">
+        <div class="bubble text-zinc-500 text-xs">Система: Шифрование включено. Вы можете отправлять текст, фото или звонить.</div>
+    </div>
+
+    <div class="p-4 bg-zinc-950 border-t border-white/5 flex gap-3">
+        <input type="text" id="msgInput" class="flex-1 bg-zinc-900 rounded-2xl px-6 outline-none focus:ring-1 ring-indigo-500" placeholder="Ваше сообщение...">
+        <button onclick="sendMessage()" class="bg-indigo-600 px-8 rounded-2xl font-bold hover:bg-indigo-500">SEND</button>
     </div>
 
     <script>
-        async function send() {
-            const input = document.getElementById('userInput');
+        let localStream;
+        let peerConnection;
+        const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+        // 1. Мессенджер логика
+        async function sendMessage() {
+            const input = document.getElementById('msgInput');
             const chat = document.getElementById('chat');
-            const val = input.value.trim();
-            if(!val) return;
+            const text = input.value.trim();
+            if(!text) return;
 
-            chat.innerHTML += `<div class="bubble user">${val}</div>`;
+            addBubble(text, 'user');
             input.value = "";
-            chat.scrollTop = chat.scrollHeight;
 
-            const isMedia = val.toLowerCase().includes("нарисуй") || val.toLowerCase().includes("видео");
-            const type = val.toLowerCase().includes("видео") ? "video" : (val.toLowerCase().includes("нарисуй") ? "image" : "text");
-
+            const type = text.toLowerCase().includes("нарисуй") ? "image" : (text.toLowerCase().includes("видео") ? "video" : "text");
+            
             try {
-                const res = await fetch(`/api/engine?prompt=${encodeURIComponent(val)}&type=${type}`);
-                if (type === 'text') {
+                const res = await fetch(`/api?prompt=${encodeURIComponent(text)}&type=${type}`);
+                if(type === 'text') {
                     const data = await res.text();
-                    chat.innerHTML += `<div class="bubble">${data}</div>`;
+                    addBubble(data, 'ai');
                 } else {
                     const data = await res.json();
-                    const content = type === 'image' 
-                        ? `<img src="${data.url}">` 
-                        : `<video src="${data.url}" controls autoplay loop></video>`;
-                    chat.innerHTML += `<div class="bubble">Запрос выполнен:<br>${content}</div>`;
+                    const media = type === 'image' ? `<img src="${data.url}" class="rounded-lg mt-2">` : `<video src="${data.url}" controls class="mt-2"></video>`;
+                    addBubble(`Результат генерации:<br>${media}`, 'ai');
                 }
-            } catch (e) {
-                chat.innerHTML += `<div class="bubble text-red-500">Системная ошибка. Проверьте Deployment на Vercel.</div>`;
-            }
+            } catch(e) { addBubble("Ошибка ядра Vercel", 'ai'); }
+        }
+
+        function addBubble(content, role) {
+            const chat = document.getElementById('chat');
+            chat.innerHTML += `<div class="bubble ${role === 'user' ? 'user' : ''}">${content}</div>`;
             chat.scrollTop = chat.scrollHeight;
         }
-        document.getElementById('userInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') send(); });
+
+        // 2. Логика звонков (WebRTC)
+        async function startCall(mode) {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: mode === 'video', 
+                    audio: true 
+                });
+                document.getElementById('localVideo').srcObject = localStream;
+                addBubble(`Запрос доступа к ${mode === 'video' ? 'камере' : 'микрофону'} разрешен.`, 'ai');
+                
+                // Здесь в реальном приложении отправляется сигнал другому пользователю
+                alert("Звонок инициирован. Для работы полноценной связи нужен второй активный ID. В режиме Demo вы видите себя.");
+            } catch (e) {
+                alert("Ошибка доступа к медиа: " + e.message);
+            }
+        }
+
+        document.getElementById('msgInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
     </script>
 </body>
 </html>
