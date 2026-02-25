@@ -2,129 +2,139 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Monolith Messenger | Calls & AI</title>
+    <title>Monolith P2P Messenger</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background: #050505; color: #e5e7eb; font-family: 'Inter', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        #chat { flex: 1; overflow-y: auto; padding: 20px; }
-        .bubble { background: #111; border: 1px solid #222; padding: 12px; border-radius: 18px; margin-bottom: 10px; max-width: 80%; }
-        .user { background: #4f46e5; margin-left: auto; border: none; }
-        .call-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; z-index: 1000; flex-direction: column; align-items: center; justify-content: center; }
-        video { width: 300px; border-radius: 20px; border: 2px solid #4f46e5; margin: 10px; background: #222; }
+        body { background: #000; color: #fff; font-family: 'JetBrains Mono', monospace; height: 100vh; display: flex; flex-direction: column; }
+        #chat { flex: 1; overflow-y: auto; padding: 20px; scrollbar-width: none; }
+        .msg { background: #111; border: 1px solid #222; padding: 10px 15px; border-radius: 12px; margin-bottom: 8px; max-width: 70%; word-wrap: break-word; }
+        .my-msg { background: #1d4ed8; margin-left: auto; border: none; }
+        .call-screen { position: fixed; inset: 0; background: #000; z-index: 50; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        video { width: 320px; border-radius: 15px; border: 1px solid #333; margin: 10px; background: #050505; }
+        #local { width: 150px; position: absolute; bottom: 100px; right: 20px; border-color: #1d4ed8; }
     </style>
 </head>
 <body>
 
-    <div id="callOverlay" class="call-container">
-        <div class="flex flex-wrap justify-center">
-            <video id="remoteVideo" autoplay playsinline></video>
-            <video id="localVideo" autoplay muted playsinline></video>
+    <div id="callUI" class="call-screen">
+        <video id="remote" autoplay playsinline></video>
+        <video id="local" autoplay muted playsinline></video>
+        <div class="flex gap-10 mt-10">
+            <button onclick="hangUp()" class="bg-red-600 p-6 rounded-full text-2xl hover:bg-red-500 transition">
+                <i class="fas fa-phone-slash"></i>
+            </button>
         </div>
-        <button onclick="endCall()" class="mt-10 bg-red-600 p-5 rounded-full hover:bg-red-700 transition">
-            <i class="fas fa-phone-slash text-2xl"></i>
-        </button>
     </div>
 
-    <header class="p-4 border-b border-white/5 flex justify-between items-center bg-black/50 backdrop-blur">
+    <header class="p-4 border-b border-white/10 flex justify-between items-center">
         <div>
-            <h1 class="font-bold text-sm tracking-tighter">MONOLITH OS <span class="text-indigo-500">MESSENGER</span></h1>
-            <p id="my-id" class="text-[10px] text-zinc-500">ID: Подключение...</p>
+            <div class="text-[10px] text-blue-500 font-bold uppercase tracking-widest">P2P Channel Active</div>
+            <div id="status" class="text-xs text-zinc-500">Подключение к сети...</div>
         </div>
-        <div class="flex gap-4">
-            <input type="text" id="peer-id-input" class="bg-zinc-900 text-xs p-2 rounded border border-zinc-800" placeholder="ID друга">
-            <button onclick="makeCall()" class="text-green-500 hover:scale-110 transition"><i class="fas fa-video"></i></button>
+        <div class="flex gap-3">
+            <input type="text" id="targetId" class="bg-zinc-900 text-[10px] p-2 rounded outline-none w-32 border border-zinc-800" placeholder="ID СОБЕСЕДНИКА">
+            <button onclick="connectToPeer()" class="text-blue-500 text-sm font-bold uppercase">Connect</button>
+            <button onclick="startCall()" class="text-green-500 px-2"><i class="fas fa-video"></i></button>
         </div>
     </header>
 
     <div id="chat">
-        <div class="bubble text-zinc-500 text-xs italic">Система: Для звонка введите ID друга сверху и нажмите иконку видео.</div>
+        <div class="text-center text-[10px] text-zinc-600 my-10 uppercase tracking-widest">Безопасное соединение установлено. Сообщения не сохраняются.</div>
     </div>
 
-    <div class="p-5 bg-zinc-950 border-t border-white/5 flex gap-3">
-        <input type="text" id="msgInput" class="flex-1 bg-zinc-900 rounded-2xl px-5 py-3 outline-none focus:ring-1 ring-indigo-500" placeholder="Текст или 'нарисуй...'">
-        <button onclick="sendMsg()" class="bg-indigo-600 px-6 rounded-2xl font-bold"><i class="fas fa-paper-plane"></i></button>
+    <div class="p-4 bg-zinc-950 border-t border-white/5 flex gap-2">
+        <input type="text" id="textIn" class="flex-1 bg-zinc-900 rounded-xl px-4 py-3 outline-none focus:ring-1 ring-blue-600" placeholder="Сообщение...">
+        <button onclick="sendText()" class="bg-blue-600 px-6 rounded-xl"><i class="fas fa-paper-plane"></i></button>
     </div>
 
     <script>
-        // --- 1. ЛОГИКА ИИ ---
-        async function sendMsg() {
-            const input = document.getElementById('msgInput');
-            const val = input.value.trim();
-            if(!val) return;
-            addMsg(val, 'user');
-            input.value = "";
+        const peer = new Peer();
+        let conn; // Соединение для текста
+        let currentCall;
 
-            const type = val.toLowerCase().includes("нарисуй") ? "image" : (val.toLowerCase().includes("видео") ? "video" : "text");
-            try {
-                const res = await fetch(`/api?prompt=${encodeURIComponent(val)}&type=${type}`);
-                if (type === 'text') {
-                    const data = await res.text();
-                    addMsg(data, 'ai');
-                } else {
-                    const data = await res.json();
-                    const media = type === 'image' ? `<img src="${data.url}">` : `<video src="${data.url}" controls></video>`;
-                    addMsg(`Результат генерации:<br>${media}`, 'ai');
-                }
-            } catch (e) { addMsg("Ошибка связи с сервером.", 'ai'); }
+        // Когда Peer открывается и дает тебе ID
+        peer.on('open', (id) => {
+            document.getElementById('status').innerText = "ВАШ ID: " + id;
+        });
+
+        // Слушаем входящие сообщения
+        peer.on('connection', (connection) => {
+            conn = connection;
+            setupConnHandlers();
+            addMsg("Собеседник подключился к чату", "sys");
+        });
+
+        // Слушаем входящие звонки
+        peer.on('call', async (call) => {
+            if (confirm("Входящий вызов. Принять?")) {
+                const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
+                document.getElementById('callUI').style.display = 'flex';
+                document.getElementById('local').srcObject = stream;
+                call.answer(stream);
+                handleCall(call);
+            }
+        });
+
+        // Подключение к другу
+        function connectToPeer() {
+            const id = document.getElementById('targetId').value;
+            if (!id) return alert("Введи ID");
+            conn = peer.connect(id);
+            setupConnHandlers();
+            addMsg("Попытка подключения...", "sys");
         }
 
-        function addMsg(text, role) {
+        function setupConnHandlers() {
+            conn.on('open', () => addMsg("Соединение установлено", "sys"));
+            conn.on('data', (data) => addMsg(data, "peer"));
+        }
+
+        // Отправка текста
+        function sendText() {
+            const input = document.getElementById('textIn');
+            const msg = input.value;
+            if (!msg || !conn) return;
+            conn.send(msg);
+            addMsg(msg, "me");
+            input.value = "";
+        }
+
+        function addMsg(text, type) {
             const chat = document.getElementById('chat');
-            chat.innerHTML += `<div class="bubble ${role === 'user' ? 'user' : ''}">${text}</div>`;
+            const div = document.createElement('div');
+            div.className = `msg ${type === 'me' ? 'my-msg' : (type === 'sys' ? 'text-[10px] text-zinc-500 mx-auto border-none bg-transparent' : '')}`;
+            div.innerText = text;
+            chat.appendChild(div);
             chat.scrollTop = chat.scrollHeight;
         }
 
-        // --- 2. ЛОГИКА ЗВОНКОВ (WebRTC via PeerJS) ---
-        const peer = new Peer(); // Генерирует уникальный ID
-        let currentCall;
-
-        peer.on('open', (id) => {
-            document.getElementById('my-id').innerText = "ВАШ ID: " + id;
-        });
-
-        // Входящий звонок
-        peer.on('call', async (call) => {
-            if (confirm("Вам звонят! Принять?")) {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                document.getElementById('callOverlay').style.display = 'flex';
-                document.getElementById('localVideo').srcObject = stream;
-                call.answer(stream);
-                setupCallHandlers(call);
-            }
-        });
-
-        async function makeCall() {
-            const destId = document.getElementById('peer-id-input').value;
-            if(!destId) return alert("Введите ID получателя");
-
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            document.getElementById('callOverlay').style.display = 'flex';
-            document.getElementById('localVideo').srcObject = stream;
-
-            const call = peer.call(destId, stream);
-            setupCallHandlers(call);
+        // Логика звонков
+        async function startCall() {
+            const id = document.getElementById('targetId').value;
+            const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
+            document.getElementById('callUI').style.display = 'flex';
+            document.getElementById('local').srcObject = stream;
+            const call = peer.call(id, stream);
+            handleCall(call);
         }
 
-        function setupCallHandlers(call) {
+        function handleCall(call) {
             currentCall = call;
             call.on('stream', (remoteStream) => {
-                document.getElementById('remoteVideo').srcObject = remoteStream;
+                document.getElementById('remote').srcObject = remoteStream;
             });
-            call.on('close', endCall);
         }
 
-        function endCall() {
-            document.getElementById('callOverlay').style.display = 'none';
+        function hangUp() {
+            document.getElementById('callUI').style.display = 'none';
             if (currentCall) currentCall.close();
-            const localVideo = document.getElementById('localVideo');
-            if (localVideo.srcObject) {
-                localVideo.srcObject.getTracks().forEach(track => track.stop());
-            }
+            const stream = document.getElementById('local').srcObject;
+            if (stream) stream.getTracks().forEach(t => t.stop());
         }
 
-        document.getElementById('msgInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMsg(); });
+        document.getElementById('textIn').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendText(); });
     </script>
 </body>
 </html>
