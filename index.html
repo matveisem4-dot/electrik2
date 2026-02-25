@@ -3,138 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HEXA OS v3</title>
+    <title>HEXA Ultimate</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --accent: #2563eb; }
-        body { background: #09090b; color: #e4e4e7; font-family: 'Inter', sans-serif; height: 100vh; display: flex; overflow: hidden; }
-        .sidebar { width: 300px; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; background: #0c0c0e; }
-        .chat-main { flex: 1; display: flex; flex-direction: column; background: #09090b; }
-        .contact-card { cursor: pointer; transition: 0.2s; border-radius: 12px; margin: 4px 8px; padding: 12px; }
-        .contact-card:hover { background: rgba(255,255,255,0.03); }
-        .contact-card.active { background: rgba(37, 99, 235, 0.15); border-left: 3px solid var(--accent); }
+        body { background: #09090b; color: #fff; font-family: 'Inter', sans-serif; height: 100vh; display: flex; overflow: hidden; }
+        .sidebar { width: 320px; border-right: 1px solid #1f1f23; background: #0c0c0e; display: flex; flex-direction: column; }
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: #09090b; position: relative; }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: #121214; border: 1px solid #27272a; padding: 30px; border-radius: 24px; width: 100%; max-width: 400px; text-align: center; }
+        .contact-item { padding: 12px 16px; margin: 4px 8px; border-radius: 14px; cursor: pointer; transition: 0.2s; }
+        .contact-item:hover { background: #18181b; }
+        .contact-item.active { background: #2563eb; }
         #messages::-webkit-scrollbar { width: 4px; }
         #messages::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
-        .call-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; }
-        video { width: 300px; border-radius: 16px; border: 2px solid var(--accent); background: #000; }
-        @media (max-width: 768px) { .sidebar { width: 80px; } .contact-info { display: none; } }
+        video { width: 100%; max-width: 400px; border-radius: 20px; border: 2px solid #2563eb; }
     </style>
 </head>
 <body>
 
-    <div id="loginScreen" class="fixed inset-0 z-[2000] bg-zinc-950 flex items-center justify-center p-6">
-        <div class="bg-zinc-900 p-8 rounded-3xl w-full max-w-md border border-white/5">
-            <h2 class="text-2xl font-bold mb-6 text-center">Вход в HEXA</h2>
-            <input type="text" id="myIdInput" class="w-full bg-black border border-zinc-800 rounded-xl p-4 mb-4 outline-none focus:ring-2 ring-blue-600" placeholder="Ваш ID (напр. 1234)">
-            <button onclick="startEngine()" class="w-full bg-blue-600 py-4 rounded-xl font-bold">ВОЙТИ</button>
+    <div id="loginModal" class="modal" style="display: flex;">
+        <div class="modal-content">
+            <div class="w-16 h-16 bg-blue-600 rounded-2xl mx-auto mb-6 flex items-center justify-center text-3xl font-bold">H</div>
+            <h2 class="text-xl font-bold mb-2 text-white">Авторизация HEXA</h2>
+            <p class="text-zinc-500 text-sm mb-6">Введите ваш персональный ID</p>
+            <input type="text" id="myIdIn" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-4 outline-none focus:ring-2 ring-blue-600 text-center" placeholder="Ваш ID (напр. 1234)">
+            <button onclick="startApp()" class="w-full bg-blue-600 py-4 rounded-xl font-bold hover:bg-blue-500 transition">ВОЙТИ</button>
+        </div>
+    </div>
+
+    <div id="addContactModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-lg font-bold mb-4">Новый контакт</h2>
+            <input type="text" id="newContactId" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-4 outline-none focus:ring-2 ring-blue-600" placeholder="ID друга">
+            <div class="flex gap-2">
+                <button onclick="closeModal('addContactModal')" class="flex-1 bg-zinc-800 py-3 rounded-xl">ОТМЕНА</button>
+                <button onclick="confirmAddContact()" class="flex-1 bg-blue-600 py-3 rounded-xl font-bold">ДОБАВИТЬ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="incomingCallModal" class="modal">
+        <div class="modal-content">
+            <div class="animate-bounce text-4xl mb-4 text-green-500"><i class="fas fa-video"></i></div>
+            <h2 id="callerName" class="text-xl font-bold mb-6">Вам звонят!</h2>
+            <div class="flex gap-2">
+                <button onclick="rejectCall()" class="flex-1 bg-red-600 py-3 rounded-xl"><i class="fas fa-times"></i></button>
+                <button onclick="acceptCall()" class="flex-1 bg-green-600 py-3 rounded-xl"><i class="fas fa-check"></i></button>
+            </div>
         </div>
     </div>
 
     <aside class="sidebar">
-        <div class="p-4 border-b border-white/5 flex justify-between items-center">
-            <span class="font-bold text-xs tracking-widest text-blue-500">HEXA CHATS</span>
-            <button onclick="addNewContact()" class="text-zinc-500 hover:text-white"><i class="fas fa-user-plus"></i></button>
+        <div class="p-6 border-b border-white/5 flex justify-between items-center">
+            <h1 class="font-black text-xl tracking-tighter italic">HEXA</h1>
+            <button onclick="openModal('addContactModal')" class="bg-zinc-800 w-8 h-8 rounded-full text-xs"><i class="fas fa-plus"></i></button>
         </div>
-        <div id="contactList" class="flex-1 overflow-y-auto py-2">
-            </div>
-        <div class="p-4 bg-black/50 text-[10px] text-zinc-600">
-            MY ID: <span id="myIdDisplay" class="text-zinc-400">---</span>
+        <div id="contactList" class="flex-1 overflow-y-auto py-4"></div>
+        <div class="p-4 bg-black/40 text-[10px] text-zinc-600 uppercase tracking-widest text-center">
+            NODE: <span id="myIdDisplay" class="text-blue-500 font-bold">---</span>
         </div>
     </aside>
 
-    <main class="chat-main">
-        <header id="chatHeader" class="h-16 border-b border-white/5 flex items-center justify-between px-6 bg-zinc-900/30 hidden">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-xs font-bold" id="headerAvatar">?</div>
-                <span class="font-bold text-sm" id="headerName">Выберите чат</span>
+    <main class="chat-area">
+        <header id="chatHeader" class="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-black/20 hidden">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center font-bold" id="headerAvatar">?</div>
+                <span class="font-bold text-lg" id="headerName">...</span>
             </div>
-            <div class="flex gap-4">
-                <button onclick="makeCall()" class="text-zinc-400 hover:text-green-500 transition"><i class="fas fa-video"></i></button>
-                <button class="text-zinc-400 hover:text-white"><i class="fas fa-info-circle"></i></button>
-            </div>
+            <button onclick="startCall()" class="bg-blue-600/10 text-blue-500 px-6 py-2 rounded-full font-bold hover:bg-blue-600 hover:text-white transition">
+                <i class="fas fa-video mr-2"></i> ЗВОНОК
+            </button>
         </header>
 
-        <div id="messages" class="flex-1 overflow-y-auto p-6 flex flex-col gap-2">
-            </div>
+        <div id="messages" class="flex-1 overflow-y-auto p-8 flex flex-col gap-3"></div>
 
-        <footer id="chatFooter" class="p-4 bg-zinc-900/50 border-t border-white/5 hidden">
-            <div class="flex gap-3">
-                <input type="text" id="msgIn" class="flex-1 bg-black border border-zinc-800 rounded-xl px-4 py-2 outline-none focus:border-blue-600" placeholder="Сообщение...">
-                <button onclick="send()" class="bg-blue-600 px-6 rounded-xl"><i class="fas fa-paper-plane"></i></button>
+        <footer id="chatFooter" class="p-6 border-t border-white/5 hidden">
+            <div class="max-w-4xl mx-auto flex gap-4">
+                <input type="text" id="msgIn" class="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-4 outline-none focus:border-blue-600" placeholder="Ваше сообщение...">
+                <button onclick="sendMsg()" class="bg-blue-600 px-8 rounded-2xl font-bold"><i class="fas fa-paper-plane"></i></button>
             </div>
         </footer>
+
+        <div id="callOverlay" class="absolute inset-0 bg-black z-50 hidden flex-col items-center justify-center">
+            <div class="relative w-full max-w-4xl px-4 flex flex-wrap justify-center gap-4">
+                <video id="remoteVideo" autoplay playsinline></video>
+                <video id="localVideo" autoplay muted playsinline class="absolute bottom-4 right-10 w-32 border-2 border-white shadow-2xl"></video>
+            </div>
+            <button onclick="endCall()" class="mt-12 bg-red-600 w-20 h-20 rounded-full text-2xl shadow-xl shadow-red-600/30">
+                <i class="fas fa-phone-slash"></i>
+            </button>
+        </div>
     </main>
 
-    <div id="callUI" class="call-overlay">
-        <div class="flex flex-wrap justify-center gap-4">
-            <video id="remoteVideo" autoplay playsinline></video>
-            <video id="localVideo" autoplay muted playsinline class="w-32"></video>
-        </div>
-        <button onclick="endCall()" class="mt-10 bg-red-600 w-16 h-16 rounded-full text-white shadow-lg shadow-red-500/20">
-            <i class="fas fa-phone-slash"></i>
-        </button>
-    </div>
-
     <script>
-        let peer, conn, currentChatId;
-        let contacts = JSON.parse(localStorage.getItem('hexa_contacts') || "[]");
-        let activeConnections = {};
+        let peer, conn, currentChat, currentCall;
+        let contacts = JSON.parse(localStorage.getItem('hexa_v3_contacts') || "[]");
 
-        // Запуск при загрузке
-        window.onload = () => {
-            const saved = localStorage.getItem('hexa_my_id');
-            if(saved) {
-                document.getElementById('myIdInput').value = saved;
-                startEngine();
-            }
-        }
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-        function startEngine() {
-            const id = document.getElementById('myIdInput').value.trim();
+        function startApp() {
+            const id = document.getElementById('myIdIn').value.trim();
             if(!id) return;
-            localStorage.setItem('hexa_my_id', id);
+            localStorage.setItem('hexa_id', id);
             
             peer = new Peer(id);
             peer.on('open', (myId) => {
-                document.getElementById('loginScreen').style.display = 'none';
+                closeModal('loginModal');
                 document.getElementById('myIdDisplay').innerText = myId;
                 renderContacts();
             });
 
             peer.on('connection', c => {
                 if(!contacts.includes(c.peer)) {
-                    if(confirm(`Пользователь ${c.peer} хочет написать вам. Добавить?`)) {
-                        addContactToList(c.peer);
-                    } else return;
+                    confirm(`Добавить ${c.peer}?`) && addContact(c.peer);
                 }
-                activeConnections[c.peer] = c;
-                setupConnection(c);
+                setupConn(c);
             });
 
-            peer.on('call', async call => {
-                if(confirm(`Вам звонит ${call.peer}!`)) {
-                    const s = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
-                    document.getElementById('callUI').style.display = 'flex';
-                    document.getElementById('localVideo').srcObject = s;
-                    call.answer(s);
-                    call.on('stream', rs => document.getElementById('remoteVideo').srcObject = rs);
-                }
+            peer.on('call', call => {
+                currentCall = call;
+                document.getElementById('callerName').innerText = "Звонит: " + call.peer;
+                openModal('incomingCallModal');
             });
         }
 
-        function addNewContact() {
-            const id = prompt("Введите ID друга:");
-            if(id && id !== localStorage.getItem('hexa_my_id')) {
-                addContactToList(id);
+        function confirmAddContact() {
+            const id = document.getElementById('newContactId').value.trim();
+            if(id) {
+                addContact(id);
+                closeModal('addContactModal');
+                document.getElementById('newContactId').value = "";
             }
         }
 
-        function addContactToList(id) {
+        function addContact(id) {
             if(!contacts.includes(id)) {
                 contacts.push(id);
-                localStorage.setItem('hexa_contacts', JSON.stringify(contacts));
+                localStorage.setItem('hexa_v3_contacts', JSON.stringify(contacts));
                 renderContacts();
             }
         }
@@ -144,80 +152,77 @@
             list.innerHTML = '';
             contacts.forEach(id => {
                 const div = document.createElement('div');
-                div.className = `contact-card flex items-center gap-3 ${currentChatId === id ? 'active' : ''}`;
+                div.className = `contact-item ${currentChat === id ? 'active' : ''}`;
                 div.onclick = () => openChat(id);
-                div.innerHTML = `
-                    <div class="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-xs font-bold">${id[0].toUpperCase()}</div>
-                    <div class="contact-info flex-1">
-                        <div class="text-sm font-bold">${id}</div>
-                        <div class="text-[10px] text-zinc-500">Нажмите, чтобы открыть</div>
-                    </div>
-                `;
+                div.innerHTML = `<div class="font-bold text-sm">${id}</div><div class="text-[10px] opacity-50">Peer Connection</div>`;
                 list.appendChild(div);
             });
         }
 
         function openChat(id) {
-            currentChatId = id;
+            currentChat = id;
             document.getElementById('chatHeader').classList.remove('hidden');
             document.getElementById('chatFooter').classList.remove('hidden');
             document.getElementById('headerName').innerText = id;
-            document.getElementById('headerAvatar').innerText = id[0].toUpperCase();
-            document.getElementById('messages').innerHTML = `<div class="text-center text-[10px] text-zinc-600 uppercase my-4">Чат с ${id} открыт</div>`;
+            document.getElementById('messages').innerHTML = "";
             renderContacts();
-
-            if(!activeConnections[id]) {
-                const c = peer.connect(id);
-                activeConnections[id] = c;
-                setupConnection(c);
-            }
+            
+            conn = peer.connect(id);
+            setupConn(conn);
         }
 
-        function setupConnection(c) {
+        function setupConn(c) {
             c.on('data', data => {
-                if(currentChatId === c.peer) {
-                    addBubble(data, 'peer');
-                } else {
-                    alert(`Новое сообщение от ${c.peer}`);
-                }
+                if(currentChat === c.peer) addBubble(data, 'other');
             });
         }
 
-        function send() {
+        function sendMsg() {
             const input = document.getElementById('msgIn');
-            const msg = input.value.trim();
-            if(!msg || !currentChatId) return;
-            
-            activeConnections[currentChatId].send(msg);
-            addBubble(msg, 'me');
+            if(!input.value || !conn) return;
+            conn.send(input.value);
+            addBubble(input.value, 'my');
             input.value = "";
         }
 
         function addBubble(text, type) {
-            const area = document.getElementById('messages');
-            const div = document.createElement('div');
-            div.className = `p-3 rounded-2xl max-w-[80%] text-sm ${type === 'me' ? 'bg-blue-600 self-end' : 'bg-zinc-800 self-start'}`;
-            div.innerText = text;
-            area.appendChild(div);
-            area.scrollTop = area.scrollHeight;
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `p-4 rounded-2xl max-w-sm text-sm ${type === 'my' ? 'bg-blue-600 self-end' : 'bg-zinc-800 self-start'}`;
+            msgDiv.innerText = text;
+            document.getElementById('messages').appendChild(msgDiv);
+            document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
         }
 
-        async function makeCall() {
-            if(!currentChatId) return;
+        async function startCall() {
             const s = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
-            document.getElementById('callUI').style.display = 'flex';
+            document.getElementById('callOverlay').style.display = 'flex';
             document.getElementById('localVideo').srcObject = s;
-            const call = peer.call(currentChatId, s);
+            const call = peer.call(currentChat, s);
+            handleCall(call);
+        }
+
+        async function acceptCall() {
+            const s = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
+            closeModal('incomingCallModal');
+            document.getElementById('callOverlay').style.display = 'flex';
+            document.getElementById('localVideo').srcObject = s;
+            currentCall.answer(s);
+            handleCall(currentCall);
+        }
+
+        function handleCall(call) {
+            currentCall = call;
             call.on('stream', rs => document.getElementById('remoteVideo').srcObject = rs);
         }
 
         function endCall() {
-            document.getElementById('callUI').style.display = 'none';
+            document.getElementById('callOverlay').style.display = 'none';
+            if(currentCall) currentCall.close();
             const s = document.getElementById('localVideo').srcObject;
             if(s) s.getTracks().forEach(t => t.stop());
         }
 
-        document.getElementById('msgIn').addEventListener('keypress', (e) => { if(e.key === 'Enter') send(); });
+        document.getElementById('msgIn').addEventListener('keypress', e => { if(e.key==='Enter') sendMsg(); });
     </script>
 </body>
 </html>
