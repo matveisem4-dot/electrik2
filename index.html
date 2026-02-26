@@ -3,267 +3,213 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HEXA | Private Messenger</title>
-    
-    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkhFWEEgVWx0aW1hdGUiLAogICJzaG9ydF9uYW1lIjogIkhFWEEiLAogICJzdGFydF91cmwiOiAiLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzA1MDUwNSIsCiAgInRoZW1lX2NvbG9yIjogIiMyNTYzZWIiLAogICJpY29ucyI6IFt7InNyYyI6ICJodHRwczovL2Nkbi1pY29ucy1wbmcuZmxhdGljb24uY29tLzUxMi81OTY4LzU5Njg3NTYucG5nIiwic2l6ZXMiOiAiNTEyeDUxMiIsInR5cGUiOiAiaW1hZ2UvcG5nIn1dfQ==">
-    
+    <title>Windows 12 | HEXA Core</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
     <style>
-        body { background: #050505; color: #fff; font-family: 'Inter', sans-serif; height: 100vh; display: flex; overflow: hidden; }
-        .sidebar { width: 320px; border-right: 1px solid #1a1a1a; background: #080808; display: flex; flex-direction: column; }
-        .main-chat { flex: 1; display: flex; flex-direction: column; background: #050505; position: relative; }
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(15px); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .active-modal { display: flex; }
-        .bubble { max-width: 75%; padding: 12px 18px; border-radius: 20px; font-size: 14px; animation: pop 0.2s ease; }
-        .my { background: #2563eb; align-self: flex-end; border-bottom-right-radius: 4px; }
-        .other { background: #1a1a1a; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #222; }
-        @keyframes pop { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .call-ui { position: absolute; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; }
-        video { width: 100%; height: 100%; object-fit: cover; border-radius: 24px; background: #111; }
+        body { 
+            background: url('https://images.wallpapersden.com/image/download/windows-12-stock-dark_bWlpZ2uUmZqaraWkpJRmbmdlrWZnZ2U.jpg') no-repeat center center fixed; 
+            background-size: cover;
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            height: 100vh;
+            user-select: none;
+        }
         
-        /* Кнопка установки */
-        .install-btn { background: linear-gradient(45deg, #2563eb, #1d4ed8); border: 1px solid rgba(255,255,255,0.1); transition: all 0.3s ease; }
-        .install-btn:hover { transform: translateY(-2px); shadow: 0 10px 20px rgba(37, 99, 235, 0.3); }
+        /* Стек окон (Z-index менеджмент) */
+        .window {
+            position: absolute;
+            min-width: 400px;
+            min-height: 300px;
+            background: rgba(18, 18, 18, 0.85);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+        .window.active { z-index: 100; border-color: rgba(59, 130, 246, 0.5); }
+
+        .window-header {
+            padding: 12px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+            background: rgba(255,255,255,0.03);
+        }
+
+        .taskbar {
+            position: fixed;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            height: 64px;
+            background: rgba(10, 10, 10, 0.7);
+            backdrop-filter: blur(20px);
+            border-radius: 22px;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            z-index: 1000;
+        }
+
+        .task-icon {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            transition: 0.2s cubic-bezier(0.2, 0, 0, 1);
+            cursor: pointer;
+            position: relative;
+        }
+        .task-icon:hover { background: rgba(255,255,255,0.1); transform: translateY(-4px); }
+        .task-icon.active::after {
+            content: ''; position: absolute; bottom: 2px; width: 4px; height: 4px; background: #3b82f6; border-radius: 50%;
+        }
+
+        /* Контекстное меню */
+        #contextMenu {
+            position: fixed; background: rgba(25, 25, 25, 0.9); backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 200px;
+            padding: 8px; z-index: 2000; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .menu-item {
+            padding: 8px 12px; border-radius: 6px; font-size: 13px; color: #eee; cursor: pointer;
+        }
+        .menu-item:hover { background: rgba(255,255,255,0.1); }
     </style>
 </head>
-<body>
+<body oncontextmenu="return showContextMenu(event)">
 
-    <div id="authModal" class="modal active-modal">
-        <div class="bg-[#0f0f0f] border border-zinc-800 p-10 rounded-[40px] w-full max-w-sm text-center shadow-2xl">
-            <div class="w-20 h-20 bg-blue-600 rounded-3xl mx-auto mb-8 flex items-center justify-center text-4xl font-black italic shadow-xl shadow-blue-600/30">H</div>
-            <h2 class="text-2xl font-bold mb-8 italic text-blue-500 uppercase">Hexa Secure</h2>
-            
-            <input type="text" id="loginId" class="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4 mb-4 outline-none focus:ring-2 ring-blue-600 text-center font-bold" placeholder="ВАШ ID">
-            <input type="password" id="loginPass" class="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4 mb-8 outline-none focus:ring-2 ring-blue-600 text-center" placeholder="ПАРОЛЬ">
-            
-            <button onclick="startApp()" class="w-full bg-blue-600 py-4 rounded-2xl font-bold hover:bg-blue-500 transition shadow-lg mb-4">ВОЙТИ</button>
-            
-            <button id="manualInstallBtn" onclick="installPWA()" class="install-btn w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
-                <i class="fas fa-download"></i> УСТАНОВИТЬ НА ПК
-            </button>
-            
-            <button onclick="Notification.requestPermission()" class="mt-6 text-[10px] text-zinc-600 hover:text-blue-500 transition uppercase tracking-widest font-bold">Включить уведомления</button>
+    <div id="desktop" class="h-full w-full p-4 relative" onclick="hideContextMenu()">
         </div>
+
+    <div id="contextMenu">
+        <div class="menu-item" onclick="createFolder()">Создать папку</div>
+        <div class="menu-item" onclick="location.reload()">Обновить систему</div>
+        <hr class="border-white/10 my-1">
+        <div class="menu-item">Персонализация</div>
     </div>
 
-    <div id="addModal" class="modal">
-        <div class="bg-[#0f0f0f] border border-zinc-800 p-8 rounded-[32px] w-full max-w-xs text-center shadow-2xl">
-            <h3 class="text-lg font-bold mb-6">Новый контакт</h3>
-            <input type="text" id="newFriendId" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-6 outline-none focus:ring-1 ring-blue-600" placeholder="Введите ID">
-            <div class="flex gap-3">
-                <button onclick="closeModal('addModal')" class="flex-1 text-zinc-500">Отмена</button>
-                <button onclick="confirmAdd()" class="flex-1 bg-blue-600 py-3 rounded-xl font-bold text-xs uppercase">Добавить</button>
-            </div>
-        </div>
+    <div class="taskbar">
+        <div class="task-icon bg-blue-600 text-white shadow-lg"><i class="fab fa-windows"></i></div>
+        <div class="task-icon text-yellow-500" onclick="openWindow('explorer', 'Проводник')"><i class="fas fa-folder text-xl"></i></div>
+        <div class="task-icon text-blue-400" onclick="openWindow('hexa', 'HEXA Messenger')"><i class="fas fa-comment-dots text-xl"></i></div>
     </div>
-
-    <div id="incModal" class="modal">
-        <div class="bg-[#121214] border border-blue-900/50 p-8 rounded-[32px] w-full max-w-xs text-center">
-            <div class="w-16 h-16 bg-blue-600/20 text-blue-500 rounded-full mx-auto mb-6 flex items-center justify-center text-2xl animate-bounce"><i class="fas fa-phone"></i></div>
-            <h3 id="incName" class="text-xl font-bold mb-8">Входящий...</h3>
-            <div class="flex gap-4">
-                <button onclick="rejectCall()" class="flex-1 bg-zinc-800 py-4 rounded-2xl font-bold">ОТКАЗ</button>
-                <button id="acceptBtn" class="flex-1 bg-blue-600 py-4 rounded-2xl font-bold">ОТВЕТ</button>
-            </div>
-        </div>
-    </div>
-
-    <aside class="sidebar">
-        <div class="p-6 border-b border-zinc-900 flex justify-between items-center bg-black/40">
-            <span class="font-black text-xl italic text-blue-500">HEXA OS</span>
-            <button onclick="openModal('addModal')" class="w-10 h-10 rounded-xl bg-zinc-900 flex items-center justify-center hover:bg-zinc-800 transition"><i class="fas fa-plus"></i></button>
-        </div>
-        <div id="contactList" class="flex-1 overflow-y-auto p-3"></div>
-        <div class="p-4 border-t border-zinc-900 bg-black/40">
-            <button id="sidebarInstallBtn" onclick="installPWA()" class="w-full py-2 bg-blue-600/10 text-blue-500 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-blue-600 hover:text-white transition hidden">
-                Скачать Приложение
-            </button>
-            <div id="myStatus" class="mt-2 text-[9px] text-zinc-700 text-center uppercase font-bold">offline</div>
-        </div>
-    </aside>
-
-    <main class="main-chat">
-        <header id="chatHeader" class="h-20 border-b border-zinc-900 flex items-center justify-between px-8 bg-black/10 hidden">
-            <div class="flex items-center gap-4">
-                <div id="hAvatar" class="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center font-black text-blue-500">?</div>
-                <div id="hName" class="font-bold text-lg">...</div>
-            </div>
-            <button onclick="makeCall()" class="w-12 h-12 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center transition hover:scale-105"><i class="fas fa-video"></i></button>
-        </header>
-        <div id="messages" class="flex-1 overflow-y-auto p-8 flex flex-col gap-3"></div>
-        <footer id="chatFooter" class="p-6 bg-black/20 border-t border-zinc-900 hidden">
-            <div class="max-w-4xl mx-auto flex gap-4">
-                <input type="text" id="msgIn" class="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-4 outline-none focus:border-blue-600 transition" placeholder="Сообщение...">
-                <button onclick="send()" class="bg-blue-600 w-16 rounded-2xl hover:bg-blue-500 transition flex items-center justify-center shadow-lg"><i class="fas fa-paper-plane"></i></button>
-            </div>
-        </footer>
-        <div id="callUI" class="call-ui">
-            <div class="relative w-full h-full flex items-center justify-center p-6">
-                <video id="remoteVideo" autoplay playsinline></video>
-                <div class="absolute bottom-32 right-12 w-40 h-56 rounded-[32px] overflow-hidden border-2 border-white/10 bg-zinc-900">
-                    <video id="localVideo" autoplay muted playsinline></video>
-                </div>
-                <button onclick="endCall()" class="absolute bottom-10 bg-red-600 w-20 h-20 rounded-full text-2xl shadow-xl hover:scale-110 transition"><i class="fas fa-phone-slash"></i></button>
-            </div>
-        </div>
-    </main>
 
     <script>
-        let peer, conn, currentChat, currentCall;
-        let friends = JSON.parse(localStorage.getItem('hexa_v6_friends') || "[]");
-        const ringtone = new Audio('https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3'); 
-        ringtone.loop = true;
+        let zIndexCounter = 100;
+        let folders = JSON.parse(localStorage.getItem('win12_folders') || '[]');
 
-        // ЛОГИКА УСТАНОВКИ (PWA)
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            // Показываем кнопки установки, если браузер разрешил
-            document.getElementById('manualInstallBtn').style.display = 'flex';
-            document.getElementById('sidebarInstallBtn').style.display = 'block';
-        });
-
-        async function installPWA() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    console.log('Пользователь установил HEXA');
-                    deferredPrompt = null;
-                }
-            } else {
-                alert("Инструкция по установке:\n1. Нажми на 'Три точки' в углу браузера\n2. Выбери 'Сохранить и поделиться'\n3. Нажми 'Установить приложение HEXA'");
-            }
-        }
-
-        window.addEventListener('appinstalled', () => {
-            document.getElementById('manualInstallBtn').style.display = 'none';
-            document.getElementById('sidebarInstallBtn').style.display = 'none';
-        });
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
-        }
-
-        function openModal(id) { document.getElementById(id).classList.add('active-modal'); }
-        function closeModal(id) { document.getElementById(id).classList.remove('active-modal'); }
-
-        function startApp() {
-            const id = document.getElementById('loginId').value.trim();
-            const pass = document.getElementById('loginPass').value.trim();
-            if(!id || pass !== "1234") return alert("Неверный пароль!");
-
-            peer = new Peer(id);
-            peer.on('open', (myId) => {
-                closeModal('authModal');
-                document.getElementById('myStatus').innerText = "SYSTEM ACTIVE: " + myId;
-                renderFriends();
-            });
-
-            peer.on('connection', c => {
-                if(!friends.includes(c.peer)) {
-                    document.getElementById('incName').innerText = "Входящий чат от " + c.peer;
-                    document.getElementById('acceptBtn').onclick = () => { addFriend(c.peer); setupConn(c); openChat(c.peer); closeModal('incModal'); };
-                    openModal('incModal');
-                } else setupConn(c);
-            });
-
-            peer.on('call', async call => {
-                ringtone.play();
-                document.getElementById('incName').innerText = "Звонок от " + call.peer;
-                document.getElementById('acceptBtn').onclick = async () => {
-                    ringtone.pause();
-                    const s = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
-                    document.getElementById('callUI').style.display = 'flex';
-                    document.getElementById('localVideo').srcObject = s;
-                    call.answer(s);
-                    call.on('stream', rs => document.getElementById('remoteVideo').srcObject = rs);
-                    currentCall = call;
-                    closeModal('incModal');
-                };
-                openModal('incModal');
-            });
-        }
-
-        function confirmAdd() {
-            const id = document.getElementById('newFriendId').value.trim();
-            if(id && id !== peer.id) { addFriend(id); closeModal('addModal'); openChat(id); }
-        }
-
-        function addFriend(id) {
-            if(!friends.includes(id)) { 
-                friends.push(id); 
-                localStorage.setItem('hexa_v6_friends', JSON.stringify(friends)); 
-                renderFriends(); 
-            }
-        }
-
-        function renderFriends() {
-            const list = document.getElementById('contactList');
-            list.innerHTML = '';
-            friends.forEach(f => {
+        // Инициализация рабочего стола
+        function renderDesktop() {
+            const desktop = document.getElementById('desktop');
+            desktop.innerHTML = '';
+            folders.forEach((folder, index) => {
                 const div = document.createElement('div');
-                div.className = `p-4 mb-2 rounded-2xl cursor-pointer transition flex items-center gap-4 ${currentChat === f ? 'bg-blue-600/20 border border-blue-600/30' : 'hover:bg-zinc-900'}`;
-                div.onclick = () => openChat(f);
-                div.innerHTML = `<div class="w-10 h-10 bg-zinc-800 rounded-xl flex items-center justify-center font-bold text-blue-500">${f[0].toUpperCase()}</div><span class="font-bold text-sm">${f}</span>`;
-                list.appendChild(div);
+                div.className = 'absolute flex flex-col items-center p-4 rounded-xl hover:bg-white/10 cursor-pointer w-24 text-white text-center';
+                div.style.left = (index * 100 + 20) + 'px';
+                div.style.top = '20px';
+                div.innerHTML = `<i class="fas fa-folder text-4xl text-yellow-500 mb-2"></i><span class="text-xs font-medium truncate w-full">${folder.name}</span>`;
+                div.ondblclick = () => openWindow('explorer', folder.name);
+                desktop.appendChild(div);
             });
         }
 
-        function openChat(id) {
-            currentChat = id;
-            document.getElementById('chatHeader').classList.remove('hidden');
-            document.getElementById('chatFooter').classList.remove('hidden');
-            document.getElementById('hName').innerText = id;
-            document.getElementById('hAvatar').innerText = id[0].toUpperCase();
-            document.getElementById('messages').innerHTML = "";
-            renderFriends();
-            conn = peer.connect(id);
-            setupConn(conn);
+        // Система Окон
+        function openWindow(type, title) {
+            const id = 'win-' + Math.random().toString(36).substr(2, 9);
+            const win = document.createElement('div');
+            win.className = 'window active';
+            win.id = id;
+            win.style.left = '150px';
+            win.style.top = '100px';
+            win.style.zIndex = ++zIndexCounter;
+
+            let content = '';
+            if(type === 'hexa') content = `<iframe src="https://electrik2-9f1c.vercel.app" class="w-full h-full border-none rounded-b-16"></iframe>`;
+            if(type === 'explorer') content = `<div class="p-6 grid grid-cols-4 gap-4 text-white">
+                <div class="flex flex-col items-center"><i class="fas fa-file-pdf text-red-500 text-3xl"></i><p class="text-[10px] mt-2">Документ.pdf</p></div>
+                <div class="flex flex-col items-center"><i class="fas fa-image text-green-500 text-3xl"></i><p class="text-[10px] mt-2">Фото.jpg</p></div>
+            </div>`;
+
+            win.innerHTML = `
+                <div class="window-header" onmousedown="focusWin('${id}'); dragStart(event, '${id}')">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-window-maximize text-[10px] text-white/40"></i>
+                        <span class="text-xs font-semibold text-white/90 uppercase tracking-widest">${title}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <div class="w-3 h-3 rounded-full bg-white/10 hover:bg-yellow-500 transition cursor-pointer"></div>
+                        <div class="w-3 h-3 rounded-full bg-white/10 hover:bg-red-500 transition cursor-pointer" onclick="document.getElementById('${id}').remove()"></div>
+                    </div>
+                </div>
+                <div class="flex-1 overflow-hidden">${content}</div>
+            `;
+            
+            document.body.appendChild(win);
+            focusWin(id);
         }
 
-        function setupConn(c) {
-            c.on('data', data => { if(currentChat === c.peer) addBubble(data, 'other'); });
+        function focusWin(id) {
+            document.querySelectorAll('.window').forEach(w => w.classList.remove('active'));
+            const win = document.getElementById(id);
+            if(win) {
+                win.classList.add('active');
+                win.style.zIndex = ++zIndexCounter;
+            }
         }
 
-        function send() {
-            const input = document.getElementById('msgIn');
-            if(!input.value || !conn) return;
-            conn.send(input.value);
-            addBubble(input.value, 'my');
-            input.value = "";
+        // Перетаскивание
+        function dragStart(e, id) {
+            const win = document.getElementById(id);
+            let startX = e.clientX - win.offsetLeft;
+            let startY = e.clientY - win.offsetTop;
+
+            function move(e) {
+                win.style.left = (e.clientX - startX) + 'px';
+                win.style.top = (e.clientY - startY) + 'px';
+            }
+            function stop() {
+                document.removeEventListener('mousemove', move);
+                document.removeEventListener('mouseup', stop);
+            }
+            document.addEventListener('mousemove', move);
+            document.addEventListener('mouseup', stop);
         }
 
-        function addBubble(text, type) {
-            const area = document.getElementById('messages');
-            const div = document.createElement('div');
-            div.className = `bubble ${type === 'my' ? 'my' : 'other'}`;
-            div.innerText = text;
-            area.appendChild(div);
-            area.scrollTop = area.scrollHeight;
+        // Функции рабочего стола
+        function showContextMenu(e) {
+            e.preventDefault();
+            const menu = document.getElementById('contextMenu');
+            menu.style.display = 'block';
+            menu.style.left = e.clientX + 'px';
+            menu.style.top = e.clientY + 'px';
+            return false;
         }
 
-        async function makeCall() {
-            const s = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
-            document.getElementById('callUI').style.display = 'flex';
-            document.getElementById('localVideo').srcObject = s;
-            const call = peer.call(currentChat, s);
-            call.on('stream', rs => document.getElementById('remoteVideo').srcObject = rs);
-            currentCall = call;
+        function hideContextMenu() {
+            document.getElementById('contextMenu').style.display = 'none';
         }
 
-        function endCall() {
-            document.getElementById('callUI').style.display = 'none';
-            if(currentCall) currentCall.close();
-            const s = document.getElementById('localVideo').srcObject;
-            if(s) s.getTracks().forEach(t => t.stop());
+        function createFolder() {
+            const name = prompt("Название папки:", "Новая папка");
+            if(name) {
+                folders.push({ name: name, type: 'folder' });
+                localStorage.setItem('win12_folders', JSON.stringify(folders));
+                renderDesktop();
+            }
+            hideContextMenu();
         }
 
-        document.getElementById('msgIn').addEventListener('keypress', e => { if(e.key==='Enter') send(); });
+        renderDesktop();
     </script>
 </body>
 </html>
