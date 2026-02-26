@@ -3,43 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HEXA OS</title>
+    <title>HEXA | Professional P2P</title>
     <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkhFWEEgVWx0aW1hdGUiLAogICJzaG9ydF9uYW1lIjogIkhFWEEiLAogICJzdGFydF91cmwiOiAiLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzA1MDUwNSIsCiAgInRoZW1lX2NvbG9yIjogIiMyNTYzZWIiCn0=">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { background: #050505; color: #fff; font-family: 'Inter', sans-serif; height: 100vh; display: flex; overflow: hidden; }
-        .sidebar { width: 300px; border-right: 1px solid #1a1a1a; background: #080808; display: flex; flex-direction: column; }
+        .sidebar { width: 320px; border-right: 1px solid #1a1a1a; background: #080808; display: flex; flex-direction: column; }
         .main-chat { flex: 1; display: flex; flex-direction: column; background: #050505; position: relative; }
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(15px); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.96); backdrop-filter: blur(15px); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
         .active-modal { display: flex; }
-        .bubble { max-width: 75%; padding: 12px 18px; border-radius: 20px; font-size: 14px; line-height: 1.4; animation: pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .bubble { max-width: 75%; padding: 12px 18px; border-radius: 20px; font-size: 14px; animation: pop 0.2s ease; }
         .my { background: #2563eb; align-self: flex-end; border-bottom-right-radius: 4px; }
-        .other { background: #18181b; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #27272a; }
-        @keyframes pop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-        .call-ui { position: absolute; inset: 0; background: radial-gradient(circle at center, #1e3a8a 0%, #050505 100%); z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; }
-        video { width: 100%; height: 100%; object-fit: cover; border-radius: 32px; }
+        .other { background: #1a1a1a; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #222; }
+        @keyframes pop { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .call-ui { position: absolute; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; }
+        video { width: 100%; height: 100%; object-fit: cover; border-radius: 24px; background: #111; }
+        input::placeholder { color: #444; }
     </style>
 </head>
 <body>
 
     <div id="authModal" class="modal active-modal">
         <div class="bg-[#0f0f0f] border border-zinc-800 p-10 rounded-[40px] w-full max-w-sm text-center shadow-2xl">
-            <div class="w-20 h-20 bg-blue-600 rounded-3xl mx-auto mb-6 flex items-center justify-center text-4xl font-black italic shadow-lg shadow-blue-600/30">H</div>
-            <h2 class="text-2xl font-bold mb-8">Авторизация</h2>
+            <div class="w-20 h-20 bg-blue-600 rounded-3xl mx-auto mb-8 flex items-center justify-center text-4xl font-black italic shadow-xl shadow-blue-600/30">H</div>
+            <h2 class="text-2xl font-bold mb-8">HEXA OS</h2>
             <input type="text" id="loginId" class="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4 mb-4 outline-none focus:ring-2 ring-blue-600 text-center font-bold" placeholder="ВАШ ID">
             <input type="password" id="loginPass" class="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4 mb-8 outline-none focus:ring-2 ring-blue-600 text-center" placeholder="ПАРОЛЬ">
-            <button onclick="startApp()" class="w-full bg-blue-600 py-4 rounded-2xl font-bold hover:bg-blue-500 transition shadow-lg shadow-blue-600/30">ЗАПУСТИТЬ HEXA</button>
-            <button onclick="requestNotif()" class="mt-4 text-[10px] text-zinc-500 uppercase tracking-widest">Разрешить уведомления и звук</button>
+            <button onclick="startApp()" class="w-full bg-blue-600 py-4 rounded-2xl font-bold hover:bg-blue-500 transition shadow-lg">ВОЙТИ</button>
+            <button onclick="Notification.requestPermission()" class="mt-6 text-[10px] text-zinc-600 hover:text-blue-500 transition uppercase tracking-widest">Включить уведомления</button>
+        </div>
+    </div>
+
+    <div id="addModal" class="modal">
+        <div class="bg-[#0f0f0f] border border-zinc-800 p-8 rounded-[32px] w-full max-w-xs text-center">
+            <h3 class="text-lg font-bold mb-6">Добавить контакт</h3>
+            <input type="text" id="newFriendId" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-6 outline-none focus:ring-1 ring-blue-600" placeholder="Введите ID">
+            <div class="flex gap-3">
+                <button onclick="closeModal('addModal')" class="flex-1 text-zinc-500">ОТМЕНА</button>
+                <button onclick="confirmAdd()" class="flex-1 bg-blue-600 py-3 rounded-xl font-bold">ОК</button>
+            </div>
         </div>
     </div>
 
     <div id="incModal" class="modal">
-        <div class="bg-[#121214] border border-blue-900/50 p-8 rounded-[32px] w-full max-w-xs text-center shadow-2xl">
+        <div class="bg-[#121214] border border-blue-900/50 p-8 rounded-[32px] w-full max-w-xs text-center">
             <div class="w-16 h-16 bg-blue-600/20 text-blue-500 rounded-full mx-auto mb-6 flex items-center justify-center text-2xl animate-bounce"><i class="fas fa-phone"></i></div>
-            <h3 id="incName" class="text-xl font-bold mb-2">...</h3>
-            <p class="text-zinc-500 text-sm mb-8">Вызывает вас...</p>
+            <h3 id="incName" class="text-xl font-bold mb-8">Входящий вызов...</h3>
             <div class="flex gap-4">
                 <button onclick="rejectCall()" class="flex-1 bg-zinc-800 py-4 rounded-2xl font-bold">ОТКЛОНИТЬ</button>
                 <button id="acceptBtn" class="flex-1 bg-blue-600 py-4 rounded-2xl font-bold shadow-lg shadow-blue-600/20">ОТВЕТИТЬ</button>
@@ -48,71 +59,72 @@
     </div>
 
     <aside class="sidebar">
-        <div class="p-6 border-b border-zinc-900 flex justify-between items-center bg-black/40">
-            <span class="font-black text-xl italic text-blue-500">HEXA OS</span>
-            <button onclick="openAdd()" class="w-10 h-10 rounded-xl bg-zinc-900 flex items-center justify-center hover:bg-zinc-800 transition"><i class="fas fa-plus"></i></button>
+        <div class="p-6 border-b border-zinc-900 flex justify-between items-center">
+            <span class="font-black text-xl italic text-blue-500 uppercase tracking-tighter">Hexa</span>
+            <button onclick="openModal('addModal')" class="w-10 h-10 rounded-xl bg-zinc-900 flex items-center justify-center hover:bg-zinc-800 transition"><i class="fas fa-plus"></i></button>
         </div>
         <div id="contactList" class="flex-1 overflow-y-auto p-3"></div>
-        <div class="p-4 bg-black/40 text-[10px] text-zinc-700 text-center uppercase tracking-widest font-bold border-t border-zinc-900" id="myIdStatus">offline</div>
+        <div id="myStatus" class="p-4 bg-black/40 text-[10px] text-zinc-700 text-center uppercase font-bold border-t border-zinc-900">offline</div>
     </aside>
 
     <main class="main-chat">
         <header id="chatHeader" class="h-20 border-b border-zinc-900 flex items-center justify-between px-8 bg-black/10 hidden">
             <div class="flex items-center gap-4">
-                <div id="hAvatar" class="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center font-black text-blue-500 border border-zinc-700">?</div>
-                <div id="hName" class="font-bold text-lg leading-tight">...</div>
+                <div id="hAvatar" class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center font-black">?</div>
+                <div id="hName" class="font-bold text-lg">...</div>
             </div>
-            <button onclick="makeCall()" class="w-12 h-12 rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/20 flex items-center justify-center transition hover:scale-105 active:scale-90"><i class="fas fa-video"></i></button>
+            <button onclick="makeCall()" class="bg-blue-600/10 text-blue-500 px-6 py-2 rounded-full font-bold hover:bg-blue-600 hover:text-white transition"><i class="fas fa-video mr-2"></i> ВИДЕО</button>
         </header>
 
         <div id="messages" class="flex-1 overflow-y-auto p-8 flex flex-col gap-3"></div>
 
         <footer id="chatFooter" class="p-6 bg-black/20 border-t border-zinc-900 hidden">
             <div class="max-w-4xl mx-auto flex gap-4">
-                <input type="text" id="msgIn" class="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-4 outline-none focus:border-blue-600 transition" placeholder="Написать сообщение...">
+                <input type="text" id="msgIn" class="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl px-6 py-4 outline-none focus:border-blue-600 transition" placeholder="Написать...">
                 <button onclick="send()" class="bg-blue-600 w-16 rounded-2xl hover:bg-blue-500 transition flex items-center justify-center shadow-lg"><i class="fas fa-paper-plane"></i></button>
             </div>
         </footer>
 
         <div id="callUI" class="call-ui">
             <div class="relative w-full h-full flex items-center justify-center p-6">
-                <video id="remoteVideo" autoplay playsinline class="shadow-2xl border border-white/5"></video>
-                <div class="absolute bottom-32 right-12 w-44 h-60 rounded-[32px] overflow-hidden border-2 border-white/10 shadow-2xl bg-zinc-900">
+                <video id="remoteVideo" autoplay playsinline></video>
+                <div class="absolute bottom-32 right-12 w-40 h-56 rounded-3xl overflow-hidden border-2 border-white/10 shadow-2xl bg-zinc-900">
                     <video id="localVideo" autoplay muted playsinline></video>
                 </div>
-                <div class="absolute bottom-10 flex gap-6">
-                    <button onclick="endCall()" class="bg-red-600 w-20 h-20 rounded-full text-2xl shadow-xl shadow-red-600/30 hover:scale-110 active:scale-90"><i class="fas fa-phone-slash"></i></button>
-                </div>
+                <button onclick="endCall()" class="absolute bottom-10 bg-red-600 w-20 h-20 rounded-full text-2xl shadow-xl shadow-red-600/30 hover:scale-110 transition"><i class="fas fa-phone-slash"></i></button>
             </div>
         </div>
     </main>
 
     <script>
         let peer, conn, currentChat, currentCall;
-        let friends = JSON.parse(localStorage.getItem('hexa_v5_f') || "[]");
+        let friends = JSON.parse(localStorage.getItem('hexa_v6_friends') || "[]");
         const ringtone = new Audio('https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3'); 
         ringtone.loop = true;
 
-        function requestNotif() { Notification.requestPermission(); alert("Доступ получен!"); }
+        // Регистрация SW для "штучки" (установки)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
+        }
+
         function openModal(id) { document.getElementById(id).classList.add('active-modal'); }
         function closeModal(id) { document.getElementById(id).classList.remove('active-modal'); }
 
         function startApp() {
             const id = document.getElementById('loginId').value.trim();
             const pass = document.getElementById('loginPass').value.trim();
-            if(!id || pass !== "1234") return alert("Ошибка доступа!");
+            if(!id || pass !== "1234") return alert("Доступ запрещен!");
 
             peer = new Peer(id);
             peer.on('open', (myId) => {
                 closeModal('authModal');
-                document.getElementById('myIdStatus').innerText = "NODE ONLINE: " + myId;
+                document.getElementById('myStatus').innerText = "SYSTEM ONLINE: " + myId;
                 renderFriends();
-                if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
             });
 
             peer.on('connection', c => {
                 if(!friends.includes(c.peer)) {
-                    document.getElementById('incName').innerText = c.peer;
+                    document.getElementById('incName').innerText = "Запрос чата: " + c.peer;
                     document.getElementById('acceptBtn').onclick = () => { addFriend(c.peer); setupConn(c); openChat(c.peer); closeModal('incModal'); };
                     openModal('incModal');
                 } else setupConn(c);
@@ -120,7 +132,7 @@
 
             peer.on('call', async call => {
                 ringtone.play();
-                document.getElementById('incName').innerText = "ЗВОНОК: " + call.peer;
+                document.getElementById('incName').innerText = "Входящий вызов: " + call.peer;
                 document.getElementById('acceptBtn').onclick = async () => {
                     ringtone.pause();
                     const s = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
@@ -135,13 +147,17 @@
             });
         }
 
-        function openAdd() {
-            const id = prompt("ID друга:"); // Можно заменить на кастомную модалку как в v4.5
-            if(id) { addFriend(id); openChat(id); }
+        function confirmAdd() {
+            const id = document.getElementById('newFriendId').value.trim();
+            if(id && id !== peer.id) { addFriend(id); closeModal('addModal'); openChat(id); }
         }
 
         function addFriend(id) {
-            if(!friends.includes(id)) { friends.push(id); localStorage.setItem('hexa_v5_f', JSON.stringify(friends)); renderFriends(); }
+            if(!friends.includes(id)) { 
+                friends.push(id); 
+                localStorage.setItem('hexa_v6_friends', JSON.stringify(friends)); 
+                renderFriends(); 
+            }
         }
 
         function renderFriends() {
@@ -149,7 +165,7 @@
             list.innerHTML = '';
             friends.forEach(f => {
                 const div = document.createElement('div');
-                div.className = `p-4 mb-2 rounded-2xl cursor-pointer transition flex items-center gap-4 ${currentChat === f ? 'bg-blue-600/10 border border-blue-600/20' : 'hover:bg-zinc-900'}`;
+                div.className = `p-4 mb-2 rounded-2xl cursor-pointer transition flex items-center gap-4 ${currentChat === f ? 'bg-blue-600/10 border border-blue-600/20 text-blue-500' : 'hover:bg-zinc-900 text-zinc-400'}`;
                 div.onclick = () => openChat(f);
                 div.innerHTML = `<div class="w-10 h-10 bg-zinc-800 rounded-xl flex items-center justify-center font-bold text-blue-600">${f[0].toUpperCase()}</div><span class="font-bold text-sm">${f}</span>`;
                 list.appendChild(div);
@@ -198,7 +214,7 @@
             currentCall = call;
         }
 
-        function rejectCall() { ringtone.pause(); closeModal('incModal'); }
+        function rejectCall() { ringtone.pause(); closeModal('incModal'); if(currentCall) currentCall.close(); }
 
         function endCall() {
             document.getElementById('callUI').style.display = 'none';
