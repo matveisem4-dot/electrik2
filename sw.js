@@ -1,17 +1,13 @@
-self.addEventListener('push', function(event) {
-    const data = event.data.json();
-    self.registration.showNotification("HEXA: Входящий вызов", {
-        body: "Вам звонит " + data.caller,
-        icon: "https://cdn-icons-png.flaticon.com/512/5968/5968756.png",
-        tag: "call-notification",
-        renotify: true,
-        requireInteraction: true // Уведомление не исчезнет, пока не нажмешь
-    });
+// Этот код позволяет приложению работать в фоне
+self.addEventListener('install', (e) => {
+  self.skipWaiting();
 });
 
-self.addEventListener('notificationclick', function(event) {
-    event.notification.close();
-    event.waitUntil(
-        clients.openWindow('/') // Открывает мессенджер при клике
-    );
+self.addEventListener('activate', (e) => {
+  return self.clients.claim();
+});
+
+self.addEventListener('fetch', (e) => {
+  // Просто проксируем запросы, чтобы PWA считалось активным
+  e.respondWith(fetch(e.request));
 });
