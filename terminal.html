@@ -9,33 +9,59 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap');
         .terminal { background: linear-gradient(180deg, #052005, #021402); }
+        .glow { animation: glow 1.5s infinite alternate; }
+        @keyframes glow { from { box-shadow: 0 0 20px #22c55e; } to { box-shadow: 0 0 60px #22c55e; } }
     </style>
 </head>
 <body class="bg-zinc-950 text-white">
     <div class="max-w-md mx-auto min-h-screen terminal flex flex-col border border-emerald-600">
-        <div class="h-20 bg-emerald-600 flex items-center px-8 text-4xl font-bold text-black">МЕГА ПОС</div>
+        <div class="h-20 bg-emerald-600 flex items-center px-8 text-4xl font-bold text-black tracking-tighter">МЕГА ПОС</div>
         
-        <div class="flex-1 p-10 flex flex-col items-center justify-center text-center">
-            <div id="connect-screen">
-                <i class="fa-solid fa-mobile-screen-button text-8xl text-emerald-400 mb-10"></i>
+        <div class="flex-1 p-10 flex flex-col">
+            
+            <!-- Экран ввода AID -->
+            <div id="connect-screen" class="flex-1 flex flex-col items-center justify-center text-center">
+                <i class="fa-solid fa-mobile-screen-button text-8xl text-emerald-400 mb-10 glow"></i>
                 <h2 class="text-3xl font-bold mb-8">ТЕРМИНАЛ</h2>
                 <input id="aid-input" type="text" maxlength="8" placeholder="Введите AID" 
                        class="w-full text-center text-5xl font-mono bg-black border border-emerald-500 rounded-3xl py-8 outline-none mb-8">
-                <button onclick="connect()" 
+                <button onclick="connectTerminal()" 
                         class="w-full py-8 bg-emerald-500 text-black text-2xl font-bold rounded-3xl">ПОДКЛЮЧИТЬСЯ</button>
             </div>
 
-            <div id="main-screen" class="hidden w-full">
-                <div class="text-emerald-400 text-sm mb-4">ПОДКЛЮЧЁН • AID</div>
-                <div id="aid-show" class="text-6xl font-mono text-emerald-400 mb-12"></div>
-                
-                <div id="waiting" class="text-xl">Ожидаем запрос от кассы...</div>
-                
-                <div id="payment-screen" class="hidden mt-12">
-                    <div id="amount" class="text-7xl font-light text-white">890</div>
-                    <div class="text-emerald-400">рублей</div>
-                    <button onclick="pay()" 
-                            class="mt-16 w-full py-10 bg-white text-black text-2xl font-bold rounded-3xl">ОПЛАТИТЬ МЕТКОЙ</button>
+            <!-- Главный экран терминала -->
+            <div id="main-screen" class="hidden flex-1 flex flex-col">
+                <div class="text-center mb-8">
+                    <div class="text-emerald-400 text-xs tracking-widest">ПОДКЛЮЧЁН К КАССЕ</div>
+                    <div id="current-aid" class="font-mono text-5xl text-emerald-400 mt-2"></div>
+                </div>
+
+                <!-- Ожидание запроса -->
+                <div id="waiting-screen" class="flex-1 flex flex-col items-center justify-center text-center">
+                    <div class="w-20 h-20 border-4 border-emerald-400 border-t-transparent animate-spin rounded-full mb-8"></div>
+                    <div class="text-xl text-emerald-300">Ожидаем запрос оплаты...</div>
+                </div>
+
+                <!-- Экран оплаты (автоматически появляется) -->
+                <div id="payment-screen" class="hidden flex-1 flex flex-col items-center justify-center text-center">
+                    <div class="text-emerald-400 text-sm tracking-widest mb-2">К ОПЛАТЕ</div>
+                    <div id="payment-amount" class="text-8xl font-light text-white">890</div>
+                    <div class="text-zinc-400 text-2xl">рублей</div>
+                    
+                    <button onclick="confirmPayment()" 
+                            class="mt-16 w-full py-12 bg-white text-black text-2xl font-bold rounded-3xl active:scale-95">
+                        ПРИКЛАДЫВАЙ МЕТКУ
+                    </button>
+                </div>
+
+                <!-- Успех -->
+                <div id="success-screen" class="hidden flex-1 flex flex-col items-center justify-center text-center">
+                    <i class="fa-solid fa-circle-check text-emerald-400 text-[160px] mb-6"></i>
+                    <div class="text-5xl font-light text-emerald-400">ОПЛАЧЕНО</div>
+                    <button onclick="resetToWaiting()" 
+                            class="mt-16 px-14 py-6 border border-emerald-400 text-emerald-400 rounded-3xl text-sm">
+                        НОВАЯ ОПЕРАЦИЯ
+                    </button>
                 </div>
             </div>
         </div>
@@ -44,37 +70,54 @@
     <script>
         let currentAID = "";
 
-        function connect() {
-            const input = document.getElementById('aid-input').value.trim().toUpperCase();
+        function connectTerminal() {
+            const input = document.getElementById("aid-input").value.trim().toUpperCase();
             if (!input) return alert("Введите AID из кассы");
             
             currentAID = input;
-            document.getElementById('connect-screen').classList.add('hidden');
-            document.getElementById('main-screen').classList.remove('hidden');
-            document.getElementById('aid-show').textContent = currentAID;
+            document.getElementById("connect-screen").classList.add("hidden");
+            document.getElementById("main-screen").classList.remove("hidden");
+            document.getElementById("current-aid").textContent = currentAID;
 
-            setInterval(checkPayment, 1000);
+            // Проверка каждые 500мс — теперь точно сработает
+            setInterval(checkForPayment, 500);
         }
 
-        function checkPayment() {
-            const req = JSON.parse(localStorage.getItem('pending_payment') || '{}');
+        function checkForPayment() {
+            const data = localStorage.getItem("pending_payment");
+            if (!data) return;
+            
+            const req = JSON.parse(data);
             if (req.aid === currentAID) {
-                document.getElementById('waiting').classList.add('hidden');
-                document.getElementById('payment-screen').classList.remove('hidden');
-                document.getElementById('amount').textContent = req.amount;
+                document.getElementById("waiting-screen").classList.add("hidden");
+                document.getElementById("payment-screen").classList.remove("hidden");
+                document.getElementById("payment-amount").textContent = req.amount;
             }
         }
 
-        function pay() {
-            const req = JSON.parse(localStorage.getItem('pending_payment') || '{}');
-            alert(`✅ Оплата ${req.amount} ₽ прошла успешно!`);
-            localStorage.removeItem('pending_payment');
-            document.getElementById('payment-screen').classList.add('hidden');
-            document.getElementById('waiting').classList.remove('hidden');
+        function confirmPayment() {
+            const data = JSON.parse(localStorage.getItem("pending_payment") || "{}");
+            if (data.aid !== currentAID) return;
+
+            document.getElementById("payment-screen").classList.add("hidden");
+            document.getElementById("success-screen").classList.remove("hidden");
+
+            localStorage.setItem("payment_completed", JSON.stringify({
+                aid: currentAID,
+                amount: data.amount,
+                status: "success"
+            }));
+
+            localStorage.removeItem("pending_payment");
+        }
+
+        function resetToWaiting() {
+            document.getElementById("success-screen").classList.add("hidden");
+            document.getElementById("waiting-screen").classList.remove("hidden");
         }
 
         window.onload = () => {
-            console.log("%cТерминал МЕГА ПОС запущен. Введите AID из кассы.", "color:#22c55e");
+            console.log("%cТерминал готов. Введите AID из кассы.", "color:#22c55e");
         };
     </script>
 </body>
