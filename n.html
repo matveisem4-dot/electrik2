@@ -3,219 +3,238 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NFC POS • Управление (с балансом)</title>
+    <title>Касса • NFC Управление</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
-        .tag { transition: all 0.2s cubic-bezier(0.4,0,0.2,1); }
-        .tag:hover { transform: scale(1.03); }
+        .tag-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .tag-card:hover { transform: translateY(-8px); box-shadow: 0 25px 50px -12px rgb(16 185 129); }
     </style>
 </head>
 <body class="bg-zinc-950 text-zinc-200">
     <div class="flex h-screen">
-        <div class="w-72 bg-zinc-900 border-r border-zinc-700 p-6 flex flex-col">
-            <div class="flex items-center gap-3 mb-10">
-                <div class="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center text-3xl">📟</div>
-                <div class="text-3xl font-bold tracking-tighter">NFC POS</div>
+        <!-- SIDEBAR -->
+        <div class="w-72 bg-zinc-900 p-6 flex flex-col border-r border-zinc-700">
+            <div class="flex items-center gap-3 mb-12">
+                <div class="text-4xl font-bold tracking-tighter text-emerald-400">POS</div>
+                <div class="text-xs bg-emerald-900 px-3 py-1 rounded-3xl">КАССА</div>
             </div>
-            <div onclick="switchTab(0)" id="tab-0" class="tab flex items-center gap-3 px-6 py-4 rounded-2xl mb-1 cursor-pointer bg-emerald-900 text-white">📊 Дашборд</div>
-            <div onclick="switchTab(1)" id="tab-1" class="tab flex items-center gap-3 px-6 py-4 rounded-2xl mb-1 cursor-pointer">🏷️ Метки & AID</div>
-            <div onclick="switchTab(2)" id="tab-2" class="tab flex items-center gap-3 px-6 py-4 rounded-2xl cursor-pointer">📜 Журнал</div>
+            <div onclick="switchTab(0)" id="tab0" class="flex items-center gap-3 px-6 py-4 rounded-3xl cursor-pointer bg-emerald-900 text-white mb-2">📊 Обзор</div>
+            <div onclick="switchTab(1)" id="tab1" class="flex items-center gap-3 px-6 py-4 rounded-3xl cursor-pointer">🏷️ Метки</div>
+            <div onclick="switchTab(2)" id="tab2" class="flex items-center gap-3 px-6 py-4 rounded-3xl cursor-pointer">📟 Терминалы</div>
+            <div onclick="switchTab(3)" id="tab3" class="flex items-center gap-3 px-6 py-4 rounded-3xl cursor-pointer">📜 История</div>
         </div>
-        
-        <div class="flex-1 p-10 overflow-auto">
-            <!-- Tab 0 -->
-            <div id="tab-content-0">
-                <h1 class="text-5xl font-bold tracking-tighter mb-2">Управление NFC-метками</h1>
-                <p class="text-emerald-400">Реальное чтение + привязка AID + пополнение баланса</p>
-                
-                <div class="mt-12 grid grid-cols-2 gap-8">
-                    <div>
-                        <div class="text-sm text-zinc-400 mb-4">ПРИВЯЗАННЫЕ МЕТКИ (NFC ID → AID)</div>
-                        <div id="tags-list" class="space-y-4"></div>
-                    </div>
-                    <div>
-                        <button onclick="addNewTagManually()" 
-                                class="bg-white text-black px-8 py-4 rounded-3xl flex items-center gap-3 font-medium">
-                            <i class="fa-solid fa-plus"></i> ДОБАВИТЬ МЕТКУ ВРУЧНУЮ
-                        </button>
-                        <div class="mt-8 bg-zinc-900 rounded-3xl p-8">
-                            <div class="text-emerald-400 text-sm mb-4">ПОПОЛНИТЬ БАЛАНС</div>
-                            <select id="select-tag" class="w-full bg-zinc-800 rounded-2xl p-4 mb-4"></select>
-                            <input id="add-amount" type="number" placeholder="Сумма пополнения" value="500" 
-                                   class="w-full bg-zinc-800 rounded-2xl p-4 mb-6 text-3xl font-light">
-                            <button onclick="topUpBalance()" 
-                                    class="w-full py-5 bg-emerald-500 text-black font-semibold rounded-3xl">ПОПОЛНИТЬ БАЛАНС</button>
-                        </div>
-                    </div>
+
+        <div class="flex-1 overflow-auto p-10">
+            <!-- TAB 0: OVERVIEW -->
+            <div id="content-0">
+                <h1 class="text-6xl font-bold tracking-tighter">Касса NFC</h1>
+                <p class="text-emerald-400">Управление метками, терминалами и реальными платежами</p>
+                <div class="mt-12 grid grid-cols-3 gap-6" id="overview-cards"></div>
+            </div>
+
+            <!-- TAB 1: TAGS -->
+            <div id="content-1" class="hidden">
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="text-4xl font-bold">Метки и карты</h2>
+                    <button onclick="createNewTag()" class="bg-emerald-500 text-black px-8 py-4 rounded-3xl font-semibold flex items-center gap-3">
+                        <i class="fa-solid fa-plus"></i> НОВАЯ МЕТКА
+                    </button>
                 </div>
+                <div id="tags-grid" class="grid grid-cols-3 gap-6"></div>
             </div>
-            
-            <!-- Tab 1: Метки -->
-            <div id="tab-content-1" class="hidden">
-                <h2 class="text-4xl font-bold mb-8">Все привязанные метки</h2>
-                <div id="full-tags-table" class="bg-zinc-900 rounded-3xl overflow-hidden"></div>
+
+            <!-- TAB 2: TERMINALS -->
+            <div id="content-2" class="hidden">
+                <h2 class="text-4xl font-bold mb-8">Терминалы</h2>
+                <div id="terminals-list" class="grid grid-cols-2 gap-6"></div>
             </div>
-            
-            <!-- Tab 2: Logs -->
-            <div id="tab-content-2" class="hidden">
-                <h2 class="text-4xl font-bold mb-8">Журнал операций</h2>
-                <div id="logs-list" class="space-y-3"></div>
+
+            <!-- TAB 3: HISTORY -->
+            <div id="content-3" class="hidden">
+                <h2 class="text-4xl font-bold mb-8">История операций</h2>
+                <div id="history-list" class="space-y-4"></div>
             </div>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <script>
-        let tags = JSON.parse(localStorage.getItem('nfc_tags')) || [
-            { nfcId: "04A1B2C3D4E5", aid: "A0000000031010", balance: 2450, owner: "Алексей Иванов" },
-            { nfcId: "04F7A9B2C318", aid: "B0000000042020", balance: 870, owner: "Мария Петрова" }
+        let tags = JSON.parse(localStorage.getItem('nfc_tags_v2')) || [];
+        let terminals = JSON.parse(localStorage.getItem('nfc_terminals')) || [
+            {id:1, name:"Терминал 01", aid:"A0000000031010", qr:"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=A0000000031010"},
+            {id:2, name:"Терминал 02", aid:"B0000000042020", qr:"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=B0000000042020"}
         ];
-        
-        let logs = [];
-        
+        let history = [];
+
         const channel = new BroadcastChannel('nfc-pos-channel');
-        
-        function saveTags() {
-            localStorage.setItem('nfc_tags', JSON.stringify(tags));
+
+        function saveData() {
+            localStorage.setItem('nfc_tags_v2', JSON.stringify(tags));
+            localStorage.setItem('nfc_terminals', JSON.stringify(terminals));
         }
-        
-        function addLog(message, detail) {
-            logs.unshift({ time: new Date().toLocaleTimeString('ru-RU'), message, detail });
-            if (logs.length > 30) logs.pop();
-            renderLogs();
+
+        function addHistory(action, detail) {
+            history.unshift({time: new Date().toLocaleTimeString('ru-RU'), action, detail});
+            renderHistory();
         }
-        
-        function renderTags() {
-            const list = document.getElementById('tags-list');
-            const table = document.getElementById('full-tags-table');
-            const select = document.getElementById('select-tag');
+
+        function renderAll() {
+            renderTags();
+            renderTerminals();
+            renderOverview();
+            renderHistory();
+        }
+
+        function createNewTag() {
+            const owner = prompt("Имя владельца:", "Клиент " + (tags.length+1));
+            const nfcId = "04" + Math.random().toString(16).slice(2,14).toUpperCase();
+            const aid = "A" + Math.random().toString(16).slice(2,16).toUpperCase();
             
-            list.innerHTML = tags.map((tag,i) => `
-                <div onclick="selectTag(${i})" class="tag bg-zinc-900 border border-zinc-700 hover:border-emerald-500 p-6 rounded-3xl cursor-pointer flex justify-between items-center">
-                    <div>
-                        <div class="font-mono text-emerald-400">${tag.nfcId}</div>
-                        <div class="text-xs text-zinc-500 mt-1">${tag.owner}</div>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-3xl font-light text-emerald-400">${tag.balance} ₽</div>
-                        <div class="text-[10px] font-mono text-amber-400">${tag.aid}</div>
-                    </div>
-                </div>
-            `).join('');
-            
-            let tableHTML = `<table class="w-full"><thead class="bg-black"><tr><th class="text-left p-6">NFC ID</th><th class="text-left p-6">AID</th><th class="text-left p-6">Владелец</th><th class="text-right p-6">Баланс</th></tr></thead><tbody>`;
-            tags.forEach(tag => {
-                tableHTML += `<tr class="border-t border-zinc-800"><td class="p-6 font-mono">${tag.nfcId}</td><td class="p-6 font-mono text-amber-400">${tag.aid}</td><td class="p-6">${tag.owner}</td><td class="p-6 text-right font-semibold">${tag.balance} ₽</td></tr>`;
+            tags.unshift({
+                nfcId: nfcId,
+                aid: aid,
+                owner: owner,
+                balance: 1500,
+                status: "active",
+                qr: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${aid}`
             });
-            tableHTML += `</tbody></table>`;
-            table.innerHTML = tableHTML;
-            
-            select.innerHTML = tags.map((tag,i) => `<option value="${i}">${tag.owner} — ${tag.nfcId}</option>`).join('');
+            saveData();
+            renderAll();
+            addHistory("Новая метка", owner);
+            channel.postMessage({type:"NEW_TAG", tag: tags[0]});
         }
-        
-        function renderLogs() {
-            document.getElementById('logs-list').innerHTML = logs.map(l => `
-                <div class="bg-zinc-900 px-8 py-5 rounded-3xl flex gap-8 text-sm">
-                    <div class="font-mono w-20 text-emerald-400">${l.time}</div>
-                    <div class="flex-1">${l.message}<div class="text-xs text-zinc-500 mt-1">${l.detail}</div></div>
+
+        function toggleBlock(index) {
+            tags[index].status = tags[index].status === "active" ? "blocked" : "active";
+            saveData();
+            renderAll();
+            addHistory(tags[index].status === "blocked" ? "Метка заблокирована" : "Метка разблокирована", tags[index].owner);
+        }
+
+        function deleteTag(index) {
+            if (confirm("Удалить метку полностью?")) {
+                const name = tags[index].owner;
+                tags.splice(index,1);
+                saveData();
+                renderAll();
+                addHistory("Метка удалена", name);
+            }
+        }
+
+        function sendPaymentToTerminal(termIndex) {
+            const amount = parseInt(prompt("Сумма к оплате:", "750")) || 750;
+            const term = terminals[termIndex];
+            
+            channel.postMessage({
+                type: "PAYMENT_REQUEST",
+                amount: amount,
+                terminalId: term.id,
+                terminalName: term.name,
+                aid: term.aid,
+                qr: term.qr
+            });
+            
+            addHistory("Запрос оплаты отправлен", `${term.name} — ${amount} ₽`);
+            alert(`Запрос на ${amount} ₽ отправлен на ${term.name}\n\nОткройте terminal.html`);
+        }
+
+        function renderTags() {
+            const container = document.getElementById('tags-grid');
+            container.innerHTML = tags.map((tag,i) => `
+                <div class="tag-card bg-zinc-900 rounded-3xl p-6 border ${tag.status==='blocked'?'border-red-500':'border-emerald-500'}">
+                    <div class="flex justify-between">
+                        <div class="font-mono text-lg">${tag.nfcId}</div>
+                        <div class="text-xs px-4 py-1 rounded-3xl ${tag.status==='active'?'bg-emerald-900 text-emerald-400':'bg-red-900 text-red-400'}">${tag.status.toUpperCase()}</div>
+                    </div>
+                    <div class="mt-6 text-3xl font-light">${tag.balance} ₽</div>
+                    <div class="text-sm text-zinc-400">${tag.owner}</div>
+                    <div class="text-[10px] font-mono text-amber-400 mt-4">${tag.aid}</div>
+                    <div class="flex gap-3 mt-8">
+                        <button onclick="toggleBlock(${i});event.stopImmediatePropagation()" class="flex-1 py-3 text-xs border border-zinc-600 rounded-2xl">${tag.status==='active'?'Заблокировать':'Разблокировать'}</button>
+                        <button onclick="deleteTag(${i});event.stopImmediatePropagation()" class="flex-1 py-3 text-xs bg-red-900 hover:bg-red-800 rounded-2xl">Удалить</button>
+                    </div>
                 </div>
             `).join('');
         }
-        
+
+        function renderTerminals() {
+            const container = document.getElementById('terminals-list');
+            container.innerHTML = terminals.map((t,i) => `
+                <div class="bg-zinc-900 rounded-3xl p-8 border border-emerald-800">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="text-2xl font-semibold">${t.name}</div>
+                            <div class="font-mono text-emerald-400 text-sm mt-1">${t.aid}</div>
+                        </div>
+                        <img src="${t.qr}" class="w-20 h-20 rounded-2xl">
+                    </div>
+                    <button onclick="sendPaymentToTerminal(${i})" 
+                            class="mt-10 w-full py-6 bg-white text-black font-bold rounded-3xl text-sm tracking-widest">ОТПРАВИТЬ ЗАПРОС ОПЛАТЫ НА ЭТОТ ТЕРМИНАЛ</button>
+                </div>
+            `).join('');
+        }
+
+        function renderOverview() {
+            // Simple stats
+            document.getElementById('overview-cards').innerHTML = `
+                <div class="bg-zinc-900 rounded-3xl p-8">
+                    <div class="text-emerald-400 text-sm">АКТИВНЫХ МЕТОК</div>
+                    <div class="text-7xl font-light mt-4">${tags.filter(t=>t.status==='active').length}</div>
+                </div>
+                <div class="bg-zinc-900 rounded-3xl p-8">
+                    <div class="text-emerald-400 text-sm">ОБЩИЙ БАЛАНС</div>
+                    <div class="text-7xl font-light mt-4">${tags.reduce((a,t)=>a+t.balance,0)} ₽</div>
+                </div>
+                <div class="bg-zinc-900 rounded-3xl p-8">
+                    <div class="text-emerald-400 text-sm">ТЕРМИНАЛОВ</div>
+                    <div class="text-7xl font-light mt-4">${terminals.length}</div>
+                </div>
+            `;
+        }
+
+        function renderHistory() {
+            document.getElementById('history-list').innerHTML = history.map(h => `
+                <div class="bg-zinc-900 p-6 rounded-3xl flex gap-6">
+                    <div class="font-mono text-xs text-emerald-400 w-20">${h.time}</div>
+                    <div class="flex-1">${h.action}<div class="text-xs text-zinc-500">${h.detail}</div></div>
+                </div>
+            `).join('');
+        }
+
         function switchTab(n) {
-            for (let i = 0; i < 3; i++) {
-                const content = document.getElementById('tab-content-' + i);
-                const tab = document.getElementById('tab-' + i);
-                if (content) content.classList.toggle('hidden', i !== n);
+            for (let i = 0; i < 4; i++) {
+                const el = document.getElementById('content-' + i);
+                const tab = document.getElementById('tab' + i);
+                if (el) el.classList.toggle('hidden', i !== n);
                 if (tab) tab.classList.toggle('bg-emerald-900', i === n);
             }
         }
-        
-        function addNewTagManually() {
-            const nfcId = prompt("NFC ID метки (например 04A1B2C3D4E5):", "04" + Math.random().toString(16).slice(2,14).toUpperCase());
-            const owner = prompt("Имя владельца:", "Новый пользователь");
-            if (!nfcId) return;
-            
-            const newTag = {
-                nfcId: nfcId.toUpperCase(),
-                aid: "A" + Math.floor(Math.random()*99999999999999).toString(16).toUpperCase().padStart(15,'0'),
-                balance: 500,
-                owner: owner
-            };
-            tags.unshift(newTag);
-            saveTags();
-            renderTags();
-            addLog("Новая метка добавлена вручную", nfcId);
-        }
-        
-        function topUpBalance() {
-            const index = document.getElementById('select-tag').value;
-            const amount = parseInt(document.getElementById('add-amount').value) || 500;
-            tags[index].balance += amount;
-            saveTags();
-            renderTags();
-            addLog("Баланс пополнен", `${tags[index].owner} +${amount} ₽ (всего ${tags[index].balance})`);
-        }
-        
-        function selectTag(i) {
-            const tag = tags[i];
-            if (confirm(`Пополнить баланс для ${tag.owner} (${tag.nfcId})?`)) {
-                const amt = prompt("Сумма пополнения:", "1000");
-                if (amt) {
-                    tag.balance += parseInt(amt);
-                    saveTags();
-                    renderTags();
-                    addLog("Пополнение", `${tag.owner} +${amt} ₽`);
-                }
-            }
-        }
-        
+
         channel.onmessage = (e) => {
-            const data = e.data;
-            if (data.type === 'REAL_NFC_READ') {
-                const existing = tags.find(t => t.nfcId === data.id || t.nfcId.includes(data.id.slice(0,8)));
-                if (existing) {
-                    addLog("Метка распознана", `${existing.owner} (${existing.aid})`);
-                    // Send current balance to terminal
-                    channel.postMessage({
-                        type: 'TAG_INFO',
-                        nfcId: existing.nfcId,
-                        aid: existing.aid,
-                        balance: existing.balance,
-                        owner: existing.owner
-                    });
-                } else {
-                    // Auto register new tag
-                    const newTag = {
-                        nfcId: data.id.slice(0,14),
-                        aid: "A" + Math.floor(Math.random()*99999999999999).toString(16).toUpperCase().padStart(15,'0'),
-                        balance: 1000,
-                        owner: "Новый пользователь"
-                    };
-                    tags.unshift(newTag);
-                    saveTags();
-                    renderTags();
-                    addLog("Новая метка автоматически привязана", newTag.nfcId + " → " + newTag.aid);
-                    channel.postMessage({ type: 'TAG_INFO', ...newTag });
-                }
-            }
-            if (data.type === 'PAYMENT_SUCCESS') {
-                const tag = tags.find(t => t.aid === data.aid || t.nfcId === data.id);
-                if (tag && data.amount) {
-                    tag.balance = Math.max(0, tag.balance - data.amount);
-                    saveTags();
-                    renderTags();
-                    addLog("Списание", `${tag.owner} -${data.amount} ₽ (остаток ${tag.balance})`);
+            if (e.data.type === "PAYMENT_SUCCESS") {
+                addHistory("Оплата прошла", `${e.data.owner || ''} — ${e.data.amount} ₽`);
+                // Update balance
+                const tag = tags.find(t => t.aid === e.data.aid);
+                if (tag) {
+                    tag.balance = Math.max(0, tag.balance - e.data.amount);
+                    saveData();
+                    renderAll();
                 }
             }
         };
-        
+
         window.onload = () => {
-            renderTags();
-            renderLogs();
+            if (tags.length === 0) {
+                tags = [
+                    {nfcId:"04A1B2C3D4E5", aid:"A0000000031010", balance:3240, owner:"Алексей Иванов", status:"active"},
+                    {nfcId:"04F7A9B2C318", aid:"B0000000042020", balance:870, owner:"Мария Петрова", status:"active"}
+                ];
+                saveData();
+            }
+            renderAll();
             switchTab(0);
-            console.log("%cСистема готова. Прикладывайте реальную NFC-метку в терминале — она автоматически получит AID и баланс.", "color:#22c55e");
         };
     </script>
 </body>
