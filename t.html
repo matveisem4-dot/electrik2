@@ -1,1082 +1,254 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>NFC POS — Терминал</title>
-<style>
-:root {
-  --bg:    #060a14;
-  --bg2:   #0b1120;
-  --bg3:   #111827;
-  --bg4:   #18243a;
-  --bg5:   #1e2d48;
-  --bd:    #1a2a42;
-  --bdL:   #223352;
-  --blue:  #3b82f6;
-  --blueD: #2563eb;
-  --blueG: rgba(59,130,246,.14);
-  --green: #10b981;
-  --greenD:#059669;
-  --greenG:rgba(16,185,129,.14);
-  --red:   #ef4444;
-  --redG:  rgba(239,68,68,.13);
-  --yellow:#f59e0b;
-  --t1:    #e2e8f0;
-  --t2:    #94a3b8;
-  --t3:    #4b5563;
-  --r:     14px;
-  --rs:    9px;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;overflow-x:hidden}
-::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--bdL);border-radius:4px}
-
-/* === SCREENS === */
-.screen{display:none;min-height:100vh}
-.screen.on{display:flex;flex-direction:column}
-
-/* ── PIN SCREEN ── */
-.pin-screen{
-  align-items:center;justify-content:center;
-  background:radial-gradient(ellipse at 50% 30%,rgba(59,130,246,.08),transparent 70%),var(--bg);
-  padding:20px;
-}
-.pin-box{
-  background:var(--bg3);border:1px solid var(--bdL);border-radius:20px;
-  padding:36px 32px;width:100%;max-width:380px;text-align:center;
-  box-shadow:0 20px 60px rgba(0,0,0,.5);
-}
-.pin-logo{
-  width:64px;height:64px;border-radius:18px;margin:0 auto 18px;
-  background:linear-gradient(135deg,var(--blue),var(--green));
-  display:flex;align-items:center;justify-content:center;font-size:30px;
-}
-.pin-title{font-size:20px;font-weight:800;margin-bottom:4px}
-.pin-sub{font-size:13px;color:var(--t2);margin-bottom:20px}
-.pin-select{
-  width:100%;background:var(--bg4);border:1px solid var(--bd);border-radius:var(--rs);
-  padding:11px 14px;color:var(--t1);font-size:14px;outline:none;cursor:pointer;
-  appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 10L3 5h10z'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 12px center;background-size:15px;
-  margin-bottom:14px;
-}
-.pin-display{
-  background:var(--bg4);border:1px solid var(--bdL);border-radius:var(--rs);
-  padding:14px;margin-bottom:16px;text-align:center;
-  font-size:30px;letter-spacing:10px;font-family:monospace;min-height:58px;
-  display:flex;align-items:center;justify-content:center;color:var(--blue);
-}
-.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
-.pk{
-  background:var(--bg4);border:1px solid var(--bd);border-radius:var(--rs);
-  padding:18px 10px;font-size:20px;font-weight:700;cursor:pointer;
-  transition:all .15s;text-align:center;color:var(--t1);
-}
-.pk:hover{background:var(--bg5);border-color:var(--bdL)}
-.pk:active{transform:scale(.95)}
-.pk.del{color:var(--red)}
-.pk.ok{background:var(--green);color:#fff;border-color:var(--green)}
-.pk.ok:hover{background:var(--greenD)}
-.pin-err{color:var(--red);font-size:13px;min-height:20px;margin-top:4px}
-.pin-hint{font-size:11px;color:var(--t3);margin-top:10px}
-
-/* ── MAIN SCREEN ── */
-.term-screen{background:var(--bg);flex-direction:column}
-
-/* TOP BAR */
-.tbar{
-  height:56px;background:rgba(6,10,20,.97);backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--bd);
-  display:flex;align-items:center;justify-content:space-between;padding:0 18px;
-  flex-shrink:0;
-}
-.tbar-left{display:flex;align-items:center;gap:12px}
-.tbar-logo{font-size:13px;font-weight:800;display:flex;align-items:center;gap:7px}
-.tbar-logoi{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--green));display:flex;align-items:center;justify-content:center;font-size:14px}
-.tbar-termname{font-size:14px;font-weight:700;color:var(--t1)}
-.tbar-termid{font-size:11px;color:var(--t3);font-family:monospace}
-.tbar-right{display:flex;align-items:center;gap:10px}
-.tdot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green);animation:g 2s infinite}
-@keyframes g{0%,100%{box-shadow:0 0 4px var(--green)}50%{box-shadow:0 0 12px var(--green)}}
-.tclk{font-size:12px;color:var(--t2);font-variant-numeric:tabular-nums}
-.tbtn{
-  padding:6px 14px;border-radius:7px;border:none;cursor:pointer;
-  font-size:12px;font-weight:600;transition:all .18s;
-  background:var(--bg4);color:var(--t2);border:1px solid var(--bd);
-}
-.tbtn:hover{color:var(--t1);border-color:var(--bdL)}
-.tbtn.danger{background:rgba(239,68,68,.12);color:var(--red);border-color:rgba(239,68,68,.25)}
-.tbtn.danger:hover{background:rgba(239,68,68,.2)}
-
-/* MODE BANNER */
-.mode-banner{
-  padding:10px 18px;text-align:center;font-size:14px;font-weight:700;
-  letter-spacing:.04em;border-bottom:1px solid var(--bd);
-  transition:all .3s;flex-shrink:0;
-}
-.mode-banner.idle{background:var(--bg2);color:var(--t3)}
-.mode-banner.pay{background:linear-gradient(90deg,rgba(16,185,129,.15),rgba(59,130,246,.15));color:var(--green);animation:pulseBanner 2s infinite}
-@keyframes pulseBanner{0%,100%{opacity:1}50%{opacity:.7}}
-
-/* MAIN BODY */
-.term-body{flex:1;display:grid;grid-template-columns:1fr 360px;overflow:hidden}
-@media(max-width:860px){.term-body{grid-template-columns:1fr;overflow:visible}}
-
-/* LEFT - KEYPAD / PRODUCTS */
-.left-pane{overflow-y:auto;padding:16px;border-right:1px solid var(--bd)}
-@media(max-width:860px){.left-pane{border-right:none;border-bottom:1px solid var(--bd)}}
-
-/* PRODUCT GRID */
-.prod-tabs{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px}
-.ptab{
-  padding:7px 14px;border-radius:var(--rs);border:1px solid var(--bd);
-  background:var(--bg4);color:var(--t2);font-size:13px;font-weight:600;
-  cursor:pointer;transition:all .18s;white-space:nowrap;
-}
-.ptab:hover{border-color:var(--bdL);color:var(--t1)}
-.ptab.on{background:var(--blue);color:#fff;border-color:var(--blue)}
-
-.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:9px}
-.pb{
-  background:var(--bg4);border:1px solid var(--bd);border-radius:var(--rs);
-  padding:14px 8px;cursor:pointer;text-align:center;transition:all .18s;
-}
-.pb:hover{border-color:var(--blue);background:var(--blueG)}
-.pb:active{transform:scale(.96)}
-.pb-ic{font-size:26px;margin-bottom:5px}
-.pb-nm{font-size:12px;font-weight:600;color:var(--t1)}
-.pb-pr{font-size:13px;color:var(--green);font-weight:700;margin-top:2px}
-
-/* NUMPAD */
-.numpad-section{margin-top:16px;border-top:1px solid var(--bd);padding-top:14px}
-.numpad-label{font-size:12px;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
-.numpad-display{
-  background:var(--bg4);border:1px solid var(--bdL);border-radius:var(--rs);
-  padding:16px;text-align:right;margin-bottom:10px;
-  font-size:32px;font-weight:900;color:var(--green);font-family:monospace;
-  letter-spacing:1px;min-height:64px;display:flex;align-items:center;justify-content:flex-end;
-}
-.npgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.npk{
-  background:var(--bg4);border:1px solid var(--bd);border-radius:var(--rs);
-  padding:16px 10px;font-size:20px;font-weight:700;cursor:pointer;
-  text-align:center;transition:all .15s;color:var(--t1);
-}
-.npk:hover{background:var(--bg5);border-color:var(--bdL)}
-.npk:active{transform:scale(.94)}
-.npk.del{color:var(--red)}
-.npk.clr{color:var(--yellow);font-size:14px}
-.npk.ok{background:linear-gradient(135deg,var(--green),var(--blueD));color:#fff;border:none;font-size:15px}
-.npk.ok:hover{opacity:.9}
-
-/* RIGHT - RECEIPT / PAYMENT */
-.right-pane{
-  display:flex;flex-direction:column;
-  background:var(--bg2);overflow-y:auto;
-}
-@media(max-width:860px){.right-pane{min-height:500px}}
-
-.rec-header{
-  padding:14px 16px;border-bottom:1px solid var(--bd);
-  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
-}
-.rec-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:7px}
-.rec-body{flex:1;overflow-y:auto;padding:0}
-.rec-empty{padding:30px 16px;text-align:center;color:var(--t3);font-size:13px}
-
-.cart-item{
-  display:flex;align-items:center;gap:8px;
-  padding:10px 14px;border-bottom:1px solid var(--bd);
-}
-.ci-ico{font-size:18px;flex-shrink:0}
-.ci-nm{flex:1;font-size:13px;font-weight:600}
-.ci-qty{display:flex;align-items:center;gap:6px}
-.qb{
-  width:24px;height:24px;border-radius:6px;
-  background:var(--bg4);border:1px solid var(--bd);
-  color:var(--t1);cursor:pointer;font-size:14px;
-  display:flex;align-items:center;justify-content:center;transition:all .15s;
-}
-.qb:hover{border-color:var(--blue);color:var(--blue)}
-.ci-sum{font-size:13px;font-weight:700;color:var(--green);min-width:60px;text-align:right}
-
-.rec-total{
-  padding:14px 16px;border-top:1px solid var(--bd);
-  display:flex;justify-content:space-between;align-items:center;flex-shrink:0;
-}
-.rec-total-lbl{font-size:13px;color:var(--t2)}
-.rec-total-val{font-size:24px;font-weight:900;color:var(--green)}
-
-/* PAYMENT PANEL */
-.pay-panel{
-  padding:14px 16px;border-top:1px solid var(--bd);flex-shrink:0;
-}
-.pay-card-select{
-  width:100%;background:var(--bg4);border:1px solid var(--bd);border-radius:var(--rs);
-  padding:10px 13px;color:var(--t1);font-size:13px;outline:none;cursor:pointer;
-  appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 10L3 5h10z'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 11px center;background-size:14px;
-  margin-bottom:10px;
-}
-.pay-btn{
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  width:100%;padding:15px;border-radius:var(--rs);border:none;cursor:pointer;
-  font-size:16px;font-weight:700;transition:all .2s;margin-bottom:8px;
-}
-.pay-btn.nfc{background:linear-gradient(135deg,var(--green),var(--blueD));color:#fff}
-.pay-btn.nfc:hover{opacity:.9;box-shadow:0 0 20px rgba(16,185,129,.3)}
-.pay-btn.cash{background:var(--bg4);color:var(--t2);border:1px solid var(--bd);font-size:14px;padding:11px}
-.pay-btn.cash:hover{color:var(--t1);border-color:var(--bdL)}
-.pay-btn:disabled{opacity:.35;cursor:not-allowed}
-
-/* UID INPUT */
-.uid-input-row{
-  display:flex;gap:8px;margin-bottom:10px;
-}
-.uid-fi{
-  flex:1;background:var(--bg4);border:1px solid var(--bd);border-radius:var(--rs);
-  padding:10px 12px;color:var(--t1);font-size:13px;font-family:monospace;outline:none;
-  transition:border-color .2s;
-}
-.uid-fi:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blueG)}
-.uid-fi::placeholder{color:var(--t3);font-family:inherit}
-.uid-lookup-btn{
-  padding:10px 12px;border-radius:var(--rs);border:1px solid var(--bd);
-  background:var(--bg5);color:var(--t2);cursor:pointer;font-size:13px;font-weight:600;
-  transition:all .15s;white-space:nowrap;
-}
-.uid-lookup-btn:hover{border-color:var(--blue);color:var(--blue)}
-
-/* PAYMENT OVERLAY */
-.pay-ov{
-  display:none;position:fixed;inset:0;z-index:200;
-  background:rgba(0,0,0,.88);backdrop-filter:blur(8px);
-  align-items:center;justify-content:center;padding:20px;
-}
-.pay-ov.on{display:flex}
-.pay-modal{
-  background:var(--bg3);border:1px solid var(--green);border-radius:20px;
-  padding:30px 26px;width:100%;max-width:400px;text-align:center;position:relative;
-  box-shadow:0 0 50px rgba(16,185,129,.25);
-}
-.pay-nfc-wrap{
-  width:96px;height:96px;border-radius:50%;margin:0 auto 18px;
-  background:linear-gradient(135deg,var(--green),var(--blueD));
-  display:flex;align-items:center;justify-content:center;font-size:44px;
-  position:relative;
-}
-.pr1,.pr2{
-  position:absolute;inset:-12px;border-radius:50%;
-  border:2px solid var(--green);opacity:.35;
-  animation:ring 2s ease-out infinite;
-}
-.pr2{animation-delay:.75s}
-@keyframes ring{0%{transform:scale(.85);opacity:.4}100%{transform:scale(1.8);opacity:0}}
-.pay-amt{font-size:40px;font-weight:900;color:var(--green);margin:8px 0}
-.pay-lbl{font-size:13px;color:var(--t2)}
-.pay-st{font-size:15px;font-weight:700;margin-top:10px;min-height:24px}
-.pay-card-info{
-  background:var(--bg4);border:1px solid var(--bdL);border-radius:var(--rs);
-  padding:12px;margin-top:14px;text-align:left;
-}
-.pay-acts{display:flex;gap:10px;margin-top:18px}
-.pay-acts .btn{flex:1;justify-content:center}
-.pay-res{
-  padding:13px;border-radius:var(--rs);margin-top:14px;font-weight:700;
-  font-size:16px;text-align:center;display:none;
-}
-.pay-res.show{display:block}
-.pay-res.ok{background:rgba(16,185,129,.15);color:var(--green);border:1px solid var(--green)}
-.pay-res.fail{background:var(--redG);color:var(--red);border:1px solid var(--red)}
-.pb-w{background:var(--bg4);border-radius:4px;height:5px;overflow:hidden;margin-top:14px}
-.pb-f{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .5s}
-
-/* CASH MODAL */
-.cash-modal{
-  background:var(--bg3);border:1px solid var(--bdL);border-radius:20px;
-  padding:28px 24px;width:100%;max-width:360px;text-align:center;position:relative;
-  box-shadow:0 10px 40px rgba(0,0,0,.5);
-}
-.cash-ico{font-size:52px;margin-bottom:12px}
-.cash-amt{font-size:38px;font-weight:900;color:var(--yellow);margin:8px 0}
-.cash-change-row{
-  display:flex;gap:8px;margin:14px 0;
-}
-.cash-fi{
-  flex:1;background:var(--bg4);border:1px solid var(--bd);border-radius:var(--rs);
-  padding:12px;color:var(--t1);font-size:18px;font-weight:700;outline:none;text-align:center;
-  font-family:monospace;
-}
-.change-display{
-  background:var(--bg4);border:1px solid var(--bdL);border-radius:var(--rs);
-  padding:14px;margin:12px 0;font-size:22px;font-weight:900;
-}
-.change-display.ok{color:var(--green)}.change-display.dn{color:var(--red)}
-
-/* RECEIPT PRINT */
-.receipt-modal{
-  background:#fff;border-radius:16px;padding:24px 20px;width:100%;max-width:340px;
-  text-align:center;color:#111;box-shadow:0 10px 40px rgba(0,0,0,.6);
-  font-family:'Courier New',monospace;max-height:90vh;overflow-y:auto;
-}
-.rcpt-logo{font-size:28px;margin-bottom:4px}
-.rcpt-title{font-size:18px;font-weight:900;margin-bottom:2px}
-.rcpt-sub{font-size:11px;color:#666;margin-bottom:14px}
-.rcpt-div{border-top:1px dashed #ccc;margin:10px 0}
-.rcpt-row{display:flex;justify-content:space-between;font-size:13px;margin:4px 0}
-.rcpt-total{font-size:18px;font-weight:900;margin-top:8px;padding-top:8px;border-top:2px solid #111}
-.rcpt-footer{font-size:11px;color:#888;margin-top:14px}
-
-/* BADGES INLINE */
-.bdg{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
-.b-green{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.25)}
-.b-gray{background:rgba(75,85,99,.2);color:var(--t2);border:1px solid var(--bd)}
-.b-red{background:var(--redG);color:var(--red);border:1px solid rgba(239,68,68,.25)}
-
-/* BUTTONS (reuse in pay-acts) */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border-radius:var(--rs);border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all .18s}
-.bt-suc{background:var(--green);color:#fff}
-.bt-suc:hover{background:var(--greenD);box-shadow:0 0 14px rgba(16,185,129,.3)}
-.bt-dan{background:var(--red);color:#fff}
-.bt-dan:hover{opacity:.85}
-.bt-gho{background:var(--bg4);color:var(--t2);border:1px solid var(--bd)}
-.bt-gho:hover{color:var(--t1)}
-.bt-yel{background:var(--yellow);color:#000}
-.btn:disabled{opacity:.35;cursor:not-allowed}
-
-/* TOAST */
-#toasts{position:fixed;bottom:16px;right:16px;z-index:999;display:flex;flex-direction:column;gap:6px}
-.toast{background:var(--bg4);border:1px solid var(--bdL);border-radius:var(--rs);padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:8px;animation:ti .22s ease;max-width:280px;box-shadow:0 4px 20px rgba(0,0,0,.4)}
-@keyframes ti{from{transform:translateX(24px);opacity:0}to{transform:translateX(0);opacity:1}}
-.toast.hide{animation:to .22s ease forwards}
-@keyframes to{to{transform:translateX(24px);opacity:0}}
-.t-suc{border-left:3px solid var(--green)}.t-err{border-left:3px solid var(--red)}
-.t-inf{border-left:3px solid var(--blue)}.t-war{border-left:3px solid var(--yellow)}
-
-/* helpers */
-.flex{display:flex}.ic{align-items:center}.gap6{gap:6px}.gap8{gap:8px}
-.fw7{font-weight:700}.fw9{font-weight:900}.t2{color:var(--t2)}.t3{color:var(--t3)}
-.t-sm{font-size:13px}.t-xs{font-size:11px}.t-green{color:var(--green)}.t-blue{color:var(--blue)}.t-red{color:var(--red)}
-.mt8{margin-top:8px}.mb8{margin-bottom:8px}.dn{display:none}.tc{text-align:center}
-.mono{font-family:'Courier New',monospace}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFC POS • Сбер Терминал</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
+        
+        .terminal-screen {
+            background: linear-gradient(180deg, #0a0f0a 0%, #111811 100%);
+            box-shadow: inset 0 0 80px rgba(33, 160, 56, 0.15);
+        }
+        .sber-logo {
+            font-family: 'Space Grotesk', sans-serif;
+            letter-spacing: -2px;
+        }
+        .nfc-wave {
+            animation: nfcPulse 2s infinite;
+        }
+        @keyframes nfcPulse {
+            0%, 100% { opacity: 0.4; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+        .success-check {
+            animation: popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.2); }
+            60% { transform: scale(1.25); }
+            100% { transform: scale(1); }
+        }
+    </style>
 </head>
-<body>
-
-<!-- ════════ PIN SCREEN ════════ -->
-<div class="screen on" id="s-pin">
-<div class="pin-screen">
-  <div class="pin-box">
-    <div class="pin-logo">⬡</div>
-    <div class="pin-title">NFC<span style="color:var(--blue)">POS</span> Терминал</div>
-    <div class="pin-sub">Выберите терминал и введите PIN</div>
-
-    <select class="pin-select" id="termSelect" onchange="onTermSelect()">
-      <option value="">— Выберите терминал —</option>
-    </select>
-
-    <div class="pin-display" id="pinDisplay">
-      <span style="font-size:16px;color:var(--t3);font-family:sans-serif" id="pinPlaceholder">Введите PIN</span>
-    </div>
-
-    <div class="pin-grid">
-      <div class="pk" onclick="pk('1')">1</div>
-      <div class="pk" onclick="pk('2')">2</div>
-      <div class="pk" onclick="pk('3')">3</div>
-      <div class="pk" onclick="pk('4')">4</div>
-      <div class="pk" onclick="pk('5')">5</div>
-      <div class="pk" onclick="pk('6')">6</div>
-      <div class="pk" onclick="pk('7')">7</div>
-      <div class="pk" onclick="pk('8')">8</div>
-      <div class="pk" onclick="pk('9')">9</div>
-      <div class="pk del" onclick="pk('del')">⌫</div>
-      <div class="pk" onclick="pk('0')">0</div>
-      <div class="pk ok" onclick="pk('ok')">✔</div>
-    </div>
-    <div class="pin-err" id="pinErr"></div>
-    <div class="pin-hint">PIN по умолчанию: 1234 (Касса №1)</div>
-  </div>
-</div>
-</div>
-
-<!-- ════════ MAIN TERMINAL SCREEN ════════ -->
-<div class="screen" id="s-main">
-  <!-- TOP BAR -->
-  <div class="tbar">
-    <div class="tbar-left">
-      <div class="tbar-logo">
-        <div class="tbar-logoi">⬡</div>
-        <span style="color:var(--blue)">NFC</span>POS
-      </div>
-      <div style="width:1px;height:28px;background:var(--bd)"></div>
-      <div>
-        <div class="tbar-termname" id="tbTermName">Терминал</div>
-        <div class="tbar-termid" id="tbTermId">TERM-000</div>
-      </div>
-    </div>
-    <div class="tbar-right">
-      <div class="tdot"></div>
-      <span class="tclk" id="tclk">--:--:--</span>
-      <button class="tbtn" onclick="togglePayMode()">⚡ Режим оплаты</button>
-      <button class="tbtn danger" onclick="lockTerminal()">🔒 Выход</button>
-    </div>
-  </div>
-
-  <!-- MODE BANNER -->
-  <div class="mode-banner idle" id="modeBanner">
-    ⏸ РЕЖИМ ОЖИДАНИЯ — выберите режим оплаты через пульт управления или кнопку выше
-  </div>
-
-  <!-- BODY -->
-  <div class="term-body">
-    <!-- LEFT -->
-    <div class="left-pane">
-      <div class="prod-tabs" id="prodTabs">
-        <div class="ptab on" onclick="setTab('all',this)">Все</div>
-        <div class="ptab" onclick="setTab('food',this)">🍕 Еда</div>
-        <div class="ptab" onclick="setTab('drink',this)">☕ Напитки</div>
-        <div class="ptab" onclick="setTab('service',this)">📦 Услуги</div>
-      </div>
-      <div class="pgrid" id="prodGrid"></div>
-
-      <!-- NUMPAD (direct amount) -->
-      <div class="numpad-section">
-        <div class="numpad-label">🔢 Прямой ввод суммы</div>
-        <div class="numpad-display" id="numDisplay">0 ₽</div>
-        <div class="npgrid">
-          <div class="npk" onclick="np('1')">1</div>
-          <div class="npk" onclick="np('2')">2</div>
-          <div class="npk" onclick="np('3')">3</div>
-          <div class="npk" onclick="np('4')">4</div>
-          <div class="npk" onclick="np('5')">5</div>
-          <div class="npk" onclick="np('6')">6</div>
-          <div class="npk" onclick="np('7')">7</div>
-          <div class="npk" onclick="np('8')">8</div>
-          <div class="npk" onclick="np('9')">9</div>
-          <div class="npk del" onclick="np('del')">⌫</div>
-          <div class="npk" onclick="np('0')">0</div>
-          <div class="npk clr" onclick="np('clr')">CLR</div>
-          <div class="npk ok" style="grid-column:span 3" onclick="np('add')">➕ Добавить к чеку</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- RIGHT -->
-    <div class="right-pane">
-      <div class="rec-header">
-        <span class="rec-title">🧾 Чек <span class="bdg b-gray" id="cartCountBdg">0 поз.</span></span>
-        <button class="tbtn" onclick="clearCart()">Очистить</button>
-      </div>
-      <div class="rec-body" id="recBody">
-        <div class="rec-empty">Добавьте товары из каталога<br>или введите сумму напрямую</div>
-      </div>
-      <div class="rec-total">
-        <span class="rec-total-lbl">ИТОГО:</span>
-        <span class="rec-total-val" id="recTotal">0 ₽</span>
-      </div>
-      <div class="pay-panel">
-        <!-- UID manual lookup -->
-        <div style="margin-bottom:8px">
-          <div style="font-size:11px;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
-            🔗 UID карты (MIFARE / NFC)
-          </div>
-          <div class="uid-input-row">
-            <input class="uid-fi" id="uidInput" placeholder="04:A1:B2:C3... (из NFC Tools)" maxlength="23" oninput="onUidInput()">
-            <button class="uid-lookup-btn" onclick="lookupUid()">Найти 🔍</button>
-          </div>
-          <div id="uidCardPreview" style="display:none;background:var(--bg4);border:1px solid var(--bdL);border-radius:var(--rs);padding:10px 12px;margin-bottom:8px">
-            <div class="flex ic gap8">
-              <span style="font-size:20px">💳</span>
-              <div style="flex:1">
-                <div class="fw7 t-sm" id="prevName">—</div>
-                <div class="mono t-xs t-blue" id="prevUid">—</div>
-              </div>
-              <div style="text-align:right">
-                <div class="t-xs t3">Баланс</div>
-                <div class="fw7 t-green t-sm" id="prevBal">—</div>
-              </div>
-              <div id="prevBdg"></div>
+<body class="bg-zinc-950 text-white font-sans">
+    <div class="min-h-screen flex items-center justify-center p-6 bg-[radial-gradient(#1a1f1a_1px,transparent_1px)] bg-[length:40px_40px]">
+        <div class="max-w-md w-full bg-black rounded-3xl overflow-hidden border border-[#21A038]/30 shadow-2xl shadow-black/80" style="height: 620px; box-shadow: 0 0 0 12px #111, 0 0 0 16px #1a1f1a;">
+            <div class="bg-[#21A038] h-14 flex items-center px-6 text-black">
+                <div class="sber-logo text-3xl font-semibold tracking-tighter flex items-center gap-1">
+                    СБЕР
+                    <span class="text-xs font-mono ml-2 opacity-75 text-[10px] leading-none pt-1">PAY</span>
+                </div>
+                <div class="ml-auto flex items-center gap-2 text-xs font-medium">
+                    <div class="bg-black/20 px-3 py-0.5 rounded-full">Терминал 01</div>
+                    <i class="fa-solid fa-wifi"></i>
+                </div>
             </div>
-          </div>
-          <select class="pay-card-select" id="cardSelect">
-            <option value="">— Или выберите карту из списка —</option>
-          </select>
+            
+            <div class="terminal-screen h-[460px] relative flex flex-col p-6 text-center overflow-hidden" id="terminal-main">
+                <div id="idle-screen" class="flex-1 flex flex-col items-center justify-center">
+                    <div class="w-20 h-20 bg-white/10 backdrop-blur-xl rounded-3xl flex items-center justify-center mb-8 border border-white/20 nfc-wave">
+                        <i class="fa-solid fa-nfc-symbol text-5xl text-[#21A038]"></i>
+                    </div>
+                    <div class="text-[#21A038] text-2xl font-semibold mb-2 tracking-tight">Приложите карту</div>
+                    <div class="text-zinc-400 text-sm max-w-[190px]">NFC / Мир / Visa / Mastercard</div>
+                    
+                    <div onclick="simulateNFCTap()" class="mt-16 cursor-pointer border border-dashed border-[#21A038]/60 hover:border-[#21A038] transition-colors rounded-2xl px-8 py-4 text-xs flex items-center gap-3">
+                        <i class="fa-solid fa-mobile-screen-button"></i>
+                        <span class="font-medium">ЭМУЛИРОВАТЬ NFC (ТЕЛЕФОН)</span>
+                    </div>
+                </div>
+                
+                <div id="payment-screen" class="hidden flex-1 flex flex-col">
+                    <div class="text-xs uppercase tracking-widest text-[#21A038] mb-1">ЗАПРОС ОПЛАТЫ</div>
+                    <div id="payment-amount" class="text-7xl font-light text-white tabular-nums mt-6 mb-1">1250</div>
+                    <div class="text-zinc-400">рублей</div>
+                    
+                    <div class="mt-auto bg-black/40 rounded-2xl p-5 text-left text-sm">
+                        <div class="flex justify-between mb-3">
+                            <div class="text-zinc-400">Карта</div>
+                            <div id="payment-card" class="font-mono text-[#21A038]">•••• •••• •••• 7712</div>
+                        </div>
+                        <div class="flex justify-between">
+                            <div class="text-zinc-400">Владелец</div>
+                            <div id="payment-owner" class="font-medium">Мария Петрова</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 grid grid-cols-2 gap-4">
+                        <button onclick="cancelPayment()" class="py-4 text-sm font-medium border border-white/30 hover:bg-white/5 rounded-2xl transition-colors">ОТМЕНА</button>
+                        <button onclick="confirmPayment()" class="py-4 text-sm font-medium bg-[#21A038] text-black rounded-2xl font-semibold active:scale-95 transition-transform">ОПЛАТИТЬ</button>
+                    </div>
+                </div>
+                
+                <div id="tap-screen" class="hidden flex-1 flex flex-col items-center justify-center">
+                    <div class="relative mb-10">
+                        <div class="w-32 h-32 border-8 border-[#21A038] border-t-transparent rounded-full animate-spin"></div>
+                        <div class="absolute inset-0 flex items-center justify-center text-6xl">📱</div>
+                    </div>
+                    <div class="text-[#21A038] font-medium text-xl">Считывание NFC...</div>
+                    <div onclick="completeTap()" class="mt-12 text-xs px-10 py-3 border border-[#21A038]/30 hover:bg-[#21A038]/10 rounded-3xl cursor-pointer transition-colors">ЗАВЕРШИТЬ СКАНИРОВАНИЕ</div>
+                </div>
+                
+                <div id="success-screen" class="hidden flex-1 flex flex-col items-center justify-center">
+                    <div class="success-check w-24 h-24 bg-emerald-500 rounded-2xl flex items-center justify-center mb-8 shadow-inner">
+                        <i class="fa-solid fa-check text-6xl text-black"></i>
+                    </div>
+                    <div class="text-3xl font-semibold text-emerald-400 mb-1">ОПЛАТА ПРОШЛА УСПЕШНО</div>
+                    <div id="success-amount" class="text-5xl font-light tabular-nums text-white">1250 ₽</div>
+                    <div class="text-zinc-400 text-sm mt-6">Карта ••••7712</div>
+                    <div id="success-time" class="font-mono text-[10px] text-zinc-500 mt-8">14:38:22 • ОДОБРЕНО</div>
+                    
+                    <button onclick="resetTerminal()" class="mt-auto w-full py-4 bg-white/5 hover:bg-white/10 border border-white/20 rounded-2xl text-sm">
+                        НОВЫЙ ПЛАТЕЖ
+                    </button>
+                </div>
+            </div>
+            
+            <div class="bg-zinc-950 border-t border-[#21A038]/20 h-20 flex items-center px-5 gap-3 text-xs">
+                <div onclick="sendStatusToAdmin('ready')" class="flex-1 h-11 flex items-center justify-center bg-zinc-900 hover:bg-zinc-800 rounded-2xl cursor-pointer transition-colors border border-white/10">
+                    <i class="fa-solid fa-circle-check mr-2"></i>ГОТОВ
+                </div>
+                <div onclick="requestPaymentFromAdmin()" class="flex-1 h-11 flex items-center justify-center bg-[#21A038] text-black font-semibold rounded-2xl cursor-pointer active:scale-95">
+                    ЗАПРОСИТЬ ОПЛАТУ
+                </div>
+            </div>
+            
+            <div class="h-9 bg-black flex items-center justify-center text-[10px] font-mono text-[#21A038]/60">
+                СБЕРБАНК • NFC • РЕАЛЬНЫЙ РЕЖИМ
+            </div>
         </div>
-        <button class="pay-btn nfc" onclick="startPayment()" id="payNfcBtn">📲 Оплата по карте</button>
-        <button class="pay-btn cash" onclick="startCash()">💵 Наличные</button>
-      </div>
     </div>
-  </div>
-</div>
 
-<!-- ════════ PAYMENT OVERLAY ════════ -->
-<div class="pay-ov" id="payOv">
-<div class="pay-modal">
-  <button class="btn bt-gho" style="position:absolute;top:12px;right:12px;padding:6px 10px" onclick="closePayOv()">✕</button>
-  <div class="pay-nfc-wrap" id="payIcon">
-    <div class="pr1"></div><div class="pr2"></div>
-    📲
-  </div>
-  <div class="pay-lbl">К оплате</div>
-  <div class="pay-amt" id="payAmt">0 ₽</div>
-  <div class="pay-st" id="paySt">Ожидание карты...</div>
-  <div class="pay-card-info dn" id="payCardInfo">
-    <div class="t-xs t3 mb8" style="margin-bottom:4px">Карта:</div>
-    <div class="flex ic gap8">
-      <span style="font-size:22px">💳</span>
-      <div style="flex:1">
-        <div class="fw7" id="payCardName">—</div>
-        <div class="mono t-xs t-blue" id="payCardUid">—</div>
-      </div>
-      <div style="text-align:right">
-        <div class="t-xs t3">Баланс</div>
-        <div class="fw7 t-green" id="payCardBal">—</div>
-      </div>
-    </div>
-  </div>
-  <div class="pay-acts">
-    <button class="btn bt-suc" id="payConfirm" onclick="confirmPay()" disabled>✔ Подтвердить</button>
-    <button class="btn bt-dan" onclick="closePayOv()">✕ Отмена</button>
-  </div>
-  <div class="pay-res" id="payRes"></div>
-  <div class="pb-w"><div class="pb-f" id="payProg" style="width:0%"></div></div>
-</div>
-</div>
-
-<!-- ════════ CASH OVERLAY ════════ -->
-<div class="pay-ov" id="cashOv">
-<div class="cash-modal">
-  <button class="btn bt-gho" style="position:absolute;top:12px;right:12px;padding:6px 10px" onclick="document.getElementById('cashOv').classList.remove('on')">✕</button>
-  <div class="cash-ico">💵</div>
-  <div class="pay-lbl">Сумма к оплате</div>
-  <div class="cash-amt" id="cashAmt">0 ₽</div>
-  <div style="font-size:13px;color:var(--t3);margin-bottom:8px">Введите сумму от покупателя:</div>
-  <div class="cash-change-row">
-    <input class="cash-fi" type="number" id="cashGiven" placeholder="0" oninput="calcChange()">
-  </div>
-  <div style="font-size:13px;color:var(--t3);margin-bottom:4px">Сдача:</div>
-  <div class="change-display" id="changeDisplay">— ₽</div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:14px">
-    <button class="btn bt-gho" style="font-size:12px;padding:6px 10px" onclick="quickCash(100)">100</button>
-    <button class="btn bt-gho" style="font-size:12px;padding:6px 10px" onclick="quickCash(200)">200</button>
-    <button class="btn bt-gho" style="font-size:12px;padding:6px 10px" onclick="quickCash(500)">500</button>
-    <button class="btn bt-gho" style="font-size:12px;padding:6px 10px" onclick="quickCash(1000)">1000</button>
-    <button class="btn bt-gho" style="font-size:12px;padding:6px 10px" onclick="quickCash(2000)">2000</button>
-    <button class="btn bt-gho" style="font-size:12px;padding:6px 10px" onclick="quickCash(5000)">5000</button>
-  </div>
-  <button class="btn bt-suc" style="width:100%;justify-content:center;padding:14px;font-size:16px" onclick="confirmCash()" id="cashConfirm">✔ Принять наличные</button>
-</div>
-</div>
-
-<!-- ════════ RECEIPT OVERLAY ════════ -->
-<div class="pay-ov" id="rcptOv">
-<div class="receipt-modal" id="rcptModal">
-  <div class="rcpt-logo">⬡</div>
-  <div class="rcpt-title">NFCPOS</div>
-  <div class="rcpt-sub" id="rcptSub">Чек</div>
-  <div class="rcpt-div"></div>
-  <div id="rcptItems"></div>
-  <div class="rcpt-div"></div>
-  <div class="rcpt-total" id="rcptTotal"></div>
-  <div class="rcpt-row" id="rcptMethod"></div>
-  <div class="rcpt-footer" id="rcptFooter"></div>
-  <div style="display:flex;gap:8px;margin-top:16px">
-    <button class="btn bt-gho" style="flex:1;justify-content:center" onclick="window.print()">🖨 Печать</button>
-    <button class="btn bt-suc" style="flex:1;justify-content:center" onclick="closeRcpt()">✔ Готово</button>
-  </div>
-</div>
-</div>
-
-<div id="toasts"></div>
-
-<script>
-const STORE_KEY = 'nfcpos_v2';
-const PRODUCTS = [
-  {id:1,name:'Кофе',price:180,icon:'☕',cat:'drink'},
-  {id:2,name:'Чай',price:120,icon:'🍵',cat:'drink'},
-  {id:3,name:'Сэндвич',price:250,icon:'🥪',cat:'food'},
-  {id:4,name:'Круассан',price:190,icon:'🥐',cat:'food'},
-  {id:5,name:'Сок',price:150,icon:'🧃',cat:'drink'},
-  {id:6,name:'Пицца',price:650,icon:'🍕',cat:'food'},
-  {id:7,name:'Салат',price:320,icon:'🥗',cat:'food'},
-  {id:8,name:'Вода',price:80,icon:'💧',cat:'drink'},
-  {id:9,name:'Доставка',price:500,icon:'📦',cat:'service'},
-  {id:10,name:'Упаковка',price:50,icon:'🎁',cat:'service'},
-  {id:11,name:'Десерт',price:280,icon:'🍰',cat:'food'},
-  {id:12,name:'Смузи',price:350,icon:'🥤',cat:'drink'},
-  {id:13,name:'Брейк-фаст',price:490,icon:'🍳',cat:'food'},
-  {id:14,name:'Лимонад',price:200,icon:'🍋',cat:'drink'},
-];
-
-// ═══════ STATE ═══════
-let S = null; // loaded from localStorage
-let currentTerminal = null;
-let cart = [];
-let numBuf = '';
-let pinBuf = '';
-let activePayCard = null;
-let prodTab = 'all';
-let cashTotal = 0;
-
-function loadS() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || null; } catch { return null; } }
-function saveS() { localStorage.setItem(STORE_KEY, JSON.stringify(S)); }
-
-// ═══════ INIT ═══════
-function init() {
-  clock(); setInterval(clock, 1000);
-  S = loadS();
-  if(!S) { showNoConfig(); return; }
-  populateTermSelect();
-  setInterval(syncFromStore, 2000);
-}
-
-function showNoConfig() {
-  document.getElementById('termSelect').innerHTML = '<option>Нет данных — откройте пульт</option>';
-}
-
-function populateTermSelect() {
-  if(!S) return;
-  const sel = document.getElementById('termSelect');
-  sel.innerHTML = '<option value="">— Выберите терминал —</option>' +
-    S.terminals.filter(t=>t.status==='online').map(t=>`<option value="${t.id}">${t.name} (PIN: ${t.pin||'?'})</option>`).join('');
-}
-
-function onTermSelect() {
-  pinBuf = '';
-  updatePinDisplay();
-  document.getElementById('pinErr').textContent = '';
-}
-
-function syncFromStore() {
-  const fresh = loadS();
-  if(!fresh || !currentTerminal) return;
-  S = fresh;
-  const t = S.terminals.find(x=>x.id===currentTerminal.id);
-  if(t) {
-    currentTerminal = t;
-    updateModeBanner();
-    updateCardSelect();
-  }
-}
-
-// ═══════ PIN ═══════
-function pk(k) {
-  const termId = document.getElementById('termSelect').value;
-  if(!termId) { document.getElementById('pinErr').textContent = 'Выберите терминал'; return; }
-  if(k==='del') { pinBuf=pinBuf.slice(0,-1); }
-  else if(k==='ok') { verifyPin(termId); return; }
-  else if(pinBuf.length<6) { pinBuf+=k; }
-  updatePinDisplay();
-  if(pinBuf.length>=4) verifyPin(termId);
-}
-
-function updatePinDisplay() {
-  const d = document.getElementById('pinDisplay');
-  const ph = document.getElementById('pinPlaceholder');
-  if(pinBuf.length===0) {
-    ph.style.display=''; d.textContent='';
-  } else {
-    ph.style.display='none';
-    d.textContent = '●'.repeat(pinBuf.length);
-  }
-}
-
-function verifyPin(termId) {
-  const t = S.terminals.find(x=>x.id===termId);
-  if(!t) { document.getElementById('pinErr').textContent='Терминал не найден'; return; }
-  if(String(t.pin)===String(pinBuf)) {
-    enterTerminal(t);
-  } else if(pinBuf.length>=4) {
-    document.getElementById('pinErr').textContent = '⚠ Неверный PIN';
-    pinBuf=''; updatePinDisplay();
-    setTimeout(()=>document.getElementById('pinErr').textContent='',2000);
-  }
-}
-
-function enterTerminal(t) {
-  currentTerminal = t;
-  document.getElementById('s-pin').classList.remove('on');
-  document.getElementById('s-main').classList.add('on');
-  document.getElementById('tbTermName').textContent = t.name;
-  document.getElementById('tbTermId').textContent = t.id + ' · ' + t.loc;
-  updateModeBanner();
-  renderProducts('all');
-  updateCardSelect();
-  addEv('success', `Вход в терминал: ${t.name}`, t.id);
-  toast('Добро пожаловать! ' + t.name, 'suc');
-}
-
-function lockTerminal() {
-  if(!confirm('Выйти из терминала?')) return;
-  addEv('info','Выход из терминала: '+currentTerminal.name,currentTerminal.id);
-  currentTerminal=null; cart=[]; numBuf=''; pinBuf='';
-  document.getElementById('s-main').classList.remove('on');
-  document.getElementById('s-pin').classList.add('on');
-  document.getElementById('termSelect').value='';
-  updatePinDisplay();
-  populateTermSelect();
-}
-
-// ═══════ MODE ═══════
-function updateModeBanner() {
-  if(!currentTerminal) return;
-  const b = document.getElementById('modeBanner');
-  if(currentTerminal.mode==='payment') {
-    b.className='mode-banner pay';
-    b.textContent='⚡ РЕЖИМ ОПЛАТЫ АКТИВЕН — поднесите NFC-карту или выберите карту вручную';
-  } else {
-    b.className='mode-banner idle';
-    b.textContent='⏸ РЕЖИМ ОЖИДАНИЯ — кнопка «Режим оплаты» или активируйте через пульт управления';
-  }
-}
-
-function togglePayMode() {
-  if(!currentTerminal) return;
-  const t = S.terminals.find(x=>x.id===currentTerminal.id);
-  if(!t) return;
-  t.mode = t.mode==='payment'?'idle':'payment';
-  currentTerminal=t;
-  saveS();
-  updateModeBanner();
-  toast(t.mode==='payment'?'Режим оплаты ВКЛ':'Режим ожидания','suc');
-  addEv(t.mode==='payment'?'success':'info',`${t.name}: ${t.mode==='payment'?'режим оплаты':'ожидание'}`,t.id);
-}
-
-// ═══════ PRODUCTS ═══════
-function setTab(cat, el) {
-  prodTab=cat;
-  document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('on'));
-  el.classList.add('on');
-  renderProducts(cat);
-}
-
-function renderProducts(cat) {
-  const list = cat==='all'?PRODUCTS:PRODUCTS.filter(p=>p.cat===cat);
-  document.getElementById('prodGrid').innerHTML = list.map(p=>`
-    <div class="pb" onclick="addToCart(${p.id})">
-      <div class="pb-ic">${p.icon}</div>
-      <div class="pb-nm">${p.name}</div>
-      <div class="pb-pr">${p.price} ₽</div>
-    </div>
-  `).join('');
-}
-
-// ═══════ CART ═══════
-function addToCart(id) {
-  const p = PRODUCTS.find(x=>x.id===id);
-  if(!p) return;
-  const item = cart.find(x=>x.id===id);
-  if(item) item.qty++;
-  else cart.push({...p,qty:1});
-  renderCart();
-  toast(p.name+' добавлен','inf');
-}
-
-function removeFromCart(id) {
-  const item = cart.find(x=>x.id===id);
-  if(!item) return;
-  if(item.qty>1) item.qty--;
-  else cart=cart.filter(x=>x.id!==id);
-  renderCart();
-}
-
-function clearCart() { cart=[]; numBuf=''; updateNumDisplay(); renderCart(); }
-
-function getTotal() { return cart.reduce((s,x)=>s+x.price*x.qty,0); }
-
-function renderCart() {
-  const body = document.getElementById('recBody');
-  const total = getTotal();
-  document.getElementById('recTotal').textContent = fmt(total);
-  document.getElementById('cartCountBdg').textContent = cart.length+' поз.';
-  if(!cart.length) {
-    body.innerHTML='<div class="rec-empty">Добавьте товары из каталога<br>или введите сумму напрямую</div>';
-    return;
-  }
-  body.innerHTML = cart.map(item=>`
-    <div class="cart-item">
-      <span class="ci-ico">${item.icon}</span>
-      <span class="ci-nm">${item.name}</span>
-      <div class="ci-qty">
-        <button class="qb" onclick="removeFromCart(${item.id})">−</button>
-        <span class="fw7">${item.qty}</span>
-        <button class="qb" onclick="addToCart(${item.id})">+</button>
-      </div>
-      <span class="ci-sum">${fmt(item.price*item.qty)}</span>
-    </div>
-  `).join('');
-}
-
-// ═══════ NUMPAD ═══════
-function np(k) {
-  if(k==='del') { numBuf=numBuf.slice(0,-1); }
-  else if(k==='clr') { numBuf=''; }
-  else if(k==='add') {
-    const amt=parseInt(numBuf)||0;
-    if(amt>0) {
-      cart.push({id:Date.now(),name:'Позиция '+fmt(amt),price:amt,icon:'💲',qty:1});
-      numBuf=''; renderCart();
-      toast('Позиция добавлена','inf');
-    }
-    updateNumDisplay(); return;
-  } else if(numBuf.length<7) { numBuf+=k; }
-  updateNumDisplay();
-}
-function updateNumDisplay() {
-  const n=parseInt(numBuf)||0;
-  document.getElementById('numDisplay').textContent = n?fmt(n):'0 ₽';
-}
-
-// ═══════ CARD / UID ═══════
-function updateCardSelect() {
-  if(!S) return;
-  const sel = document.getElementById('cardSelect');
-  sel.innerHTML = '<option value="">— Или выберите карту из списка —</option>' +
-    S.cards.filter(c=>c.status==='active').map(c=>`<option value="${c.id}">${c.owner} · ${fmt(c.balance)}</option>`).join('');
-}
-
-function onUidInput() {
-  const uid = normalizeUid(document.getElementById('uidInput').value);
-  if(uid.length<5) { document.getElementById('uidCardPreview').style.display='none'; return; }
-}
-
-function lookupUid() {
-  const raw = document.getElementById('uidInput').value.trim();
-  const uid = normalizeUid(raw);
-  if(!uid) { toast('Введите UID','war'); return; }
-  if(!S) return;
-  const card = S.cards.find(c=>c.uid===uid);
-  const prev = document.getElementById('uidCardPreview');
-  if(card) {
-    document.getElementById('prevName').textContent = card.owner;
-    document.getElementById('prevUid').textContent = card.uid;
-    document.getElementById('prevBal').textContent = fmt(card.balance);
-    document.getElementById('prevBdg').innerHTML = cBdg(card.status);
-    prev.style.display='block';
-    activePayCard = card;
-    document.getElementById('cardSelect').value = card.id;
-    toast('Карта найдена: '+card.owner,'suc');
-    addEv('info','Найдена карта по UID: '+card.owner,card.id);
-  } else {
-    prev.style.display='none';
-    activePayCard=null;
-    toast('Карта с UID '+uid+' не найдена','err');
-    addEv('warn','UID не найден в базе: '+uid,'NFC');
-  }
-}
-
-function normalizeUid(uid) {
-  const clean=(uid||'').replace(/[^0-9A-Fa-f]/g,'');
-  const pairs=clean.match(/.{1,2}/g)||[];
-  return pairs.map(p=>p.toUpperCase()).join(':');
-}
-
-// ═══════ PAYMENT ═══════
-function startPayment() {
-  const total = getTotal();
-  if(total<=0) { toast('Добавьте товары','war'); return; }
-
-  // Determine card
-  let card = activePayCard;
-  if(!card) {
-    const selId = document.getElementById('cardSelect').value;
-    if(selId && S) card = S.cards.find(c=>c.id===selId);
-  }
-
-  document.getElementById('payAmt').textContent = fmt(total);
-  document.getElementById('paySt').textContent = card ? 'Карта определена' : 'Введите UID или выберите карту…';
-  document.getElementById('payRes').className='pay-res';
-  document.getElementById('payRes').textContent='';
-  document.getElementById('payCardInfo').classList.add('dn');
-  document.getElementById('payConfirm').disabled=true;
-  document.getElementById('payIcon').childNodes[2].textContent='📲';
-  document.getElementById('payProg').style.width='0%';
-  document.getElementById('payOv').classList.add('on');
-
-  if(card) {
-    loadPayCard(card, total);
-  } else {
-    toast('Введите UID карты и нажмите «Найти»','war');
-  }
-}
-
-function loadPayCard(card, total) {
-  S = loadS();
-  const fresh = S ? S.cards.find(c=>c.id===card.id) : card;
-  if(!fresh) return;
-  document.getElementById('payCardName').textContent = fresh.owner;
-  document.getElementById('payCardUid').textContent = fresh.uid||'—';
-  document.getElementById('payCardBal').textContent = fmt(fresh.balance);
-  document.getElementById('payCardInfo').classList.remove('dn');
-
-  if(fresh.status==='blocked') {
-    document.getElementById('paySt').textContent='🔒 Карта заблокирована';
-    document.getElementById('payConfirm').disabled=true;
-  } else if(fresh.balance < total) {
-    document.getElementById('paySt').textContent='⚠ Недостаточно средств ('+fmt(fresh.balance)+')';
-    document.getElementById('payConfirm').disabled=true;
-  } else {
-    document.getElementById('paySt').textContent='✔ Готово к оплате · спишется '+fmt(total);
-    document.getElementById('payConfirm').disabled=false;
-    document.getElementById('payIcon').childNodes[2].textContent='💳';
-    activePayCard = fresh;
-  }
-
-  // progress bar
-  let p=0; const iv=setInterval(()=>{
-    p+=3; document.getElementById('payProg').style.width=Math.min(p,100)+'%';
-    if(p>=100) clearInterval(iv);
-  },30);
-}
-
-function confirmPay() {
-  const total = getTotal();
-  if(!activePayCard) { toast('Карта не выбрана','err'); return; }
-  S = loadS();
-  if(!S) return;
-  const card = S.cards.find(c=>c.id===activePayCard.id);
-  const term = S.terminals.find(t=>t.id===currentTerminal.id);
-  if(!card) { toast('Карта не найдена','err'); return; }
-  if(card.balance<total) { toast('Недостаточно средств','err'); return; }
-
-  card.balance -= total;
-  card.lastUsed = new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
-  card.lastAmt = total;
-  if(term) { term.txns++; term.revenue+=total; term.daily+=total; }
-
-  saveS();
-
-  document.getElementById('payIcon').childNodes[2].textContent='✅';
-  document.getElementById('paySt').textContent='✔ Транзакция прошла!';
-  const res = document.getElementById('payRes');
-  res.textContent=`✔ Успешно: ${fmt(total)} списано с карты ${card.owner}`;
-  res.className='pay-res show ok';
-  document.getElementById('payConfirm').disabled=true;
-
-  addEv('success',`Оплата ${fmt(total)} · ${card.owner} · ${currentTerminal.id}`,'PAY');
-  toast('Оплата прошла! '+fmt(total),'suc');
-
-  const cartSnapshot = [...cart];
-  cart=[]; activePayCard=null;
-  document.getElementById('uidInput').value='';
-  document.getElementById('uidCardPreview').style.display='none';
-
-  setTimeout(()=>{
-    closePayOv();
-    renderCart();
-    updateCardSelect();
-    showReceipt(cartSnapshot, total, 'nfc', card);
-  },2000);
-}
-
-function closePayOv() { document.getElementById('payOv').classList.remove('on'); }
-
-// ═══════ CASH ═══════
-function startCash() {
-  const total = getTotal();
-  if(total<=0) { toast('Добавьте товары','war'); return; }
-  cashTotal = total;
-  document.getElementById('cashAmt').textContent = fmt(total);
-  document.getElementById('cashGiven').value='';
-  document.getElementById('changeDisplay').textContent='— ₽';
-  document.getElementById('changeDisplay').className='change-display';
-  document.getElementById('cashOv').classList.add('on');
-}
-
-function calcChange() {
-  const given = parseInt(document.getElementById('cashGiven').value)||0;
-  const change = given - cashTotal;
-  const el = document.getElementById('changeDisplay');
-  if(!given) { el.textContent='— ₽'; el.className='change-display'; return; }
-  el.textContent = fmt(Math.abs(change));
-  el.className = 'change-display '+(change>=0?'ok':'dn');
-  document.getElementById('cashConfirm').disabled = change < 0;
-}
-
-function quickCash(n) {
-  document.getElementById('cashGiven').value = n;
-  calcChange();
-}
-
-function confirmCash() {
-  const total = cashTotal;
-  S = loadS();
-  if(!S) return;
-  const term = S.terminals.find(t=>t.id===currentTerminal.id);
-  if(term) { term.txns++; term.revenue+=total; term.daily+=total; }
-  saveS();
-  addEv('success',`Наличные ${fmt(total)} · ${currentTerminal.id}`,'CASH');
-  toast('Наличные приняты: '+fmt(total),'suc');
-  document.getElementById('cashOv').classList.remove('on');
-  const cartSnapshot=[...cart];
-  cart=[];
-  renderCart();
-  showReceipt(cartSnapshot, total, 'cash', null);
-}
-
-// ═══════ RECEIPT ═══════
-function showReceipt(items, total, method, card) {
-  const now = new Date();
-  document.getElementById('rcptSub').textContent =
-    now.toLocaleDateString('ru')+' '+now.toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})+
-    ' · '+currentTerminal.name;
-  document.getElementById('rcptItems').innerHTML = items.map(i=>`
-    <div class="rcpt-row"><span>${i.icon} ${i.name} ×${i.qty}</span><span>${i.price*i.qty} ₽</span></div>
-  `).join('');
-  document.getElementById('rcptTotal').innerHTML =
-    `<span>ИТОГО</span><span>${total} ₽</span>`;
-  document.getElementById('rcptMethod').innerHTML =
-    method==='nfc'
-      ?`<span>💳 NFC-карта</span><span>${card?card.owner:''}</span>`
-      :`<span>💵 Наличные</span><span></span>`;
-  document.getElementById('rcptFooter').textContent =
-    '✔ Спасибо за покупку! · '+currentTerminal.id;
-  document.getElementById('rcptOv').classList.add('on');
-}
-
-function closeRcpt() {
-  document.getElementById('rcptOv').classList.remove('on');
-  updateCardSelect();
-}
-
-// ═══════ EVENTS ═══════
-function addEv(type,text,src) {
-  S = loadS(); if(!S) return;
-  const t=new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  S.events.unshift({type,text,src,t});
-  if(S.events.length>100) S.events.pop();
-  saveS();
-}
-
-// ═══════ HELPERS ═══════
-function clock() {
-  document.getElementById('tclk').textContent = new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-}
-function fmt(n){if(!n) return '0 ₽'; return n>=1000?(n/1000).toFixed(n%1000===0?0:1)+'к ₽':n+' ₽'}
-function cBdg(s){const m={active:'b-green',blocked:'b-red',unbound:'b-gray'};const l={active:'Активна',blocked:'Блок',unbound:'Нет UID'};return`<span class="bdg ${m[s]||'b-gray'}">${l[s]||s}</span>`}
-
-function toast(msg,type='inf'){
-  const el=document.createElement('div');
-  el.className=`toast t-${type}`;
-  const ic={suc:'✅',err:'❌',war:'⚠️',inf:'ℹ️'};
-  el.innerHTML=`<span>${ic[type]||'ℹ️'}</span><span>${msg}</span>`;
-  document.getElementById('toasts').appendChild(el);
-  setTimeout(()=>{el.classList.add('hide');setTimeout(()=>el.remove(),280)},3000);
-}
-
-// Close overlays on backdrop click
-['payOv','cashOv','rcptOv'].forEach(id=>{
-  document.getElementById(id).addEventListener('click',e=>{
-    if(e.target===document.getElementById(id)) document.getElementById(id).classList.remove('on');
-  });
-});
-
-init();
-</script>
+    <script>
+        let currentAmount = 1250;
+        let currentCard = null;
+        let channel = null;
+        
+        const sampleCards = [
+            { id: "04A1B2C3D4E5", owner: "Алексей Иванов", last4: "4242", balance: 1840 },
+            { id: "04F7A9B2C318", owner: "Мария Петрова", last4: "7712", balance: 920 },
+            { id: "0482C6D9E1F2", owner: "Дмитрий Соколов", last4: "1983", balance: 3250 }
+        ];
+        
+        function initBroadcast() {
+            if ('BroadcastChannel' in window) {
+                channel = new BroadcastChannel('nfc-pos-channel');
+                channel.onmessage = (event) => {
+                    const data = event.data;
+                    if (data.type === 'PAYMENT_REQUEST') {
+                        currentAmount = parseInt(data.amount) || 1250;
+                        currentCard = data.card || sampleCards[1];
+                        showPaymentScreen();
+                    }
+                    if (data.type === 'COMMAND' && data.action === 'reset') resetTerminal();
+                };
+            }
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'nfc-admin-command') {
+                    try {
+                        const data = JSON.parse(e.newValue);
+                        if (data.type === 'PAYMENT_REQUEST') {
+                            currentAmount = parseInt(data.amount) || 1250;
+                            currentCard = data.card || sampleCards[1];
+                            showPaymentScreen();
+                        }
+                    } catch(e) {}
+                }
+            });
+        }
+        
+        function sendToAdmin(message) {
+            if (channel) channel.postMessage(message);
+            localStorage.setItem('nfc-terminal-last-event', JSON.stringify({...message, timestamp: new Date().toISOString()}));
+        }
+        
+        function simulateNFCTap() {
+            document.getElementById('idle-screen').classList.add('hidden');
+            document.getElementById('tap-screen').classList.remove('hidden');
+            setTimeout(() => {
+                if (document.getElementById('success-screen').classList.contains('hidden')) completeTap();
+            }, 1450);
+        }
+        
+        function completeTap() {
+            document.getElementById('tap-screen').classList.add('hidden');
+            document.getElementById('success-screen').classList.remove('hidden');
+            document.getElementById('success-amount').textContent = currentAmount + " ₽";
+            document.getElementById('success-time').textContent = new Date().toLocaleTimeString('ru-RU') + " • ОДОБРЕНО";
+            
+            sendToAdmin({
+                type: 'PAYMENT_SUCCESS',
+                amount: currentAmount,
+                cardId: currentCard ? currentCard.id : '04F7A9B2C318',
+                owner: currentCard ? currentCard.owner : 'Мария Петрова',
+                last4: currentCard ? currentCard.last4 : '7712',
+                time: new Date().toISOString()
+            });
+        }
+        
+        function showPaymentScreen() {
+            document.getElementById('idle-screen').classList.add('hidden');
+            document.getElementById('tap-screen').classList.add('hidden');
+            document.getElementById('success-screen').classList.add('hidden');
+            const ps = document.getElementById('payment-screen');
+            ps.classList.remove('hidden');
+            document.getElementById('payment-amount').textContent = currentAmount;
+            if (currentCard) {
+                document.getElementById('payment-card').textContent = "•••• •••• •••• " + currentCard.last4;
+                document.getElementById('payment-owner').textContent = currentCard.owner;
+            }
+        }
+        
+        function confirmPayment() {
+            document.getElementById('payment-screen').classList.add('hidden');
+            document.getElementById('success-screen').classList.remove('hidden');
+            document.getElementById('success-amount').textContent = currentAmount + " ₽";
+            document.getElementById('success-time').textContent = new Date().toLocaleTimeString('ru-RU') + " • ОДОБРЕНО";
+            sendToAdmin({
+                type: 'PAYMENT_SUCCESS',
+                amount: currentAmount,
+                cardId: currentCard ? currentCard.id : '04F7A9B2C318',
+                owner: currentCard ? currentCard.owner : 'Клиент',
+                last4: currentCard ? currentCard.last4 : '7712',
+                time: new Date().toISOString()
+            });
+        }
+        
+        function cancelPayment() {
+            resetTerminal();
+            sendToAdmin({ type: 'PAYMENT_CANCELLED', amount: currentAmount, reason: 'Отменено на терминале' });
+        }
+        
+        function resetTerminal() {
+            document.getElementById('payment-screen').classList.add('hidden');
+            document.getElementById('tap-screen').classList.add('hidden');
+            document.getElementById('success-screen').classList.add('hidden');
+            document.getElementById('idle-screen').classList.remove('hidden');
+        }
+        
+        function requestPaymentFromAdmin() {
+            const amount = prompt("Введите сумму оплаты:", "1250");
+            if (!amount) return;
+            sendToAdmin({
+                type: 'TERMINAL_REQUESTS_PAYMENT',
+                amount: parseInt(amount),
+                terminal: 'Сбер Терминал #01'
+            });
+            alert('Запрос отправлен в панель управления (admin.html)');
+        }
+        
+        function sendStatusToAdmin(status) {
+            sendToAdmin({ type: 'TERMINAL_STATUS', status: status, time: new Date().toISOString() });
+        }
+        
+        window.onload = () => {
+            initBroadcast();
+            console.log('%cСбер NFC Терминал готов. Откройте admin.html для управления картами и отправки команд.', 'color:#22c55e;font-size:13px');
+        };
+    </script>
 </body>
 </html>
