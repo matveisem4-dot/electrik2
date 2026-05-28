@@ -3,186 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Сбер • NFC Терминал</title>
+    <title>Сбер • NFC Терминал (Web NFC)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
         .terminal-screen { background: linear-gradient(180deg, #0a120a, #111b11); }
-        .aid-badge { font-family: monospace; font-size: 13px; }
     </style>
 </head>
 <body class="bg-zinc-950 text-white">
-    <div class="max-w-md mx-auto min-h-screen bg-black border-x border-emerald-900 flex flex-col" style="box-shadow: 0 0 60px -10px rgb(16 185 129)">
-        <!-- Header -->
+    <div class="max-w-md mx-auto min-h-screen bg-black border-x border-emerald-900 flex flex-col">
         <div class="bg-emerald-600 text-black h-14 flex items-center px-6 font-semibold">
             <div class="flex-1 flex items-center gap-2">
                 <span class="text-3xl tracking-[-3px]">СБЕР</span>
-                <span class="text-xs bg-black/30 px-2.5 py-px rounded">PAY</span>
             </div>
-            <div class="text-xs text-right">
-                <div id="current-aid" class="aid-badge bg-black/20 px-4 py-1 rounded-3xl text-black">AID: A0000000031010</div>
+            <div id="aid-display" class="text-xs bg-black/30 px-4 py-1 rounded-3xl font-mono"></div>
+        </div>
+
+        <div id="main-screen" class="flex-1 flex flex-col p-8 terminal-screen">
+            <div id="status" class="text-center text-emerald-400 text-xs mb-6">ГОТОВ К ЧТЕНИЮ NFC</div>
+            
+            <div id="idle" class="flex-1 flex flex-col items-center justify-center">
+                <button onclick="readRealNFC()" 
+                        class="w-52 h-52 rounded-full border-8 border-emerald-400 flex items-center justify-center hover:scale-105 active:scale-95 transition-all mb-8">
+                    <div class="text-center">
+                        <i class="fa-solid fa-nfc-symbol text-8xl text-emerald-400"></i>
+                        <div class="text-xs mt-6 text-emerald-300">НАЖМИТЕ ДЛЯ ЧТЕНИЯ<br>РЕАЛЬНОЙ МЕТКИ</div>
+                    </div>
+                </button>
+                <button onclick="simulateNFC()" 
+                        class="text-xs px-8 py-4 border border-dashed border-zinc-400 text-zinc-400 rounded-3xl hover:text-white">
+                    Эмуляция (если NFC не работает)
+                </button>
+            </div>
+
+            <div id="reading" class="hidden flex-1 flex flex-col items-center justify-center">
+                <div class="animate-spin w-16 h-16 border-4 border-emerald-400 border-t-transparent rounded-full mb-8"></div>
+                <div class="text-xl">Сканирование NFC-метки...</div>
+                <div class="text-xs text-zinc-500 mt-8">Приложите метку или телефон</div>
+            </div>
+
+            <div id="success" class="hidden flex-1 flex flex-col items-center justify-center text-center">
+                <i class="fa-solid fa-check-circle text-8xl text-emerald-400 mb-6"></i>
+                <div id="success-text" class="text-2xl font-medium">Метка считана</div>
+                <div id="success-id" class="font-mono text-emerald-300 mt-4 text-sm"></div>
+                <button onclick="resetScreen()" class="mt-16 px-10 py-4 bg-emerald-500 text-black rounded-3xl text-sm font-medium">НОВОЕ ЧТЕНИЕ</button>
             </div>
         </div>
-        
-        <div id="main-screen" class="terminal-screen flex-1 flex flex-col p-8 relative">
-            <!-- Idle -->
-            <div id="idle" class="flex-1 flex flex-col items-center justify-center text-center">
-                <div class="w-24 h-24 rounded-3xl bg-white/10 flex items-center justify-center mb-10 border border-emerald-400/30">
-                    <i class="fa-solid fa-nfc-symbol text-7xl text-emerald-400"></i>
-                </div>
-                <div class="text-3xl font-medium text-emerald-400">Ожидание карты</div>
-                <div class="text-zinc-400 mt-3 max-w-[210px]">Приложите NFC-карту или телефон</div>
-                
-                <div onclick="simulateTap()" class="mt-20 text-xs flex items-center gap-4 border border-dashed border-emerald-500 hover:border-emerald-400 transition-colors rounded-3xl px-8 py-5 cursor-pointer">
-                    <i class="fa-solid fa-mobile-screen-button text-xl"></i>
-                    <div class="text-left leading-tight">
-                        <div class="font-medium text-emerald-300">ЭМУЛЯЦИЯ NFC</div>
-                        <div class="text-[10px]">Телефон / Метка</div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Payment screen -->
-            <div id="payment-screen" class="hidden flex-1 flex flex-col">
-                <div class="text-xs tracking-widest text-center text-amber-400 mb-8">ЗАПРОС ОПЛАТЫ</div>
-                <div id="pay-amount" class="text-center text-7xl font-light text-white">1250</div>
-                <div class="text-center text-zinc-400 text-sm">рублей</div>
-                
-                <div class="mt-auto bg-black/40 p-6 rounded-3xl text-sm">
-                    <div class="flex justify-between mb-4">
-                        <div class="text-zinc-400">Номер карты</div>
-                        <div id="pay-card" class="font-mono text-emerald-300">••••4242</div>
-                    </div>
-                    <div class="flex justify-between">
-                        <div class="text-zinc-400">AID терминала</div>
-                        <div id="pay-aid" class="font-mono text-amber-400">A0000000031010</div>
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4 mt-12">
-                    <button onclick="cancelTransaction()" class="py-6 text-sm border border-white/30 rounded-3xl">ОТМЕНА</button>
-                    <button onclick="approveTransaction()" class="py-6 text-sm bg-emerald-500 text-black font-semibold rounded-3xl">ПОДТВЕРДИТЬ</button>
-                </div>
-            </div>
-            
-            <!-- Success -->
-            <div id="success-screen" class="hidden flex-1 flex flex-col items-center justify-center">
-                <div class="w-28 h-28 bg-emerald-500 text-black rounded-3xl flex items-center justify-center mb-8">
-                    <i class="fa-solid fa-check text-7xl"></i>
-                </div>
-                <div class="text-emerald-400 text-4xl font-light" id="success-amt">1250 ₽</div>
-                <div class="text-zinc-400 mt-2">Операция одобрена</div>
-                <div onclick="resetToIdle()" class="mt-20 text-xs border border-emerald-500/30 hover:bg-emerald-900 px-10 py-4 rounded-3xl cursor-pointer">НОВОЕ СКАНИРОВАНИЕ</div>
-            </div>
-        </div>
-        
-        <div class="h-16 bg-zinc-900 flex items-center px-6 text-xs border-t border-emerald-900">
-            <input id="aid-input" placeholder="Введите AID для подключения" 
-                   class="flex-1 bg-transparent outline-none text-emerald-300 placeholder:text-zinc-600 text-sm font-mono" onkeypress="if(event.key==='Enter') connectWithAID()">
-            <button onclick="connectWithAID()" class="ml-4 bg-emerald-600 hover:bg-emerald-500 px-7 py-2 rounded-2xl text-black text-xs font-medium">ПОДКЛЮЧИТЬ</button>
+
+        <div class="p-4 bg-zinc-900 border-t border-emerald-900 text-xs flex gap-2">
+            <input id="aid-input" placeholder="AID терминала" class="flex-1 bg-zinc-800 rounded-2xl px-4 py-3 text-emerald-300 font-mono text-sm outline-none">
+            <button onclick="setAID()" class="bg-emerald-600 px-8 rounded-2xl text-black font-medium">УСТАНОВИТЬ</button>
         </div>
     </div>
-    
+
     <script>
         let currentAID = "A0000000031010";
-        let currentTransaction = {};
-        
+        document.getElementById('aid-display').textContent = currentAID;
+
         const channel = new BroadcastChannel('nfc-pos-channel');
-        
-        function updateAIDDisplay() {
-            document.getElementById('current-aid').textContent = "AID: " + currentAID;
+
+        async function readRealNFC() {
+            if (!('NDEFReader' in window)) {
+                alert("Web NFC не поддерживается в этом браузере.\n\nИспользуйте Android + Chrome.\n\nСейчас будет запущена эмуляция.");
+                simulateNFC();
+                return;
+            }
+
+            const readingScreen = document.getElementById('reading');
+            const idleScreen = document.getElementById('idle');
+            idleScreen.classList.add('hidden');
+            readingScreen.classList.remove('hidden');
+
+            try {
+                const ndef = new NDEFReader();
+                await ndef.scan();
+
+                ndef.onreading = event => {
+                    const record = event.message.records[0];
+                    let id = "UNKNOWN";
+                    if (record) {
+                        if (record.recordType === "text") {
+                            id = new TextDecoder().decode(record.data);
+                        } else {
+                            id = Array.from(new Uint8Array(record.data)).map(b => b.toString(16).padStart(2,'0')).join('').toUpperCase();
+                        }
+                    }
+
+                    readingScreen.classList.add('hidden');
+                    const successScreen = document.getElementById('success');
+                    successScreen.classList.remove('hidden');
+                    document.getElementById('success-id').textContent = "ID: " + id.slice(0,16);
+                    document.getElementById('success-text').textContent = "NFC-метка считана успешно";
+
+                    channel.postMessage({
+                        type: 'REAL_NFC_READ',
+                        id: id,
+                        aid: currentAID,
+                        timestamp: Date.now()
+                    });
+
+                    setTimeout(resetScreen, 3200);
+                };
+
+            } catch (err) {
+                readingScreen.classList.add('hidden');
+                idleScreen.classList.remove('hidden');
+                alert("Ошибка NFC: " + err.message + "\n\nУбедитесь, что NFC включён и сайт открыт по HTTPS.");
+            }
         }
-        
-        function simulateTap() {
+
+        function simulateNFC() {
+            const id = "04" + Math.floor(Math.random()*1000000000000).toString(16).toUpperCase();
             document.getElementById('idle').classList.add('hidden');
-            document.getElementById('success-screen').classList.remove('hidden');
-            setTimeout(() => {
-                addLogToAdmin("NFC Tap", "Эмуляция карты через телефон", "success");
-            }, 800);
+            const success = document.getElementById('success');
+            success.classList.remove('hidden');
+            document.getElementById('success-id').textContent = "ID: " + id;
+            document.getElementById('success-text').innerHTML = 'ЭМУЛЯЦИЯ<br><span class="text-emerald-400 text-sm">реальная метка не найдена</span>';
+
+            channel.postMessage({ type: 'REAL_NFC_READ', id: id, aid: currentAID, simulated: true });
         }
-        
-        function showPayment(amount, cardNumber, aid) {
-            document.getElementById('idle').classList.add('hidden');
-            document.getElementById('success-screen').classList.add('hidden');
-            const payScreen = document.getElementById('payment-screen');
-            payScreen.classList.remove('hidden');
-            
-            document.getElementById('pay-amount').textContent = amount;
-            document.getElementById('pay-card').textContent = "••••" + cardNumber.slice(-4);
-            document.getElementById('pay-aid').textContent = aid || currentAID;
-            
-            currentTransaction = { amount, cardNumber, aid };
-        }
-        
-        function approveTransaction() {
-            const payScreen = document.getElementById('payment-screen');
-            payScreen.classList.add('hidden');
-            document.getElementById('success-screen').classList.remove('hidden');
-            document.getElementById('success-amt').textContent = currentTransaction.amount + " ₽";
-            
-            channel.postMessage({
-                type: 'PAYMENT_SUCCESS',
-                amount: currentTransaction.amount,
-                owner: "Клиент",
-                aid: currentTransaction.aid || currentAID
-            });
-            
-            addLogToAdmin("Оплата одобрена", currentTransaction.amount + " ₽ • AID " + (currentTransaction.aid || currentAID), "success");
-        }
-        
-        function cancelTransaction() {
-            document.getElementById('payment-screen').classList.add('hidden');
-            document.getElementById('idle').classList.remove('hidden');
-            addLogToAdmin("Оплата отменена", "Пользователь отказался", "error");
-        }
-        
-        function resetToIdle() {
-            document.getElementById('success-screen').classList.add('hidden');
+
+        function resetScreen() {
+            document.getElementById('success').classList.add('hidden');
+            document.getElementById('reading').classList.add('hidden');
             document.getElementById('idle').classList.remove('hidden');
         }
-        
-        function connectWithAID() {
+
+        function setAID() {
             const input = document.getElementById('aid-input').value.trim();
-            if (!input) return;
-            currentAID = input;
-            updateAIDDisplay();
-            addLogToAdmin("Терминал подключён", "AID: " + currentAID, "system");
-            document.getElementById('aid-input').value = '';
-            
-            // Notify admin
-            channel.postMessage({ type: 'TERMINAL_CONNECTED', aid: currentAID });
-        }
-        
-        function addLogToAdmin(title, detail) {
-            channel.postMessage({ type: 'LOG', title, detail });
-        }
-        
-        channel.onmessage = (event) => {
-            const data = event.data;
-            if (data.type === 'PAYMENT_REQUEST' && (!data.aid || data.aid === currentAID)) {
-                showPayment(data.amount || 1250, data.cardNumber || "42424242", data.aid);
+            if (input) {
+                currentAID = input;
+                document.getElementById('aid-display').textContent = currentAID;
+                channel.postMessage({ type: 'TERMINAL_AID_SET', aid: currentAID });
             }
-            if (data.type === 'TERMINAL_CONNECT') {
-                if (data.aid) {
-                    currentAID = data.aid;
-                    updateAIDDisplay();
-                }
-            }
-        };
-        
+        }
+
         window.onload = () => {
-            updateAIDDisplay();
-            console.log('%cСбер NFC Терминал готов. Введите AID из панели управления для привязки.', 'color:#4ade80');
-            
-            // Demo
-            setTimeout(() => {
-                if (Math.random() > 0.5) {
-                    document.getElementById('idle').classList.add('hidden');
-                    document.getElementById('payment-screen').classList.remove('hidden');
-                    document.getElementById('pay-amount').textContent = '890';
-                }
-            }, 2200);
+            console.log("%cРеальный Web NFC активирован. Попробуй на Android Chrome с NFC-меткой.", "color:#10b981");
         };
     </script>
 </body>
