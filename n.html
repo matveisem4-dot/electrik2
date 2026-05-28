@@ -1,0 +1,2055 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NFC POS — Система управления картами</title>
+<style>
+  :root {
+    --bg-primary: #0a0e1a;
+    --bg-secondary: #111827;
+    --bg-card: #161d2e;
+    --bg-elevated: #1e2a40;
+    --border: #1f2d45;
+    --border-light: #2a3a55;
+    --blue: #3b82f6;
+    --blue-dark: #2563eb;
+    --blue-glow: rgba(59,130,246,0.18);
+    --green: #10b981;
+    --green-dark: #059669;
+    --green-glow: rgba(16,185,129,0.18);
+    --red: #ef4444;
+    --red-glow: rgba(239,68,68,0.15);
+    --yellow: #f59e0b;
+    --yellow-glow: rgba(245,158,11,0.15);
+    --purple: #8b5cf6;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #4b5563;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    --shadow-blue: 0 0 20px rgba(59,130,246,0.2);
+    --shadow-green: 0 0 20px rgba(16,185,129,0.2);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg-primary); }
+  ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; }
+
+  /* TOP NAV */
+  .topnav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,14,26,0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px; height: 60px;
+  }
+  .topnav-brand {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 17px; font-weight: 700; color: var(--text-primary);
+  }
+  .topnav-brand .logo-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--blue), var(--green));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .topnav-tabs {
+    display: flex; gap: 4px;
+  }
+  .tab-btn {
+    padding: 8px 18px; border-radius: var(--radius-sm);
+    border: none; cursor: pointer; font-size: 14px; font-weight: 600;
+    transition: all .2s; background: transparent; color: var(--text-secondary);
+  }
+  .tab-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .tab-btn.active {
+    background: var(--blue); color: #fff;
+    box-shadow: var(--shadow-blue);
+  }
+  .topnav-right {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .sys-time {
+    font-size: 13px; color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse-green 2s infinite;
+  }
+  @keyframes pulse-green {
+    0%,100%{box-shadow:0 0 4px var(--green);} 50%{box-shadow:0 0 12px var(--green);}
+  }
+
+  /* VIEWS */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* LAYOUT */
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px 16px; }
+
+  /* STATS ROW */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px; margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 16px;
+    position: relative; overflow: hidden; transition: transform .2s, border-color .2s;
+  }
+  .stat-card:hover { transform: translateY(-2px); border-color: var(--border-light); }
+  .stat-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    background: var(--accent, var(--blue));
+  }
+  .stat-card .stat-icon {
+    font-size: 22px; margin-bottom: 10px;
+  }
+  .stat-card .stat-val {
+    font-size: 28px; font-weight: 800; color: var(--text-primary);
+    line-height: 1;
+  }
+  .stat-card .stat-label {
+    font-size: 12px; color: var(--text-secondary); margin-top: 4px;
+    text-transform: uppercase; letter-spacing: .06em;
+  }
+  .stat-card .stat-trend {
+    font-size: 12px; margin-top: 8px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .trend-up { color: var(--green); }
+  .trend-dn { color: var(--red); }
+
+  /* GRID LAYOUT */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+  @media(max-width:900px) {
+    .grid-2,.grid-3 { grid-template-columns: 1fr; }
+  }
+
+  /* PANEL */
+  .panel {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden; margin-bottom: 16px;
+  }
+  .panel-header {
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-title {
+    font-size: 15px; font-weight: 700; color: var(--text-primary);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel-body { padding: 16px; }
+
+  /* BADGE */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+  }
+  .badge-green { background: var(--green-glow); color: var(--green); border: 1px solid rgba(16,185,129,.25); }
+  .badge-blue  { background: var(--blue-glow);  color: var(--blue);  border: 1px solid rgba(59,130,246,.25); }
+  .badge-red   { background: var(--red-glow);   color: var(--red);   border: 1px solid rgba(239,68,68,.25); }
+  .badge-yellow{ background: var(--yellow-glow);color: var(--yellow);border: 1px solid rgba(245,158,11,.25); }
+  .badge-gray  { background: rgba(75,85,99,.2); color: var(--text-secondary); border: 1px solid var(--border); }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 16px; border-radius: var(--radius-sm);
+    border: none; cursor: pointer; font-size: 13px; font-weight: 600;
+    transition: all .2s; text-decoration: none;
+  }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .btn-primary:hover { background: var(--blue-dark); box-shadow: var(--shadow-blue); }
+  .btn-success { background: var(--green); color: #fff; }
+  .btn-success:hover { background: var(--green-dark); box-shadow: var(--shadow-green); }
+  .btn-danger  { background: var(--red); color: #fff; }
+  .btn-danger:hover { opacity: .85; }
+  .btn-ghost {
+    background: var(--bg-elevated); color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { color: var(--text-primary); border-color: var(--border-light); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-xs { padding: 4px 9px; font-size: 11px; border-radius: 6px; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* TABLE */
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--bg-elevated); }
+  th {
+    padding: 11px 14px; text-align: left;
+    color: var(--text-secondary); font-weight: 600;
+    font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,.02); }
+  .mono { font-family: 'Courier New', monospace; font-size: 12px; color: var(--blue); }
+
+  /* TERMINAL CARDS */
+  .term-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;
+  }
+  .term-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px; position: relative;
+    overflow: hidden; transition: all .2s; cursor: pointer;
+  }
+  .term-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--border-light); }
+  .term-card.payment-mode {
+    border-color: var(--green);
+    box-shadow: 0 0 24px rgba(16,185,129,0.2);
+  }
+  .term-card.payment-mode::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    background: linear-gradient(90deg, var(--green), var(--blue));
+  }
+  .term-card.offline { opacity: .6; }
+  .term-card-head {
+    display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;
+  }
+  .term-card-id {
+    font-size: 12px; color: var(--text-muted);
+    font-family: 'Courier New', monospace;
+  }
+  .term-card-name {
+    font-size: 16px; font-weight: 700; margin-bottom: 2px;
+  }
+  .term-card-loc {
+    font-size: 12px; color: var(--text-secondary);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .term-card-stats {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px;
+  }
+  .term-stat {
+    background: var(--bg-elevated); border-radius: var(--radius-sm);
+    padding: 8px; text-align: center;
+  }
+  .term-stat-val { font-size: 18px; font-weight: 700; }
+  .term-stat-lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-top: 2px; }
+  .term-actions { display: flex; gap: 6px; margin-top: 14px; flex-wrap: wrap; }
+
+  /* NFC CARD ITEMS */
+  .nfc-card-item {
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 8px; transition: all .2s;
+  }
+  .nfc-card-item:hover { border-color: var(--border-light); }
+  .nfc-icon {
+    width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; background: var(--bg-card);
+  }
+  .nfc-info { flex: 1; min-width: 0; }
+  .nfc-name { font-size: 14px; font-weight: 600; }
+  .nfc-uid { font-family: monospace; font-size: 11px; color: var(--blue); margin-top: 2px; }
+  .nfc-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* FORM */
+  .form-group { margin-bottom: 14px; }
+  .form-label {
+    display: block; font-size: 12px; font-weight: 600;
+    color: var(--text-secondary); margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .form-input {
+    width: 100%; background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 14px; color: var(--text-primary); font-size: 14px;
+    outline: none; transition: border-color .2s;
+  }
+  .form-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-glow); }
+  .form-input::placeholder { color: var(--text-muted); }
+  .form-select {
+    width: 100%; background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 10px 14px; color: var(--text-primary); font-size: 14px;
+    outline: none; cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 10L3 5h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center; background-size: 16px;
+  }
+  .form-select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-glow); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media(max-width:600px){ .form-row { grid-template-columns: 1fr; } }
+
+  /* NFC SCAN ZONE */
+  .nfc-scan-zone {
+    border: 2px dashed var(--border-light); border-radius: var(--radius);
+    padding: 28px 20px; text-align: center; transition: all .3s; cursor: pointer;
+    position: relative; overflow: hidden;
+  }
+  .nfc-scan-zone:hover, .nfc-scan-zone.scanning {
+    border-color: var(--blue); background: var(--blue-glow);
+  }
+  .nfc-scan-zone.success {
+    border-color: var(--green); background: var(--green-glow);
+  }
+  .nfc-scan-zone.error {
+    border-color: var(--red); background: var(--red-glow);
+  }
+  .nfc-scan-icon { font-size: 40px; margin-bottom: 10px; }
+  .nfc-scan-text { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+  .nfc-scan-sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+  .nfc-result-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--bg-elevated); border: 1px solid var(--border-light);
+    border-radius: 20px; padding: 8px 16px; margin-top: 12px;
+    font-family: monospace; font-size: 14px; font-weight: 700; color: var(--blue);
+  }
+
+  /* PULSE RING */
+  @keyframes ring {
+    0%  { transform: scale(.8); opacity: 1; }
+    100%{ transform: scale(2); opacity: 0; }
+  }
+  .pulse-ring {
+    position: absolute; top: 50%; left: 50%;
+    width: 60px; height: 60px; margin: -30px 0 0 -30px;
+    border: 2px solid var(--blue); border-radius: 50%;
+    animation: ring 1.5s ease-out infinite;
+    pointer-events: none;
+  }
+
+  /* EVENTS LOG */
+  .event-log { max-height: 320px; overflow-y: auto; }
+  .event-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .event-item:last-child { border-bottom: none; }
+  .event-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    margin-top: 5px;
+  }
+  .event-time { font-size: 11px; color: var(--text-muted); min-width: 55px; font-variant-numeric: tabular-nums; }
+  .event-text { font-size: 13px; flex: 1; }
+  .event-tag { font-size: 11px; color: var(--text-muted); }
+
+  /* PAYMENT MODE OVERLAY */
+  .payment-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,.85); backdrop-filter: blur(6px);
+    flex-direction: column; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .payment-overlay.active { display: flex; }
+  .payment-modal {
+    background: var(--bg-card); border: 1px solid var(--green);
+    border-radius: 20px; padding: 32px 28px; width: 100%;
+    max-width: 420px; text-align: center; position: relative;
+    box-shadow: 0 0 40px rgba(16,185,129,.3);
+  }
+  .payment-nfc-icon {
+    width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 20px;
+    background: linear-gradient(135deg, var(--green), var(--blue));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px; position: relative;
+  }
+  .payment-ring1, .payment-ring2 {
+    position: absolute; inset: -10px; border-radius: 50%;
+    border: 2px solid var(--green); opacity: .4;
+    animation: ring 2s ease-out infinite;
+  }
+  .payment-ring2 { animation-delay: .7s; }
+  .payment-amount { font-size: 42px; font-weight: 900; color: var(--green); margin: 10px 0; }
+  .payment-label { font-size: 14px; color: var(--text-secondary); }
+  .payment-status { font-size: 16px; font-weight: 700; margin-top: 12px; }
+  .payment-card-info {
+    background: var(--bg-elevated); border-radius: var(--radius-sm);
+    padding: 12px; margin-top: 16px; text-align: left;
+  }
+  .payment-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .payment-actions .btn { flex: 1; justify-content: center; }
+  .payment-result {
+    padding: 14px; border-radius: var(--radius-sm); margin-top: 16px;
+    font-weight: 700; font-size: 16px; text-align: center;
+    display: none;
+  }
+  .payment-result.show { display: block; }
+  .payment-result.ok { background: var(--green-glow); color: var(--green); border: 1px solid var(--green); }
+  .payment-result.fail { background: var(--red-glow); color: var(--red); border: 1px solid var(--red); }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 150;
+    background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: var(--bg-card); border: 1px solid var(--border-light);
+    border-radius: 16px; width: 100%; max-width: 480px; max-height: 90vh;
+    overflow-y: auto; box-shadow: var(--shadow);
+  }
+  .modal-header {
+    padding: 18px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title { font-size: 16px; font-weight: 700; }
+  .modal-close {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--bg-elevated); border: none; cursor: pointer;
+    color: var(--text-secondary); font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .2s;
+  }
+  .modal-close:hover { background: var(--red-glow); color: var(--red); }
+  .modal-body { padding: 20px; }
+  .modal-footer {
+    padding: 16px 20px; border-top: 1px solid var(--border);
+    display: flex; gap: 10px; justify-content: flex-end;
+  }
+
+  /* PROGRESS BAR */
+  .progress-bar-wrap {
+    background: var(--bg-elevated); border-radius: 4px;
+    height: 6px; overflow: hidden; margin-top: 8px;
+  }
+  .progress-bar-fill {
+    height: 100%; border-radius: 4px;
+    background: linear-gradient(90deg, var(--blue), var(--green));
+    transition: width .5s ease;
+  }
+
+  /* TOAST */
+  #toast-container {
+    position: fixed; bottom: 20px; right: 20px; z-index: 999;
+    display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+  }
+  .toast {
+    background: var(--bg-elevated); border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm); padding: 12px 16px;
+    font-size: 13px; box-shadow: var(--shadow);
+    display: flex; align-items: center; gap: 10px;
+    animation: toast-in .3s ease;
+    pointer-events: all;
+    max-width: 300px;
+  }
+  @keyframes toast-in {
+    from { transform: translateX(40px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+  .toast.hiding { animation: toast-out .3s ease forwards; }
+  @keyframes toast-out {
+    to { transform: translateX(40px); opacity: 0; }
+  }
+  .toast-success { border-left: 3px solid var(--green); }
+  .toast-error   { border-left: 3px solid var(--red); }
+  .toast-info    { border-left: 3px solid var(--blue); }
+  .toast-warn    { border-left: 3px solid var(--yellow); }
+
+  /* CASHIER VIEW */
+  .cashier-layout {
+    display: grid; grid-template-columns: 1fr 340px; gap: 16px;
+    align-items: start;
+  }
+  @media(max-width:900px){ .cashier-layout { grid-template-columns: 1fr; } }
+
+  .product-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(130px,1fr)); gap: 10px;
+  }
+  .product-btn {
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 14px 10px; cursor: pointer;
+    text-align: center; transition: all .2s; color: var(--text-primary);
+  }
+  .product-btn:hover { border-color: var(--blue); background: var(--blue-glow); }
+  .product-btn .p-icon { font-size: 26px; margin-bottom: 6px; }
+  .product-btn .p-name { font-size: 12px; font-weight: 600; }
+  .product-btn .p-price { font-size: 13px; color: var(--green); font-weight: 700; margin-top: 2px; }
+
+  .cart-wrap {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+    position: sticky; top: 80px;
+  }
+  .cart-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+  }
+  .cart-item-name { flex: 1; font-size: 13px; }
+  .cart-item-qty {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .qty-btn {
+    width: 24px; height: 24px; border-radius: 6px;
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    color: var(--text-primary); cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+  }
+  .qty-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .cart-total {
+    padding: 14px; border-top: 1px solid var(--border);
+    font-size: 22px; font-weight: 800;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .cart-total .amount { color: var(--green); }
+
+  /* SWITCH TOGGLE */
+  .toggle-wrap { display: flex; align-items: center; gap: 10px; }
+  .toggle {
+    width: 44px; height: 24px; border-radius: 12px;
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    position: relative; cursor: pointer; transition: background .2s;
+    flex-shrink: 0;
+  }
+  .toggle.on { background: var(--green); border-color: var(--green); }
+  .toggle::after {
+    content:''; position:absolute; top: 2px; left: 2px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #fff; transition: transform .2s;
+  }
+  .toggle.on::after { transform: translateX(20px); }
+
+  /* SECTION HEADER */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+  }
+  .section-title { font-size: 18px; font-weight: 800; }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+  /* CHIP */
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 10px; font-size: 12px;
+  }
+
+  /* HELPER */
+  .flex { display: flex; }
+  .items-center { align-items: center; }
+  .gap-8 { gap: 8px; }
+  .gap-12 { gap: 12px; }
+  .mt-8 { margin-top: 8px; }
+  .mt-12 { margin-top: 12px; }
+  .mt-16 { margin-top: 16px; }
+  .mb-16 { margin-bottom: 16px; }
+  .text-sm { font-size: 13px; }
+  .text-xs { font-size: 11px; }
+  .text-muted { color: var(--text-secondary); }
+  .text-green { color: var(--green); }
+  .text-blue { color: var(--blue); }
+  .text-red { color: var(--red); }
+  .fw-700 { font-weight: 700; }
+  .w-full { width: 100%; }
+  .text-center { text-align: center; }
+  .hidden { display: none; }
+
+  @media(max-width:480px){
+    .topnav-tabs { display: none; }
+    .mobile-tabs {
+      display: flex; overflow-x: auto; gap: 6px; padding: 10px 16px;
+      border-bottom: 1px solid var(--border); background: var(--bg-secondary);
+    }
+    .mobile-tabs .tab-btn { white-space: nowrap; }
+  }
+  @media(min-width:481px){ .mobile-tabs { display: none; } }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="topnav">
+  <div class="topnav-brand">
+    <div class="logo-icon">⬡</div>
+    <span>NFC<span style="color:var(--blue)">POS</span></span>
+  </div>
+  <div class="topnav-tabs">
+    <button class="tab-btn active" onclick="switchView('dashboard')">📊 Дашборд</button>
+    <button class="tab-btn" onclick="switchView('terminals')">🖥 Терминалы</button>
+    <button class="tab-btn" onclick="switchView('cards')">💳 Карты</button>
+    <button class="tab-btn" onclick="switchView('cashier')">🧾 Касса</button>
+  </div>
+  <div class="topnav-right">
+    <div class="status-dot" title="Система онлайн"></div>
+    <span class="sys-time" id="sysTime">--:--:--</span>
+  </div>
+</nav>
+<div class="mobile-tabs">
+  <button class="tab-btn active" onclick="switchView('dashboard')">📊 Дашборд</button>
+  <button class="tab-btn" onclick="switchView('terminals')">🖥 Терминалы</button>
+  <button class="tab-btn" onclick="switchView('cards')">💳 Карты</button>
+  <button class="tab-btn" onclick="switchView('cashier')">🧾 Касса</button>
+</div>
+
+<!-- ══════════════════ VIEW: DASHBOARD ══════════════════ -->
+<div class="view active" id="view-dashboard">
+<div class="container">
+
+  <div class="stats-row">
+    <div class="stat-card" style="--accent:var(--blue)">
+      <div class="stat-icon">🖥</div>
+      <div class="stat-val" id="st-terminals">4</div>
+      <div class="stat-label">Терминалов</div>
+      <div class="stat-trend trend-up">▲ 1 за сегодня</div>
+    </div>
+    <div class="stat-card" style="--accent:var(--green)">
+      <div class="stat-icon">💳</div>
+      <div class="stat-val" id="st-cards">12</div>
+      <div class="stat-label">NFC-карт</div>
+      <div class="stat-trend trend-up">▲ 3 за неделю</div>
+    </div>
+    <div class="stat-card" style="--accent:var(--purple)">
+      <div class="stat-icon">✅</div>
+      <div class="stat-val" id="st-txns">247</div>
+      <div class="stat-label">Транзакций</div>
+      <div class="stat-trend trend-up">▲ 18 сегодня</div>
+    </div>
+    <div class="stat-card" style="--accent:var(--yellow)">
+      <div class="stat-icon">💰</div>
+      <div class="stat-val" id="st-revenue">83.4к</div>
+      <div class="stat-label">Выручка (₽)</div>
+      <div class="stat-trend trend-up">▲ 12% к вчера</div>
+    </div>
+    <div class="stat-card" style="--accent:var(--red)">
+      <div class="stat-icon">⚡</div>
+      <div class="stat-val" id="st-active">3</div>
+      <div class="stat-label">Активны сейчас</div>
+      <div class="stat-trend">из 4 терминалов</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <!-- TERMINAL STATUS -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">🖥 Статус терминалов</span>
+        <button class="btn btn-primary btn-sm" onclick="switchView('terminals')">Все терминалы</button>
+      </div>
+      <div class="panel-body" style="padding:0">
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Терминал</th><th>Статус</th><th>Режим</th><th>Транз.</th><th>Действие</th>
+            </tr></thead>
+            <tbody id="dash-terminal-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- EVENT LOG -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">📋 Лог событий</span>
+        <button class="btn btn-ghost btn-sm" onclick="clearEvents()">Очистить</button>
+      </div>
+      <div class="panel-body" style="padding:8px 14px">
+        <div class="event-log" id="eventLog"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECENT CARDS -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">💳 Недавние карты</span>
+      <button class="btn btn-primary btn-sm" onclick="switchView('cards')">Все карты</button>
+    </div>
+    <div class="panel-body" style="padding:0">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Владелец</th><th>UID (NFC)</th><th>Баланс</th><th>Терминал</th><th>Статус</th><th>Последнее</th>
+          </tr></thead>
+          <tbody id="dash-cards-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════ VIEW: TERMINALS ══════════════════ -->
+<div class="view" id="view-terminals">
+<div class="container">
+
+  <div class="section-header">
+    <div class="section-title">🖥 Терминалы</div>
+    <div class="flex gap-8">
+      <button class="btn btn-ghost btn-sm" onclick="openModal('modal-add-terminal')">＋ Добавить</button>
+      <button class="btn btn-primary btn-sm" onclick="refreshTerminals()">↺ Обновить</button>
+    </div>
+  </div>
+
+  <div class="term-grid" id="terminalGrid"></div>
+
+</div>
+</div>
+
+<!-- ══════════════════ VIEW: CARDS ══════════════════ -->
+<div class="view" id="view-cards">
+<div class="container">
+
+  <div class="section-header">
+    <div class="section-title">💳 NFC-карты</div>
+    <div class="flex gap-8">
+      <button class="btn btn-ghost btn-sm" onclick="openModal('modal-register-card')">＋ Выпустить карту</button>
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-bind-nfc')">📡 Привязать NFC</button>
+    </div>
+  </div>
+
+  <!-- NFC Reader Banner -->
+  <div class="panel mb-16" id="nfcReaderPanel">
+    <div class="panel-header">
+      <span class="panel-title">📡 NFC-сканер</span>
+      <span id="nfcSupportBadge"></span>
+    </div>
+    <div class="panel-body">
+      <div class="grid-2">
+        <div>
+          <div class="nfc-scan-zone" id="nfcScanZone" onclick="startNfcScan()">
+            <div class="nfc-scan-icon">📲</div>
+            <div class="nfc-scan-text" id="nfcScanText">Нажмите для сканирования</div>
+            <div class="nfc-scan-sub" id="nfcScanSub">Поднесите NFC-карту или метку к телефону</div>
+            <div id="nfcScanResult"></div>
+          </div>
+          <div class="mt-8 text-xs text-muted text-center">
+            Поддержка: Android Chrome ≥89, NFC-телефон или USB-ридер
+          </div>
+        </div>
+        <div>
+          <div class="form-group">
+            <label class="form-label">Ручной ввод UID</label>
+            <input type="text" class="form-input" id="manualUid" placeholder="04:AB:CD:EF:12:34:56" maxlength="23">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Тип записи</label>
+            <select class="form-select" id="nfcRecordType">
+              <option value="iso14443a">ISO 14443-A (MIFARE)</option>
+              <option value="iso14443b">ISO 14443-B</option>
+              <option value="felica">FeliCa</option>
+              <option value="iso15693">ISO 15693</option>
+            </select>
+          </div>
+          <button class="btn btn-primary w-full" onclick="bindManualNfc()">📡 Привязать по UID</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARDS TABLE -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Все карты <span class="chip" id="cardsCount">0 шт.</span></span>
+      <div class="flex gap-8">
+        <input type="text" class="form-input" id="cardSearch" placeholder="🔍 Поиск..." style="width:180px;padding:7px 12px;font-size:13px" oninput="filterCards()">
+      </div>
+    </div>
+    <div class="panel-body" style="padding:0">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Владелец</th><th>UID (NFC)</th><th>Тип</th><th>Баланс</th>
+            <th>Лимит</th><th>Привязан к</th><th>Статус</th><th>Действия</th>
+          </tr></thead>
+          <tbody id="cardsTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════ VIEW: CASHIER ══════════════════ -->
+<div class="view" id="view-cashier">
+<div class="container">
+
+  <div class="section-header">
+    <div class="section-title">🧾 Касса</div>
+    <div class="flex items-center gap-12">
+      <div>
+        <label class="form-label" style="margin-bottom:4px">Активный терминал</label>
+        <select class="form-select" id="cashierTerminal" style="width:200px;padding:8px 12px" onchange="updateCashierTerminal()"></select>
+      </div>
+      <div id="cashierTermStatus"></div>
+    </div>
+  </div>
+
+  <div class="cashier-layout">
+    <!-- LEFT: PRODUCTS -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">🛒 Товары</span>
+          <div class="flex gap-8">
+            <select class="form-select" id="productCategory" style="width:140px;padding:7px 12px;font-size:13px" onchange="renderProducts()">
+              <option value="all">Все</option>
+              <option value="food">Еда</option>
+              <option value="drink">Напитки</option>
+              <option value="service">Услуги</option>
+            </select>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="product-grid" id="productGrid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: CART -->
+    <div class="cart-wrap">
+      <div class="panel-header">
+        <span class="panel-title">🧾 Чек</span>
+        <button class="btn btn-ghost btn-xs" onclick="clearCart()">Очистить</button>
+      </div>
+      <div id="cartItems"></div>
+      <div class="cart-total">
+        <span class="text-muted text-sm">Итого:</span>
+        <span class="amount" id="cartTotal">0 ₽</span>
+      </div>
+      <div style="padding:0 14px 14px">
+        <div class="form-group">
+          <label class="form-label">Карта клиента</label>
+          <select class="form-select" id="paymentCard">
+            <option value="">— NFC сканирование —</option>
+          </select>
+        </div>
+        <button class="btn btn-success w-full" style="justify-content:center;font-size:15px;padding:14px" onclick="initiatePayment()">
+          📲 Оплата NFC
+        </button>
+        <button class="btn btn-ghost w-full mt-8" style="justify-content:center" onclick="initiateCash()">
+          💵 Наличные
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════ PAYMENT OVERLAY ══════════════════ -->
+<div class="payment-overlay" id="paymentOverlay">
+  <div class="payment-modal">
+    <button class="modal-close" style="position:absolute;top:14px;right:14px" onclick="closePayment()">✕</button>
+    <div class="payment-nfc-icon" id="payNfcIcon">
+      <div class="payment-ring1"></div>
+      <div class="payment-ring2"></div>
+      📲
+    </div>
+    <div class="payment-label">К оплате</div>
+    <div class="payment-amount" id="payAmount">0 ₽</div>
+    <div class="payment-status" id="payStatus">Ожидание NFC-карты...</div>
+    <div class="payment-card-info" id="payCardInfo" style="display:none">
+      <div class="text-xs text-muted mb-16" style="margin-bottom:4px">Карта:</div>
+      <div class="flex items-center gap-8">
+        <span style="font-size:22px">💳</span>
+        <div>
+          <div class="fw-700" id="payCardName">—</div>
+          <div class="mono" id="payCardUid">—</div>
+        </div>
+        <div style="margin-left:auto">
+          <div class="text-xs text-muted">Баланс</div>
+          <div class="fw-700 text-green" id="payCardBalance">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="payment-actions">
+      <button class="btn btn-success" id="payConfirmBtn" onclick="confirmPayment()" disabled>✔ Подтвердить</button>
+      <button class="btn btn-danger" onclick="closePayment()">✕ Отмена</button>
+    </div>
+    <div class="payment-result" id="payResult"></div>
+    <div style="margin-top:14px">
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="payProgress" style="width:0%"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODALS ══════════════════ -->
+
+<!-- Add Terminal -->
+<div class="modal-overlay" id="modal-add-terminal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">🖥 Новый терминал</span>
+      <button class="modal-close" onclick="closeModal('modal-add-terminal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Название терминала</label>
+          <input type="text" class="form-input" id="newTermName" placeholder="Касса №5">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ID терминала</label>
+          <input type="text" class="form-input" id="newTermId" placeholder="TERM-005" readonly>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Местоположение</label>
+        <input type="text" class="form-input" id="newTermLoc" placeholder="Зал А, стойка 2">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Тип</label>
+          <select class="form-select" id="newTermType">
+            <option value="pos">POS-терминал</option>
+            <option value="kiosk">Киоск</option>
+            <option value="mobile">Мобильный</option>
+            <option value="gate">Турникет/Вход</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">NFC-интерфейс</label>
+          <select class="form-select" id="newTermNfc">
+            <option value="built-in">Встроенный</option>
+            <option value="usb">USB-ридер</option>
+            <option value="external">Внешний</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Дневной лимит (₽)</label>
+        <input type="number" class="form-input" id="newTermLimit" placeholder="100000">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-terminal')">Отмена</button>
+      <button class="btn btn-primary" onclick="addTerminal()">Создать терминал</button>
+    </div>
+  </div>
+</div>
+
+<!-- Register Card -->
+<div class="modal-overlay" id="modal-register-card">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">💳 Выпуск новой карты</span>
+      <button class="modal-close" onclick="closeModal('modal-register-card')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Владелец</label>
+          <input type="text" class="form-input" id="newCardOwner" placeholder="Иван Иванов">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Телефон</label>
+          <input type="tel" class="form-input" id="newCardPhone" placeholder="+7 999 000 00 00">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">UID карты (NFC)</label>
+        <div class="flex gap-8">
+          <input type="text" class="form-input" id="newCardUid" placeholder="04:AB:CD:EF:12:34:56" style="flex:1">
+          <button class="btn btn-ghost" onclick="generateUid()">🎲 Авто</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Тип карты</label>
+          <select class="form-select" id="newCardType">
+            <option value="standard">Стандартная</option>
+            <option value="premium">Премиум</option>
+            <option value="corporate">Корпоративная</option>
+            <option value="guest">Гостевая</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Начальный баланс (₽)</label>
+          <input type="number" class="form-input" id="newCardBalance" value="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Лимит на транзакцию (₽)</label>
+        <input type="number" class="form-input" id="newCardLimit" value="5000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Привязать к терминалу</label>
+        <select class="form-select" id="newCardTerminal">
+          <option value="">— Все терминалы —</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-register-card')">Отмена</button>
+      <button class="btn btn-success" onclick="registerCard()">Выпустить карту</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bind NFC -->
+<div class="modal-overlay" id="modal-bind-nfc">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">📡 Привязка NFC к карте</span>
+      <button class="modal-close" onclick="closeModal('modal-bind-nfc')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="nfc-scan-zone" id="bindScanZone" onclick="startBindScan()">
+        <div class="nfc-scan-icon">📡</div>
+        <div class="nfc-scan-text" id="bindScanText">Нажмите — поднесите метку</div>
+        <div class="nfc-scan-sub">Поддерживается Web NFC API (Android Chrome)</div>
+        <div id="bindScanResult"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="form-group">
+        <label class="form-label">UID для привязки</label>
+        <input type="text" class="form-input" id="bindUid" placeholder="Отсканируйте или введите UID">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Выберите карту</label>
+        <select class="form-select" id="bindCardSelect"></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-bind-nfc')">Отмена</button>
+      <button class="btn btn-primary" onclick="bindNfcToCard()">Привязать</button>
+    </div>
+  </div>
+</div>
+
+<!-- Terminal Detail -->
+<div class="modal-overlay" id="modal-terminal-detail">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-header">
+      <span class="modal-title" id="termDetailTitle">Терминал</span>
+      <button class="modal-close" onclick="closeModal('modal-terminal-detail')">✕</button>
+    </div>
+    <div class="modal-body" id="termDetailBody"></div>
+    <div class="modal-footer" id="termDetailFooter"></div>
+  </div>
+</div>
+
+<!-- Card Detail -->
+<div class="modal-overlay" id="modal-card-detail">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="cardDetailTitle">Карта</span>
+      <button class="modal-close" onclick="closeModal('modal-card-detail')">✕</button>
+    </div>
+    <div class="modal-body" id="cardDetailBody"></div>
+    <div class="modal-footer" id="cardDetailFooter"></div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
+const state = {
+  currentView: 'dashboard',
+  terminals: [
+    { id:'TERM-001', name:'Касса №1 (Главная)', loc:'Зал А', type:'pos', nfc:'built-in', status:'online', mode:'idle', txns:84, revenue:28400, limit:200000, daily:28400 },
+    { id:'TERM-002', name:'Касса №2 (Бар)',     loc:'Бар',   type:'pos', nfc:'built-in', status:'online', mode:'idle', txns:63, revenue:21300, limit:150000, daily:21300 },
+    { id:'TERM-003', name:'Киоск (Вход)',        loc:'Холл',  type:'kiosk',nfc:'external',status:'online', mode:'idle', txns:71, revenue:17800, limit:100000, daily:17800 },
+    { id:'TERM-004', name:'Мобильный',           loc:'Склад', type:'mobile',nfc:'usb',  status:'offline',mode:'idle', txns:29, revenue:15900, limit:50000, daily:15900 },
+  ],
+  cards: [
+    { id:'CARD-001', owner:'Алексей Соколов',  phone:'+7 916 123-45-67', uid:'04:A1:B2:C3:D4:E5:F6', type:'premium',   balance:12500, limit:10000, terminal:'', status:'active',  lastUsed:'14:32' },
+    { id:'CARD-002', owner:'Мария Петрова',    phone:'+7 903 987-65-43', uid:'04:F1:E2:D3:C4:B5:A6', type:'standard',  balance:3200,  limit:5000,  terminal:'TERM-001', status:'active',  lastUsed:'13:15' },
+    { id:'CARD-003', owner:'Иван Сидоров',     phone:'+7 925 111-22-33', uid:'04:11:22:33:44:55:66', type:'corporate',  balance:50000, limit:20000, terminal:'TERM-002', status:'active',  lastUsed:'12:58' },
+    { id:'CARD-004', owner:'Анна Козлова',     phone:'+7 977 444-55-66', uid:'04:AA:BB:CC:DD:EE:FF', type:'standard',  balance:800,   limit:5000,  terminal:'', status:'active',  lastUsed:'11:44' },
+    { id:'CARD-005', owner:'Дмитрий Новиков',  phone:'+7 901 777-88-99', uid:'04:12:34:56:78:9A:BC', type:'guest',     balance:500,   limit:1000,  terminal:'TERM-003', status:'active',  lastUsed:'10:21' },
+    { id:'CARD-006', owner:'Ольга Морозова',   phone:'+7 915 222-33-44', uid:'04:DE:AD:BE:EF:00:01', type:'standard',  balance:0,     limit:5000,  terminal:'', status:'blocked', lastUsed:'09:05' },
+    { id:'CARD-007', owner:'Сергей Лебедев',   phone:'+7 999 000-11-22', uid:'',                     type:'standard',  balance:1500,  limit:5000,  terminal:'', status:'unbound', lastUsed:'—' },
+    { id:'CARD-008', owner:'Тестовая метка',   phone:'—',                uid:'04:NF:CT:AG:00:00:01', type:'guest',     balance:100,   limit:500,   terminal:'TERM-001', status:'active', lastUsed:'15:00' },
+  ],
+  events: [],
+  cart: [],
+  cashierTerminalId: 'TERM-001',
+  activePayment: null,
+  nfcReader: null,
+  scanController: null,
+};
+
+const PRODUCTS = [
+  { id:1, name:'Кофе',      price:180,  icon:'☕', cat:'drink' },
+  { id:2, name:'Чай',       price:120,  icon:'🍵', cat:'drink' },
+  { id:3, name:'Сэндвич',   price:250,  icon:'🥪', cat:'food'  },
+  { id:4, name:'Круассан',  price:190,  icon:'🥐', cat:'food'  },
+  { id:5, name:'Сок',       price:150,  icon:'🧃', cat:'drink' },
+  { id:6, name:'Пицца',     price:650,  icon:'🍕', cat:'food'  },
+  { id:7, name:'Салат',     price:320,  icon:'🥗', cat:'food'  },
+  { id:8, name:'Вода',      price:80,   icon:'💧', cat:'drink' },
+  { id:9, name:'Доставка',  price:500,  icon:'📦', cat:'service'},
+  { id:10,name:'Упаковка',  price:50,   icon:'🎁', cat:'service'},
+  { id:11,name:'Десерт',    price:280,  icon:'🍰', cat:'food'  },
+  { id:12,name:'Смузи',     price:350,  icon:'🥤', cat:'drink' },
+];
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
+function init() {
+  updateClock();
+  setInterval(updateClock, 1000);
+  generateTerminalIds();
+  renderAll();
+  addEvent('info', 'Система NFC POS запущена', 'SYS');
+  addEvent('info', 'NFC Web API: ' + (('NDEFReader' in window) ? 'Доступен' : 'Недоступен в этом браузере'), 'NFC');
+  checkNfcSupport();
+  setInterval(simulateLiveEvents, 8000);
+}
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById('sysTime').textContent =
+    now.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+function generateTerminalIds() {
+  const nextId = 'TERM-' + String(state.terminals.length + 1).padStart(3,'0');
+  const el = document.getElementById('newTermId');
+  if(el) el.value = nextId;
+}
+
+function renderAll() {
+  renderDashboard();
+  renderTerminals();
+  renderCards();
+  renderCashier();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  VIEW SWITCHING
+// ═══════════════════════════════════════════════════════════════
+function switchView(name) {
+  state.currentView = name;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    if(b.textContent.toLowerCase().includes(name.slice(0,4))) b.classList.add('active');
+  });
+  if(name==='dashboard') renderDashboard();
+  if(name==='terminals') renderTerminals();
+  if(name==='cards') renderCards();
+  if(name==='cashier') renderCashier();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+function renderDashboard() {
+  document.getElementById('st-terminals').textContent = state.terminals.length;
+  document.getElementById('st-cards').textContent = state.cards.length;
+  document.getElementById('st-active').textContent = state.terminals.filter(t=>t.status==='online').length;
+
+  // Terminal table
+  const tbody = document.getElementById('dash-terminal-table');
+  tbody.innerHTML = state.terminals.map(t => `
+    <tr>
+      <td>
+        <div class="fw-700">${t.name}</div>
+        <div class="text-xs text-muted">${t.id} · ${t.loc}</div>
+      </td>
+      <td>${statusBadge(t.status)}</td>
+      <td>${modeBadge(t.mode)}</td>
+      <td class="fw-700">${t.txns}</td>
+      <td>
+        ${t.status==='online' ? `<button class="btn btn-success btn-xs" onclick="quickPayMode('${t.id}')">💳 Режим оплаты</button>` : '<span class="text-muted text-xs">Офлайн</span>'}
+      </td>
+    </tr>
+  `).join('');
+
+  // Cards table
+  const ctbody = document.getElementById('dash-cards-table');
+  ctbody.innerHTML = state.cards.slice(0,6).map(c => `
+    <tr>
+      <td>
+        <div class="fw-700">${c.owner}</div>
+        <div class="text-xs text-muted">${c.phone}</div>
+      </td>
+      <td><span class="mono">${c.uid || '<span class="text-muted">не привязан</span>'}</span></td>
+      <td><span class="badge badge-gray">${cardTypeLabel(c.type)}</span></td>
+      <td class="fw-700 text-green">${fmtMoney(c.balance)}</td>
+      <td>${c.terminal ? `<span class="chip">${c.terminal}</span>` : '<span class="text-muted">—</span>'}</td>
+      <td>${cardStatusBadge(c.status)}</td>
+      <td class="text-muted text-xs">${c.lastUsed}</td>
+    </tr>
+  `).join('');
+
+  renderEventLog();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TERMINALS
+// ═══════════════════════════════════════════════════════════════
+function renderTerminals() {
+  const grid = document.getElementById('terminalGrid');
+  grid.innerHTML = state.terminals.map(t => `
+    <div class="term-card ${t.mode==='payment'?'payment-mode':''} ${t.status==='offline'?'offline':''}" onclick="openTerminalDetail('${t.id}')">
+      <div class="term-card-head">
+        <div>
+          <div class="term-card-id">${t.id}</div>
+          <div class="term-card-name">${t.name}</div>
+          <div class="term-card-loc">📍 ${t.loc} · ${termTypeLabel(t.type)}</div>
+        </div>
+        ${statusBadge(t.status)}
+      </div>
+      ${t.mode==='payment'?'<div class="badge badge-green" style="margin-bottom:10px">⚡ РЕЖИМ ОПЛАТЫ</div>':''}
+      <div class="term-card-stats">
+        <div class="term-stat">
+          <div class="term-stat-val" style="color:var(--blue)">${t.txns}</div>
+          <div class="term-stat-lbl">Транз.</div>
+        </div>
+        <div class="term-stat">
+          <div class="term-stat-val" style="color:var(--green);font-size:14px">${fmtMoney(t.revenue)}</div>
+          <div class="term-stat-lbl">Выручка</div>
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <div class="flex items-center gap-8" style="margin-bottom:4px">
+          <span class="text-xs text-muted">Дн. лимит:</span>
+          <span class="text-xs fw-700">${fmtMoney(t.daily)} / ${fmtMoney(t.limit)}</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" style="width:${Math.min((t.daily/t.limit)*100,100)}%"></div>
+        </div>
+      </div>
+      <div class="term-actions" onclick="event.stopPropagation()">
+        ${t.status==='online' ? `
+          <button class="btn btn-success btn-xs" onclick="setPaymentMode('${t.id}')">
+            ${t.mode==='payment'?'⏸ Стоп':'💳 Режим оплаты'}
+          </button>
+          <button class="btn btn-ghost btn-xs" onclick="openTerminalDetail('${t.id}')">Детали</button>
+        ` : `
+          <button class="btn btn-primary btn-xs" onclick="toggleTerminalStatus('${t.id}')">▶ Включить</button>
+        `}
+        <button class="btn btn-ghost btn-xs" onclick="openModal('modal-terminal-detail');openTerminalDetail('${t.id}')">✏</button>
+      </div>
+    </div>
+  `).join('');
+
+  // Update terminal selects
+  updateTerminalSelects();
+}
+
+function openTerminalDetail(id) {
+  const t = state.terminals.find(x=>x.id===id);
+  if(!t) return;
+  document.getElementById('termDetailTitle').textContent = t.name;
+  const linkedCards = state.cards.filter(c=>c.terminal===t.id);
+  document.getElementById('termDetailBody').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div class="term-stat"><div class="term-stat-val" style="color:var(--blue)">${t.txns}</div><div class="term-stat-lbl">Транзакций</div></div>
+      <div class="term-stat"><div class="term-stat-val text-green" style="font-size:15px">${fmtMoney(t.revenue)}</div><div class="term-stat-lbl">Выручка</div></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Статус</label>
+      <div class="flex items-center gap-12">
+        ${statusBadge(t.status)}
+        ${modeBadge(t.mode)}
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Тип</label>
+        <div class="chip">${termTypeLabel(t.type)}</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">NFC-интерфейс</label>
+        <div class="chip">${t.nfc}</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Дневной лимит</label>
+      <div class="flex items-center gap-8">
+        <div style="flex:1"><div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${Math.min((t.daily/t.limit)*100,100)}%"></div></div></div>
+        <span class="text-sm fw-700">${fmtMoney(t.daily)} / ${fmtMoney(t.limit)}</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Привязанных карт</label>
+      <div>${linkedCards.length ? linkedCards.map(c=>`<div class="nfc-card-item"><div class="nfc-icon">💳</div><div class="nfc-info"><div class="nfc-name">${c.owner}</div><div class="nfc-uid">${c.uid||'не привязан'}</div></div>${cardStatusBadge(c.status)}</div>`).join('') : '<div class="text-muted text-sm">Карты не привязаны</div>'}</div>
+    </div>
+  `;
+  document.getElementById('termDetailFooter').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeModal('modal-terminal-detail')">Закрыть</button>
+    ${t.status==='online' ? `<button class="btn ${t.mode==='payment'?'btn-danger':'btn-success'}" onclick="setPaymentMode('${t.id}');closeModal('modal-terminal-detail')">${t.mode==='payment'?'⏸ Выйти из режима':'💳 Режим оплаты'}</button>` : `<button class="btn btn-primary" onclick="toggleTerminalStatus('${t.id}');closeModal('modal-terminal-detail')">▶ Включить</button>`}
+    <button class="btn btn-danger btn-sm" onclick="removeTerminal('${t.id}');closeModal('modal-terminal-detail')">🗑</button>
+  `;
+  openModal('modal-terminal-detail');
+}
+
+function setPaymentMode(id) {
+  const t = state.terminals.find(x=>x.id===id);
+  if(!t || t.status==='offline') return;
+  t.mode = t.mode==='payment' ? 'idle' : 'payment';
+  addEvent(t.mode==='payment'?'success':'info',
+    `${t.name}: ${t.mode==='payment'?'активирован режим оплаты':'режим оплаты отключён'}`, t.id);
+  toast(t.mode==='payment'?`${t.name} — режим оплаты ВКЛ`:`${t.name} — режим оплаты ВЫКЛ`,
+        t.mode==='payment'?'success':'info');
+  renderAll();
+}
+
+function quickPayMode(id) {
+  setPaymentMode(id);
+  switchView('terminals');
+}
+
+function toggleTerminalStatus(id) {
+  const t = state.terminals.find(x=>x.id===id);
+  if(!t) return;
+  t.status = t.status==='online'?'offline':'online';
+  if(t.status==='offline') t.mode='idle';
+  addEvent(t.status==='online'?'success':'warn', `${t.name}: ${t.status==='online'?'онлайн':'ушёл офлайн'}`, t.id);
+  toast(`${t.name} — ${t.status==='online'?'онлайн':'офлайн'}`, t.status==='online'?'success':'warn');
+  renderAll();
+}
+
+function addTerminal() {
+  const name = document.getElementById('newTermName').value.trim();
+  const id   = document.getElementById('newTermId').value.trim();
+  const loc  = document.getElementById('newTermLoc').value.trim();
+  const type = document.getElementById('newTermType').value;
+  const nfc  = document.getElementById('newTermNfc').value;
+  const limit= parseInt(document.getElementById('newTermLimit').value) || 100000;
+  if(!name) { toast('Введите название терминала','warn'); return; }
+  state.terminals.push({ id, name, loc: loc||'Не указано', type, nfc, status:'online', mode:'idle', txns:0, revenue:0, limit, daily:0 });
+  addEvent('success', `Создан терминал: ${name} (${id})`, 'SYS');
+  toast(`Терминал ${name} создан!`, 'success');
+  closeModal('modal-add-terminal');
+  document.getElementById('newTermName').value='';
+  document.getElementById('newTermLoc').value='';
+  generateTerminalIds();
+  renderAll();
+}
+
+function removeTerminal(id) {
+  if(!confirm('Удалить терминал?')) return;
+  state.terminals = state.terminals.filter(t=>t.id!==id);
+  addEvent('warn','Терминал удалён: '+id,'SYS');
+  toast('Терминал удалён','warn');
+  renderAll();
+}
+
+function refreshTerminals() {
+  state.terminals.forEach(t => {
+    if(t.status==='online' && Math.random()>.7) {
+      t.txns += Math.floor(Math.random()*3);
+      t.revenue += Math.floor(Math.random()*500);
+      t.daily = t.revenue;
+    }
+  });
+  toast('Терминалы обновлены','info');
+  addEvent('info','Ручное обновление данных терминалов','SYS');
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CARDS
+// ═══════════════════════════════════════════════════════════════
+function renderCards() {
+  renderCardsTable(state.cards);
+  document.getElementById('cardsCount').textContent = state.cards.length + ' шт.';
+
+  // bind card select
+  const sel = document.getElementById('bindCardSelect');
+  if(sel) sel.innerHTML = state.cards.map(c=>`<option value="${c.id}">${c.owner} — ${c.id}</option>`).join('');
+
+  // payment card select
+  const psel = document.getElementById('paymentCard');
+  if(psel) {
+    psel.innerHTML = '<option value="">— NFC сканирование —</option>' +
+      state.cards.filter(c=>c.status==='active').map(c=>`<option value="${c.id}">${c.owner} (${fmtMoney(c.balance)})</option>`).join('');
+  }
+
+  // new card terminal
+  const nct = document.getElementById('newCardTerminal');
+  if(nct) nct.innerHTML = '<option value="">— Все терминалы —</option>' +
+    state.terminals.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+}
+
+function renderCardsTable(cards) {
+  const tbody = document.getElementById('cardsTable');
+  if(!tbody) return;
+  tbody.innerHTML = cards.map(c => `
+    <tr>
+      <td>
+        <div class="fw-700">${c.owner}</div>
+        <div class="text-xs text-muted">${c.phone}</div>
+      </td>
+      <td>
+        <span class="mono">${c.uid || '<span style="color:var(--red);font-size:11px">⚠ не привязан</span>'}</span>
+      </td>
+      <td><span class="badge badge-gray">${cardTypeLabel(c.type)}</span></td>
+      <td class="fw-700" style="color:${c.balance<500?'var(--red)':'var(--green)'}">${fmtMoney(c.balance)}</td>
+      <td class="text-muted text-sm">${fmtMoney(c.limit)}</td>
+      <td>${c.terminal ? `<span class="chip">🖥 ${c.terminal}</span>` : '<span class="text-muted text-xs">Все</span>'}</td>
+      <td>${cardStatusBadge(c.status)}</td>
+      <td>
+        <div class="flex gap-8">
+          <button class="btn btn-ghost btn-xs" onclick="openCardDetail('${c.id}')">Инфо</button>
+          <button class="btn btn-ghost btn-xs" onclick="topupCard('${c.id}')">+ ₽</button>
+          ${c.status==='blocked'
+            ? `<button class="btn btn-success btn-xs" onclick="toggleCardBlock('${c.id}')">✔</button>`
+            : `<button class="btn btn-danger btn-xs" onclick="toggleCardBlock('${c.id}')">🔒</button>`}
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterCards() {
+  const q = document.getElementById('cardSearch').value.toLowerCase();
+  const filtered = state.cards.filter(c =>
+    c.owner.toLowerCase().includes(q) ||
+    c.uid.toLowerCase().includes(q) ||
+    c.id.toLowerCase().includes(q) ||
+    c.phone.includes(q)
+  );
+  renderCardsTable(filtered);
+}
+
+function registerCard() {
+  const owner = document.getElementById('newCardOwner').value.trim();
+  const phone = document.getElementById('newCardPhone').value.trim();
+  const uid   = document.getElementById('newCardUid').value.trim();
+  const type  = document.getElementById('newCardType').value;
+  const balance = parseInt(document.getElementById('newCardBalance').value)||0;
+  const limit = parseInt(document.getElementById('newCardLimit').value)||5000;
+  const terminal = document.getElementById('newCardTerminal').value;
+  if(!owner) { toast('Введите имя владельца','warn'); return; }
+  const id = 'CARD-' + String(state.cards.length+1).padStart(3,'0');
+  state.cards.push({ id, owner, phone:phone||'—', uid, type, balance, limit, terminal, status: uid?'active':'unbound', lastUsed:'—' });
+  addEvent('success', `Выпущена карта: ${owner} (${id})`, 'SYS');
+  toast(`Карта для ${owner} выпущена!`, 'success');
+  closeModal('modal-register-card');
+  document.getElementById('newCardOwner').value='';
+  document.getElementById('newCardPhone').value='';
+  document.getElementById('newCardUid').value='';
+  document.getElementById('newCardBalance').value='0';
+  renderAll();
+}
+
+function generateUid() {
+  const bytes = Array.from({length:7},()=>Math.floor(Math.random()*256).toString(16).padStart(2,'0').toUpperCase());
+  bytes[0]='04';
+  document.getElementById('newCardUid').value = bytes.join(':');
+}
+
+function openCardDetail(id) {
+  const c = state.cards.find(x=>x.id===id);
+  if(!c) return;
+  document.getElementById('cardDetailTitle').textContent = c.owner;
+  document.getElementById('cardDetailBody').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div class="term-stat"><div class="term-stat-val text-green" style="font-size:22px">${fmtMoney(c.balance)}</div><div class="term-stat-lbl">Баланс</div></div>
+      <div class="term-stat"><div class="term-stat-val" style="color:var(--text-secondary);font-size:16px">${fmtMoney(c.limit)}</div><div class="term-stat-lbl">Лимит/транз.</div></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">UID карты (NFC)</label>
+      <div class="nfc-result-tag">${c.uid || '⚠ Не привязана'}</div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Тип</label>
+        <span class="badge badge-gray">${cardTypeLabel(c.type)}</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Статус</label>
+        ${cardStatusBadge(c.status)}
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Телефон</label>
+      <div class="text-sm">${c.phone}</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Привязан к терминалу</label>
+      <div>${c.terminal ? `<span class="chip">🖥 ${c.terminal}</span>` : '<span class="text-muted">Все терминалы</span>'}</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Пополнить баланс (₽)</label>
+      <div class="flex gap-8">
+        <input type="number" class="form-input" id="topupAmount" placeholder="500" style="flex:1">
+        <button class="btn btn-success" onclick="doTopup('${c.id}')">+ Пополнить</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('cardDetailFooter').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeModal('modal-card-detail')">Закрыть</button>
+    <button class="btn ${c.status==='blocked'?'btn-success':'btn-danger'}" onclick="toggleCardBlock('${c.id}');closeModal('modal-card-detail')">${c.status==='blocked'?'✔ Разблокировать':'🔒 Заблокировать'}</button>
+    <button class="btn btn-primary btn-xs" onclick="openModal('modal-bind-nfc');closeModal('modal-card-detail');document.getElementById('bindCardSelect').value='${c.id}'">📡 Привязать NFC</button>
+  `;
+  openModal('modal-card-detail');
+}
+
+function doTopup(id) {
+  const amount = parseInt(document.getElementById('topupAmount').value);
+  if(!amount || amount<=0) { toast('Введите сумму','warn'); return; }
+  const c = state.cards.find(x=>x.id===id);
+  c.balance += amount;
+  addEvent('success', `Пополнение карты ${c.owner}: +${fmtMoney(amount)}`, c.id);
+  toast(`Пополнено: +${fmtMoney(amount)}`, 'success');
+  closeModal('modal-card-detail');
+  renderAll();
+}
+
+function topupCard(id) {
+  openCardDetail(id);
+}
+
+function toggleCardBlock(id) {
+  const c = state.cards.find(x=>x.id===id);
+  if(!c) return;
+  c.status = c.status==='blocked'?'active':'blocked';
+  addEvent(c.status==='blocked'?'warn':'success', `Карта ${c.owner}: ${c.status==='blocked'?'заблокирована':'разблокирована'}`, c.id);
+  toast(`Карта ${c.status==='blocked'?'заблокирована':'разблокирована'}`, c.status==='blocked'?'warn':'success');
+  renderAll();
+}
+
+function bindNfcToCard() {
+  const uid = document.getElementById('bindUid').value.trim();
+  const cardId = document.getElementById('bindCardSelect').value;
+  if(!uid) { toast('Введите или отсканируйте UID','warn'); return; }
+  if(!cardId) { toast('Выберите карту','warn'); return; }
+  const existing = state.cards.find(c=>c.uid===uid && c.id!==cardId);
+  if(existing) { toast('Этот UID уже привязан к карте '+existing.owner,'error'); return; }
+  const card = state.cards.find(c=>c.id===cardId);
+  card.uid = uid;
+  card.status = 'active';
+  addEvent('success', `NFC привязан к карте ${card.owner}: ${uid}`, card.id);
+  toast(`NFC ${uid} привязан к карте ${card.owner}!`, 'success');
+  closeModal('modal-bind-nfc');
+  document.getElementById('bindUid').value='';
+  renderAll();
+}
+
+function bindManualNfc() {
+  const uid = document.getElementById('manualUid').value.trim();
+  if(!uid) { toast('Введите UID','warn'); return; }
+  const existing = state.cards.find(c=>c.uid===uid);
+  if(existing) {
+    toast(`Уже привязан: ${existing.owner}`, 'info');
+    return;
+  }
+  document.getElementById('bindUid').value = uid;
+  openModal('modal-bind-nfc');
+  toast('UID подставлен в форму привязки','info');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  NFC WEB API
+// ═══════════════════════════════════════════════════════════════
+function checkNfcSupport() {
+  const badge = document.getElementById('nfcSupportBadge');
+  if(!badge) return;
+  if('NDEFReader' in window) {
+    badge.innerHTML = '<span class="badge badge-green">✔ Web NFC доступен</span>';
+  } else {
+    badge.innerHTML = '<span class="badge badge-yellow">⚠ Web NFC недоступен — режим эмуляции</span>';
+  }
+}
+
+async function startNfcScan() {
+  const zone = document.getElementById('nfcScanZone');
+  const text = document.getElementById('nfcScanText');
+  const sub  = document.getElementById('nfcScanSub');
+  const res  = document.getElementById('nfcScanResult');
+
+  if('NDEFReader' in window) {
+    try {
+      zone.classList.add('scanning');
+      text.textContent = 'Сканирование...';
+      sub.textContent = 'Поднесите карту/метку';
+      const pulse = document.createElement('div');
+      pulse.className = 'pulse-ring';
+      zone.appendChild(pulse);
+
+      const ndef = new NDEFReader();
+      await ndef.scan();
+      addEvent('info','NFC-сканер запущен','NFC');
+
+      ndef.onreading = e => {
+        const uid = formatNfcUid(e.serialNumber);
+        zone.classList.remove('scanning');
+        zone.classList.add('success');
+        text.textContent = 'Карта прочитана!';
+        res.innerHTML = `<div class="nfc-result-tag">📡 ${uid}</div>`;
+        pulse.remove();
+        document.getElementById('manualUid').value = uid;
+        document.getElementById('bindUid').value = uid;
+        addEvent('success', `NFC прочитан: ${uid}`, 'NFC');
+        toast(`Прочитан NFC: ${uid}`, 'success');
+        checkCardByUid(uid);
+        ndef.onreading = null;
+      };
+
+      ndef.onreadingerror = () => {
+        zone.classList.remove('scanning');
+        zone.classList.add('error');
+        text.textContent = 'Ошибка чтения';
+        pulse.remove();
+        addEvent('error','Ошибка NFC-чтения','NFC');
+      };
+    } catch(err) {
+      zone.classList.remove('scanning');
+      zone.classList.add('error');
+      text.textContent = 'Нет доступа к NFC';
+      sub.textContent = err.message;
+      addEvent('warn','NFC: '+err.message,'NFC');
+    }
+  } else {
+    // Emulation
+    zone.classList.add('scanning');
+    text.textContent = 'Эмуляция сканирования...';
+    const pulse = document.createElement('div');
+    pulse.className = 'pulse-ring';
+    zone.appendChild(pulse);
+    setTimeout(()=>{
+      const uid = generateRandomUid();
+      zone.classList.remove('scanning');
+      zone.classList.add('success');
+      text.textContent = '✔ Карта прочитана (эмуляция)';
+      document.getElementById('nfcScanResult').innerHTML = `<div class="nfc-result-tag">📡 ${uid}</div>`;
+      document.getElementById('manualUid').value = uid;
+      document.getElementById('bindUid').value = uid;
+      pulse.remove();
+      addEvent('success','[ЭМУЛЯЦИЯ] NFC прочитан: '+uid,'NFC');
+      toast('[Эмуляция] NFC: '+uid,'info');
+      checkCardByUid(uid);
+      setTimeout(()=>{
+        zone.classList.remove('success');
+        text.textContent='Нажмите для сканирования';
+        document.getElementById('nfcScanResult').innerHTML='';
+      },5000);
+    },2000);
+  }
+}
+
+async function startBindScan() {
+  const zone = document.getElementById('bindScanZone');
+  const text = document.getElementById('bindScanText');
+  const res  = document.getElementById('bindScanResult');
+
+  if('NDEFReader' in window) {
+    try {
+      zone.classList.add('scanning');
+      text.textContent = 'Сканирование...';
+      const ndef = new NDEFReader();
+      await ndef.scan();
+      ndef.onreading = e => {
+        const uid = formatNfcUid(e.serialNumber);
+        zone.classList.remove('scanning');
+        zone.classList.add('success');
+        text.textContent = 'Прочитано!';
+        res.innerHTML = `<div class="nfc-result-tag">📡 ${uid}</div>`;
+        document.getElementById('bindUid').value = uid;
+        addEvent('success','Bind NFC прочитан: '+uid,'NFC');
+        ndef.onreading = null;
+      };
+    } catch(err) {
+      zone.classList.remove('scanning');
+      zone.classList.add('error');
+      text.textContent = err.message;
+      addEvent('warn','Bind NFC: '+err.message,'NFC');
+    }
+  } else {
+    zone.classList.add('scanning');
+    text.textContent = 'Эмуляция...';
+    setTimeout(()=>{
+      const uid = generateRandomUid();
+      zone.classList.remove('scanning');
+      zone.classList.add('success');
+      text.textContent = '✔ Готово (эмуляция)';
+      res.innerHTML = `<div class="nfc-result-tag">📡 ${uid}</div>`;
+      document.getElementById('bindUid').value = uid;
+      addEvent('success','[ЭМУЛЯЦИЯ] Bind NFC: '+uid,'NFC');
+    },1800);
+  }
+}
+
+function checkCardByUid(uid) {
+  const card = state.cards.find(c=>c.uid===uid);
+  if(card) {
+    toast(`Карта найдена: ${card.owner} | ${fmtMoney(card.balance)}`, 'success');
+    addEvent('info',`Идентифицирована карта: ${card.owner}`,card.id);
+  } else {
+    toast('Карта не найдена — выпустить новую?', 'warn');
+  }
+}
+
+function formatNfcUid(serial) {
+  if(!serial) return generateRandomUid();
+  return serial.split(':').map(b=>b.toUpperCase().padStart(2,'0')).join(':');
+}
+
+function generateRandomUid() {
+  const bytes = ['04'];
+  for(let i=0;i<6;i++) bytes.push(Math.floor(Math.random()*256).toString(16).padStart(2,'0').toUpperCase());
+  return bytes.join(':');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CASHIER / PAYMENT
+// ═══════════════════════════════════════════════════════════════
+function renderCashier() {
+  // Terminal selector
+  const sel = document.getElementById('cashierTerminal');
+  if(sel) {
+    sel.innerHTML = state.terminals.filter(t=>t.status==='online').map(t=>`<option value="${t.id}" ${t.id===state.cashierTerminalId?'selected':''}>${t.name}</option>`).join('');
+    if(!sel.value && state.terminals.length) state.cashierTerminalId = state.terminals[0].id;
+  }
+  updateCashierTerminal();
+  renderProducts();
+  renderCart();
+
+  const psel = document.getElementById('paymentCard');
+  if(psel) {
+    psel.innerHTML = '<option value="">— NFC сканирование —</option>' +
+      state.cards.filter(c=>c.status==='active').map(c=>`<option value="${c.id}">${c.owner} (${fmtMoney(c.balance)})</option>`).join('');
+  }
+}
+
+function updateCashierTerminal() {
+  const sel = document.getElementById('cashierTerminal');
+  if(sel) state.cashierTerminalId = sel.value;
+  const t = state.terminals.find(x=>x.id===state.cashierTerminalId);
+  const stEl = document.getElementById('cashierTermStatus');
+  if(stEl && t) {
+    stEl.innerHTML = `${statusBadge(t.status)} ${modeBadge(t.mode)}`;
+  }
+}
+
+function renderProducts() {
+  const cat = document.getElementById('productCategory').value;
+  const grid = document.getElementById('productGrid');
+  if(!grid) return;
+  const filtered = cat==='all' ? PRODUCTS : PRODUCTS.filter(p=>p.cat===cat);
+  grid.innerHTML = filtered.map(p=>`
+    <div class="product-btn" onclick="addToCart(${p.id})">
+      <div class="p-icon">${p.icon}</div>
+      <div class="p-name">${p.name}</div>
+      <div class="p-price">${fmtMoney(p.price)}</div>
+    </div>
+  `).join('');
+}
+
+function addToCart(productId) {
+  const p = PRODUCTS.find(x=>x.id===productId);
+  if(!p) return;
+  const item = state.cart.find(x=>x.id===productId);
+  if(item) item.qty++;
+  else state.cart.push({...p, qty:1});
+  renderCart();
+}
+
+function removeFromCart(productId) {
+  const item = state.cart.find(x=>x.id===productId);
+  if(!item) return;
+  if(item.qty>1) item.qty--;
+  else state.cart = state.cart.filter(x=>x.id!==productId);
+  renderCart();
+}
+
+function clearCart() {
+  state.cart = [];
+  renderCart();
+}
+
+function renderCart() {
+  const el = document.getElementById('cartItems');
+  if(!el) return;
+  if(!state.cart.length) {
+    el.innerHTML = '<div class="text-muted text-sm text-center" style="padding:20px">Корзина пуста</div>';
+    document.getElementById('cartTotal').textContent = '0 ₽';
+    return;
+  }
+  el.innerHTML = state.cart.map(item=>`
+    <div class="cart-item">
+      <span style="font-size:18px">${item.icon}</span>
+      <span class="cart-item-name">${item.name}</span>
+      <div class="cart-item-qty">
+        <button class="qty-btn" onclick="removeFromCart(${item.id})">−</button>
+        <span class="fw-700">${item.qty}</span>
+        <button class="qty-btn" onclick="addToCart(${item.id})">+</button>
+      </div>
+      <span class="fw-700 text-green" style="min-width:60px;text-align:right">${fmtMoney(item.price*item.qty)}</span>
+    </div>
+  `).join('');
+  const total = state.cart.reduce((s,x)=>s+x.price*x.qty,0);
+  document.getElementById('cartTotal').textContent = fmtMoney(total);
+}
+
+function getCartTotal() {
+  return state.cart.reduce((s,x)=>s+x.price*x.qty,0);
+}
+
+function initiatePayment() {
+  const total = getCartTotal();
+  if(total<=0) { toast('Добавьте товары в корзину','warn'); return; }
+  const cardId = document.getElementById('paymentCard').value;
+  state.activePayment = { total, cardId: cardId||null, confirmed: false };
+
+  document.getElementById('payAmount').textContent = fmtMoney(total);
+  document.getElementById('payStatus').textContent = cardId ? 'Карта выбрана — подтвердите' : 'Ожидание NFC-карты...';
+  document.getElementById('payResult').classList.remove('show','ok','fail');
+  document.getElementById('payResult').textContent = '';
+  document.getElementById('payCardInfo').style.display = 'none';
+  document.getElementById('payConfirmBtn').disabled = true;
+  document.getElementById('payProgress').style.width = '0%';
+  document.getElementById('payNfcIcon').textContent = '📲';
+
+  document.getElementById('paymentOverlay').classList.add('active');
+
+  if(cardId) {
+    loadPaymentCard(cardId);
+  } else {
+    simulateNfcPaymentScan(total);
+  }
+}
+
+function initiateCash() {
+  const total = getCartTotal();
+  if(total<=0) { toast('Добавьте товары','warn'); return; }
+  const t = state.terminals.find(x=>x.id===state.cashierTerminalId);
+  if(t) { t.txns++; t.revenue+=total; t.daily+=total; }
+  addEvent('success',`Оплата наличными: ${fmtMoney(total)}`,state.cashierTerminalId);
+  toast(`Оплата ${fmtMoney(total)} наличными принята!`,'success');
+  state.cart = [];
+  renderCart();
+}
+
+function loadPaymentCard(cardId) {
+  const c = state.cards.find(x=>x.id===cardId);
+  if(!c) return;
+  showPaymentCard(c);
+}
+
+function showPaymentCard(c) {
+  document.getElementById('payCardName').textContent = c.owner;
+  document.getElementById('payCardUid').textContent = c.uid||'—';
+  document.getElementById('payCardBalance').textContent = fmtMoney(c.balance);
+  document.getElementById('payCardInfo').style.display='block';
+  const total = state.activePayment.total;
+  if(c.status==='blocked') {
+    document.getElementById('payStatus').textContent = '🔒 Карта заблокирована';
+    document.getElementById('payConfirmBtn').disabled = true;
+  } else if(c.balance < total) {
+    document.getElementById('payStatus').textContent = '⚠ Недостаточно средств';
+    document.getElementById('payConfirmBtn').disabled = true;
+  } else {
+    document.getElementById('payStatus').textContent = '✔ Карта готова к оплате';
+    document.getElementById('payConfirmBtn').disabled = false;
+    state.activePayment.cardId = c.id;
+  }
+}
+
+function simulateNfcPaymentScan(total) {
+  let prog = 0;
+  const interval = setInterval(()=>{
+    prog += 4;
+    document.getElementById('payProgress').style.width = prog+'%';
+    if(prog>=100) {
+      clearInterval(interval);
+      // Pick a random active card
+      const activeCards = state.cards.filter(c=>c.status==='active'&&c.balance>=total);
+      if(activeCards.length) {
+        const c = activeCards[Math.floor(Math.random()*activeCards.length)];
+        document.getElementById('payNfcIcon').textContent = '💳';
+        showPaymentCard(c);
+        addEvent('info','NFC прочитан: '+c.uid,'NFC');
+        toast('Карта прочитана: '+c.owner,'info');
+      } else {
+        document.getElementById('payStatus').textContent = '⚠ Нет подходящей карты';
+        toast('Карты с достаточным балансом нет','warn');
+      }
+    }
+  },70);
+}
+
+function confirmPayment() {
+  if(!state.activePayment) return;
+  const { total, cardId } = state.activePayment;
+  const c = state.cards.find(x=>x.id===cardId);
+  if(!c) { toast('Ошибка: карта не найдена','error'); return; }
+  if(c.balance < total) { toast('Недостаточно средств','error'); return; }
+
+  // Process
+  c.balance -= total;
+  c.lastUsed = new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
+  const t = state.terminals.find(x=>x.id===state.cashierTerminalId);
+  if(t) { t.txns++; t.revenue+=total; t.daily+=total; }
+
+  document.getElementById('payProgress').style.width='100%';
+  document.getElementById('payNfcIcon').textContent='✅';
+  document.getElementById('payStatus').textContent='Оплата прошла!';
+  const res = document.getElementById('payResult');
+  res.textContent=`✔ Успешно: ${fmtMoney(total)} списано с ${c.owner}`;
+  res.className='payment-result show ok';
+  document.getElementById('payConfirmBtn').disabled=true;
+
+  addEvent('success',`Оплата ${fmtMoney(total)} | Карта: ${c.owner} | Терминал: ${state.cashierTerminalId}`,'PAY');
+  state.cart=[];
+  renderCart();
+
+  setTimeout(()=>{ closePayment(); renderAll(); },2500);
+}
+
+function closePayment() {
+  document.getElementById('paymentOverlay').classList.remove('active');
+  state.activePayment=null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  EVENTS
+// ═══════════════════════════════════════════════════════════════
+function addEvent(type, text, source) {
+  const time = new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  state.events.unshift({type,text,source,time});
+  if(state.events.length>80) state.events.pop();
+  renderEventLog();
+}
+
+function renderEventLog() {
+  const el = document.getElementById('eventLog');
+  if(!el) return;
+  const colorMap = { success:' var(--green)', error:'var(--red)', warn:'var(--yellow)', info:'var(--blue)' };
+  el.innerHTML = state.events.map(e=>`
+    <div class="event-item">
+      <div class="event-dot" style="background:${colorMap[e.type]||'var(--text-muted)'}"></div>
+      <div class="event-time">${e.time}</div>
+      <div class="event-text">${e.text}</div>
+      <div class="event-tag">${e.source}</div>
+    </div>
+  `).join('') || '<div class="text-muted text-sm text-center">Нет событий</div>';
+}
+
+function clearEvents() { state.events=[]; renderEventLog(); }
+
+function simulateLiveEvents() {
+  const events = [
+    ['info','Heartbeat: все онлайн терминалы активны','SYS'],
+    ['info','NFC-ридер проверен','NFC'],
+    ['success','Автосинхронизация завершена','SYS'],
+  ];
+  const onlineTerms = state.terminals.filter(t=>t.status==='online');
+  if(onlineTerms.length) {
+    const t = onlineTerms[Math.floor(Math.random()*onlineTerms.length)];
+    const activeCards = state.cards.filter(c=>c.status==='active'&&c.balance>100);
+    if(activeCards.length && Math.random()>.5) {
+      const c = activeCards[Math.floor(Math.random()*activeCards.length)];
+      const amount = [120,180,250,650,320,500][Math.floor(Math.random()*6)];
+      if(c.balance>=amount) {
+        c.balance -= amount;
+        c.lastUsed = new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
+        t.txns++;t.revenue+=amount;t.daily+=amount;
+        addEvent('success',`[Авто] Транзакция ${fmtMoney(amount)} | ${c.owner} → ${t.name}`,'SIM');
+        renderAll();
+        return;
+      }
+    }
+    const [type,text,src] = events[Math.floor(Math.random()*events.length)];
+    addEvent(type,text,src);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MODAL / TOAST HELPERS
+// ═══════════════════════════════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('active'); });
+});
+
+function toast(msg, type='info') {
+  const el = document.createElement('div');
+  el.className=`toast toast-${type}`;
+  const icons={success:'✅',error:'❌',warn:'⚠️',info:'ℹ️'};
+  el.innerHTML=`<span>${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(()=>{
+    el.classList.add('hiding');
+    setTimeout(()=>el.remove(),300);
+  },3500);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  BADGES / LABELS
+// ═══════════════════════════════════════════════════════════════
+function statusBadge(s) {
+  const map={online:'badge-green',offline:'badge-gray',maintenance:'badge-yellow'};
+  const lbl={online:'Онлайн',offline:'Офлайн',maintenance:'Обслуживание'};
+  return `<span class="badge ${map[s]||'badge-gray'}">${lbl[s]||s}</span>`;
+}
+function modeBadge(m) {
+  const map={idle:'badge-gray',payment:'badge-green',blocked:'badge-red'};
+  const lbl={idle:'Ожидание',payment:'Оплата',blocked:'Блок'};
+  return `<span class="badge ${map[m]||'badge-gray'}">${lbl[m]||m}</span>`;
+}
+function cardStatusBadge(s) {
+  const map={active:'badge-green',blocked:'badge-red',unbound:'badge-yellow',expired:'badge-gray'};
+  const lbl={active:'Активна',blocked:'Блок',unbound:'Нет NFC',expired:'Истекла'};
+  return `<span class="badge ${map[s]||'badge-gray'}">${lbl[s]||s}</span>`;
+}
+function cardTypeLabel(t) {
+  const m={standard:'Стандарт',premium:'Премиум',corporate:'Корпорат.',guest:'Гостевая'};
+  return m[t]||t;
+}
+function termTypeLabel(t) {
+  const m={pos:'POS',kiosk:'Киоск',mobile:'Мобильный',gate:'Турникет'};
+  return m[t]||t;
+}
+function fmtMoney(n) {
+  return n>=1000 ? (n/1000).toFixed(n%1000===0?0:1)+'к ₽' : n+' ₽';
+}
+
+function updateTerminalSelects() {
+  const opts = state.terminals.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+  const sel1 = document.getElementById('newCardTerminal');
+  if(sel1) sel1.innerHTML = '<option value="">— Все терминалы —</option>' + opts;
+  const sel2 = document.getElementById('cashierTerminal');
+  if(sel2) {
+    const onlineOpts = state.terminals.filter(t=>t.status==='online').map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+    sel2.innerHTML = onlineOpts;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  STATS LIVE UPDATE
+// ═══════════════════════════════════════════════════════════════
+function updateStats() {
+  const total = state.terminals.reduce((s,t)=>s+t.txns,0);
+  const revenue = state.terminals.reduce((s,t)=>s+t.revenue,0);
+  document.getElementById('st-terminals').textContent = state.terminals.length;
+  document.getElementById('st-cards').textContent = state.cards.length;
+  document.getElementById('st-txns').textContent = total;
+  document.getElementById('st-revenue').textContent = fmtMoney(revenue);
+  document.getElementById('st-active').textContent = state.terminals.filter(t=>t.status==='online').length;
+}
+
+setInterval(()=>{ updateStats(); }, 5000);
+
+// ═══════════════════════════════════════════════════════════════
+//  START
+// ═══════════════════════════════════════════════════════════════
+init();
+</script>
+</body>
+</html>
