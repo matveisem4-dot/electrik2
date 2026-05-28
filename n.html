@@ -1,1083 +1,403 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NFC POS — Пульт управления</title>
-<style>
-:root {
-  --bg:       #080c17;
-  --bg2:      #0d1220;
-  --bg3:      #131a2e;
-  --bg4:      #1a2340;
-  --border:   #1e2d48;
-  --borderL:  #263550;
-  --blue:     #3b82f6;
-  --blueD:    #2563eb;
-  --blueG:    rgba(59,130,246,.15);
-  --green:    #10b981;
-  --greenD:   #059669;
-  --greenG:   rgba(16,185,129,.15);
-  --red:      #ef4444;
-  --redG:     rgba(239,68,68,.13);
-  --yellow:   #f59e0b;
-  --yellowG:  rgba(245,158,11,.13);
-  --purple:   #8b5cf6;
-  --purpleG:  rgba(139,92,246,.13);
-  --t1:       #e2e8f0;
-  --t2:       #94a3b8;
-  --t3:       #4b5563;
-  --r:        12px;
-  --rs:       8px;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;overflow-x:hidden}
-::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--borderL);border-radius:4px}
-
-/* NAV */
-.nav{
-  position:sticky;top:0;z-index:100;height:58px;
-  background:rgba(8,12,23,.96);backdrop-filter:blur(16px);
-  border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;padding:0 20px;
-}
-.nav-brand{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:800}
-.nav-logo{
-  width:34px;height:34px;border-radius:9px;
-  background:linear-gradient(135deg,var(--blue),var(--green));
-  display:flex;align-items:center;justify-content:center;font-size:16px;
-}
-.nav-badge{
-  font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;
-  background:var(--purpleG);color:var(--purple);border:1px solid rgba(139,92,246,.3);
-  letter-spacing:.06em;text-transform:uppercase;
-}
-.nav-tabs{display:flex;gap:3px}
-.ntab{
-  padding:7px 16px;border-radius:var(--rs);border:none;cursor:pointer;
-  font-size:13px;font-weight:600;transition:all .18s;
-  background:transparent;color:var(--t2);
-}
-.ntab:hover{background:var(--bg4);color:var(--t1)}
-.ntab.on{background:var(--blue);color:#fff;box-shadow:0 0 16px rgba(59,130,246,.3)}
-.nav-right{display:flex;align-items:center;gap:12px}
-.sync-dot{
-  width:8px;height:8px;border-radius:50%;background:var(--green);
-  box-shadow:0 0 8px var(--green);animation:glow 2s infinite;
-}
-@keyframes glow{0%,100%{box-shadow:0 0 4px var(--green)}50%{box-shadow:0 0 14px var(--green)}}
-.sys-clock{font-size:13px;color:var(--t2);font-variant-numeric:tabular-nums}
-
-/* MOBILE TABS */
-.m-tabs{display:none;overflow-x:auto;gap:6px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg2)}
-@media(max-width:560px){.nav-tabs{display:none}.m-tabs{display:flex}}
-
-/* LAYOUT */
-.wrap{max-width:1440px;margin:0 auto;padding:22px 16px}
-.view{display:none}
-.view.on{display:block}
-
-/* STATS */
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:22px}
-.sc{
-  background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);
-  padding:16px;position:relative;overflow:hidden;transition:transform .2s,border-color .2s;
-  cursor:default;
-}
-.sc:hover{transform:translateY(-2px);border-color:var(--borderL)}
-.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--acc,var(--blue))}
-.sc-icon{font-size:20px;margin-bottom:8px}
-.sc-val{font-size:26px;font-weight:900;line-height:1}
-.sc-lbl{font-size:11px;color:var(--t2);margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
-.sc-trend{font-size:11px;margin-top:7px;color:var(--t2)}
-.up{color:var(--green)}.dn{color:var(--red)}
-
-/* GRID */
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-@media(max-width:860px){.g2,.g3{grid-template-columns:1fr}}
-
-/* PANEL */
-.pnl{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
-.pnl-h{
-  padding:13px 18px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;
-}
-.pnl-t{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
-.pnl-b{padding:16px}
-
-/* BADGES */
-.bdg{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
-.b-green{background:var(--greenG);color:var(--green);border:1px solid rgba(16,185,129,.25)}
-.b-blue {background:var(--blueG); color:var(--blue); border:1px solid rgba(59,130,246,.25)}
-.b-red  {background:var(--redG);  color:var(--red);  border:1px solid rgba(239,68,68,.25)}
-.b-yellow{background:var(--yellowG);color:var(--yellow);border:1px solid rgba(245,158,11,.25)}
-.b-gray {background:rgba(75,85,99,.18);color:var(--t2);border:1px solid var(--border)}
-.b-purple{background:var(--purpleG);color:var(--purple);border:1px solid rgba(139,92,246,.25)}
-
-/* BUTTONS */
-.btn{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:9px 15px;border-radius:var(--rs);border:none;cursor:pointer;
-  font-size:13px;font-weight:600;transition:all .18s;text-decoration:none;white-space:nowrap;
-}
-.bt-pri{background:var(--blue);color:#fff}
-.bt-pri:hover{background:var(--blueD);box-shadow:0 0 16px rgba(59,130,246,.3)}
-.bt-suc{background:var(--green);color:#fff}
-.bt-suc:hover{background:var(--greenD);box-shadow:0 0 16px rgba(16,185,129,.3)}
-.bt-dan{background:var(--red);color:#fff}
-.bt-dan:hover{opacity:.85}
-.bt-warn{background:var(--yellow);color:#000}
-.bt-warn:hover{opacity:.85}
-.bt-gho{background:var(--bg4);color:var(--t2);border:1px solid var(--border)}
-.bt-gho:hover{color:var(--t1);border-color:var(--borderL)}
-.btn-sm{padding:6px 12px;font-size:12px}
-.btn-xs{padding:4px 9px;font-size:11px;border-radius:6px}
-.btn:disabled{opacity:.35;cursor:not-allowed}
-.w100{width:100%;justify-content:center}
-
-/* TABLE */
-.tbl-w{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:13px}
-thead tr{background:var(--bg4)}
-th{padding:10px 13px;text-align:left;color:var(--t2);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border)}
-td{padding:11px 13px;border-bottom:1px solid var(--border);vertical-align:middle}
-tbody tr:last-child td{border-bottom:none}
-tbody tr:hover{background:rgba(255,255,255,.02)}
-.mono{font-family:'Courier New',monospace;font-size:12px;color:var(--blue)}
-
-/* TERMINAL CARDS */
-.tg{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
-.tc{
-  background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);
-  padding:18px;position:relative;overflow:hidden;transition:all .2s;cursor:pointer;
-}
-.tc:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.4);border-color:var(--borderL)}
-.tc.pay{border-color:var(--green);box-shadow:0 0 24px rgba(16,185,129,.18)}
-.tc.pay::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--green),var(--blue))}
-.tc.off{opacity:.55}
-.tc-id{font-size:11px;color:var(--t3);font-family:monospace;margin-bottom:2px}
-.tc-name{font-size:15px;font-weight:700;margin-bottom:3px}
-.tc-loc{font-size:12px;color:var(--t2);display:flex;align-items:center;gap:4px}
-.tc-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
-.ts{background:var(--bg4);border-radius:var(--rs);padding:8px;text-align:center}
-.ts-v{font-size:17px;font-weight:800}
-.ts-l{font-size:10px;color:var(--t3);text-transform:uppercase;margin-top:2px}
-.tc-acts{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
-
-/* FORM */
-.fg{margin-bottom:13px}
-.fl{display:block;font-size:11px;font-weight:600;color:var(--t2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
-.fi{
-  width:100%;background:var(--bg4);border:1px solid var(--border);border-radius:var(--rs);
-  padding:10px 13px;color:var(--t1);font-size:14px;outline:none;transition:border-color .2s;
-}
-.fi:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blueG)}
-.fi::placeholder{color:var(--t3)}
-.fs{
-  width:100%;background:var(--bg4);border:1px solid var(--border);border-radius:var(--rs);
-  padding:10px 13px;color:var(--t1);font-size:14px;outline:none;cursor:pointer;
-  appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 10L3 5h10z'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 11px center;background-size:15px;
-}
-.fs:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blueG)}
-.fr{display:grid;grid-template-columns:1fr 1fr;gap:11px}
-@media(max-width:500px){.fr{grid-template-columns:1fr}}
-
-/* PROGRESS */
-.pb-w{background:var(--bg4);border-radius:4px;height:5px;overflow:hidden;margin-top:7px}
-.pb-f{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .5s ease}
-
-/* NFC INFO BOX */
-.nfc-info-box{
-  background:var(--bg4);border:1px solid var(--borderL);border-radius:var(--r);
-  padding:16px;margin-bottom:16px;
-}
-.nfc-info-box.warn{border-color:rgba(245,158,11,.4);background:var(--yellowG)}
-.nfc-info-box.info{border-color:rgba(59,130,246,.3);background:var(--blueG)}
-
-/* EVENT LOG */
-.elog{max-height:300px;overflow-y:auto}
-.ei{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid var(--border)}
-.ei:last-child{border-bottom:none}
-.edot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px}
-.etime{font-size:11px;color:var(--t3);min-width:54px;font-variant-numeric:tabular-nums}
-.etxt{font-size:13px;flex:1}
-.etag{font-size:10px;color:var(--t3);white-space:nowrap}
-
-/* CARD ITEMS */
-.ci{
-  background:var(--bg4);border:1px solid var(--border);border-radius:var(--rs);
-  padding:11px 13px;display:flex;align-items:center;gap:11px;margin-bottom:7px;transition:all .2s;
-}
-.ci:hover{border-color:var(--borderL)}
-.ci-icon{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;background:var(--bg3);flex-shrink:0}
-.ci-info{flex:1;min-width:0}
-.ci-name{font-size:14px;font-weight:600}
-.ci-uid{font-family:monospace;font-size:11px;color:var(--blue);margin-top:2px}
-.ci-meta{font-size:11px;color:var(--t3);margin-top:2px}
-
-/* MODAL */
-.mo{display:none;position:fixed;inset:0;z-index:150;background:rgba(0,0,0,.75);backdrop-filter:blur(5px);align-items:center;justify-content:center;padding:14px}
-.mo.on{display:flex}
-.mod{background:var(--bg3);border:1px solid var(--borderL);border-radius:16px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.5)}
-.mod-h{padding:17px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.mod-t{font-size:15px;font-weight:700}
-.mod-x{width:30px;height:30px;border-radius:7px;background:var(--bg4);border:none;cursor:pointer;color:var(--t2);font-size:17px;display:flex;align-items:center;justify-content:center;transition:all .2s}
-.mod-x:hover{background:var(--redG);color:var(--red)}
-.mod-b{padding:20px}
-.mod-f{padding:15px 20px;border-top:1px solid var(--border);display:flex;gap:9px;justify-content:flex-end}
-
-/* DIVIDER */
-.div{height:1px;background:var(--border);margin:18px 0}
-
-/* CHIP */
-.chip{display:inline-flex;align-items:center;gap:4px;background:var(--bg4);border:1px solid var(--border);border-radius:20px;padding:3px 9px;font-size:12px}
-
-/* SECTION HEADER */
-.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:15px;flex-wrap:wrap;gap:10px}
-.sh-t{font-size:18px;font-weight:800}
-
-/* TOGGLE */
-.tog-w{display:flex;align-items:center;gap:9px}
-.tog{width:42px;height:22px;border-radius:11px;background:var(--bg4);border:1px solid var(--border);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
-.tog.on{background:var(--green);border-color:var(--green)}
-.tog::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s}
-.tog.on::after{transform:translateX(20px)}
-
-/* HELPERS */
-.flex{display:flex}.ic{align-items:center}.gap6{gap:6px}.gap10{gap:10px}.gap12{gap:12px}
-.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}
-.t-sm{font-size:13px}.t-xs{font-size:11px}.t2{color:var(--t2)}.t3{color:var(--t3)}
-.t-green{color:var(--green)}.t-blue{color:var(--blue)}.t-red{color:var(--red)}.t-yellow{color:var(--yellow)}
-.fw7{font-weight:700}.fw9{font-weight:900}.tc-txt{text-align:center}
-.dn{display:none}
-
-/* TOAST */
-#toasts{position:fixed;bottom:18px;right:18px;z-index:999;display:flex;flex-direction:column;gap:7px;pointer-events:none}
-.toast{
-  background:var(--bg4);border:1px solid var(--borderL);border-radius:var(--rs);
-  padding:11px 15px;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,.4);
-  display:flex;align-items:center;gap:9px;animation:ti .25s ease;pointer-events:all;max-width:300px;
-}
-@keyframes ti{from{transform:translateX(30px);opacity:0}to{transform:translateX(0);opacity:1}}
-.toast.hide{animation:to .25s ease forwards}
-@keyframes to{to{transform:translateX(30px);opacity:0}}
-.t-suc{border-left:3px solid var(--green)}.t-err{border-left:3px solid var(--red)}
-.t-inf{border-left:3px solid var(--blue)}.t-war{border-left:3px solid var(--yellow)}
-
-/* PAYMENT STATUS DISPLAY */
-.pay-status-bar{
-  display:flex;align-items:center;gap:14px;
-  background:var(--bg4);border:1px solid var(--borderL);border-radius:var(--r);
-  padding:14px 18px;margin-bottom:16px;
-}
-.pay-term-icon{font-size:28px}
-.pay-term-info{flex:1}
-.pay-term-name{font-size:14px;font-weight:700}
-.pay-term-id{font-size:11px;color:var(--t3);font-family:monospace}
-.pay-amount-big{font-size:26px;font-weight:900;color:var(--green);white-space:nowrap}
-
-/* MIFARE NOTE */
-.mifare-note{
-  border-radius:var(--r);padding:14px 16px;
-  background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(239,68,68,.06));
-  border:1px solid rgba(245,158,11,.3);margin-bottom:16px;
-}
-
-@media(max-width:480px){
-  .nav-brand span:not(.nav-badge){font-size:14px}
-  .wrap{padding:14px 12px}
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFC POS • Панель Управления</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
+        .card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+        .log-line {
+            animation: fadeIn 0.4s ease forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
-<body>
-
-<!-- NAV -->
-<nav class="nav">
-  <div class="nav-brand">
-    <div class="nav-logo">⬡</div>
-    <span>NFC<span style="color:var(--blue)">POS</span></span>
-    <span class="nav-badge">ПУЛЬТ</span>
-  </div>
-  <div class="nav-tabs">
-    <button class="ntab on" onclick="sv('dash')">📊 Дашборд</button>
-    <button class="ntab" onclick="sv('terminals')">🖥 Терминалы</button>
-    <button class="ntab" onclick="sv('cards')">💳 Карты</button>
-    <button class="ntab" onclick="sv('events')">📋 События</button>
-  </div>
-  <div class="nav-right">
-    <div class="sync-dot" title="Синхронизация с терминалами"></div>
-    <span class="sys-clock" id="clk">--:--:--</span>
-    <a href="terminal.html" target="_blank" class="btn bt-gho btn-sm">🖥 Открыть терминал →</a>
-  </div>
-</nav>
-<div class="m-tabs">
-  <button class="ntab on" onclick="sv('dash')">📊 Дашборд</button>
-  <button class="ntab" onclick="sv('terminals')">🖥 Терминалы</button>
-  <button class="ntab" onclick="sv('cards')">💳 Карты</button>
-  <button class="ntab" onclick="sv('events')">📋 События</button>
-</div>
-
-<!-- ══════════════ DASHBOARD ══════════════ -->
-<div class="view on" id="v-dash">
-<div class="wrap">
-
-  <!-- MIFARE WARNING -->
-  <div class="mifare-note">
-    <div class="flex ic gap10" style="margin-bottom:6px">
-      <span style="font-size:18px">⚠️</span>
-      <span class="fw7" style="font-size:14px">MIFARE Classic — ограничения Web NFC API</span>
-    </div>
-    <div class="t-sm t2">
-      <b>MIFARE Classic (ISO 14443-A)</b> не поддерживается браузерным Web NFC API — браузер читает только NDEF-теги.
-      Для работы с MIFARE Classic используйте <b>ручной ввод UID</b> (считайте UID телефоном через приложение NFC Tools / NFC TagInfo) 
-      или введите ID с наклейки на метке. UID отображается в любом NFC-приложении на Android.
-    </div>
-  </div>
-
-  <div class="stats" id="statsRow"></div>
-
-  <div class="g2">
-    <div class="pnl">
-      <div class="pnl-h">
-        <span class="pnl-t">🖥 Терминалы — статус</span>
-        <a href="terminal.html" target="_blank" class="btn bt-pri btn-sm">Открыть терминал</a>
-      </div>
-      <div style="padding:0"><div class="tbl-w"><table>
-        <thead><tr><th>Терминал</th><th>Статус</th><th>Режим</th><th>Транз.</th><th>Управление</th></tr></thead>
-        <tbody id="dashTermTbl"></tbody>
-      </table></div></div>
-    </div>
-    <div class="pnl">
-      <div class="pnl-h">
-        <span class="pnl-t">📋 Последние события</span>
-        <button class="btn bt-gho btn-sm" onclick="clearEvents()">Очистить</button>
-      </div>
-      <div class="pnl-b" style="padding:8px 14px"><div class="elog" id="dashElog"></div></div>
-    </div>
-  </div>
-
-  <div class="pnl">
-    <div class="pnl-h">
-      <span class="pnl-t">💳 Карты — обзор</span>
-      <button class="btn bt-pri btn-sm" onclick="sv('cards')">Все карты</button>
-    </div>
-    <div style="padding:0"><div class="tbl-w"><table>
-      <thead><tr><th>Владелец</th><th>UID (MIFARE/NFC)</th><th>Баланс</th><th>Статус</th><th>Последняя оплата</th></tr></thead>
-      <tbody id="dashCardsTbl"></tbody>
-    </table></div></div>
-  </div>
-
-</div>
-</div>
-
-<!-- ══════════════ TERMINALS ══════════════ -->
-<div class="view" id="v-terminals">
-<div class="wrap">
-  <div class="sh">
-    <div class="sh-t">🖥 Терминалы</div>
-    <div class="flex gap6">
-      <button class="btn bt-gho btn-sm" onclick="om('m-add-term')">＋ Добавить</button>
-      <a href="terminal.html" target="_blank" class="btn bt-pri btn-sm">🖥 Открыть терминал →</a>
-    </div>
-  </div>
-  <div class="tg" id="termGrid"></div>
-</div>
-</div>
-
-<!-- ══════════════ CARDS ══════════════ -->
-<div class="view" id="v-cards">
-<div class="wrap">
-  <div class="sh">
-    <div class="sh-t">💳 NFC / MIFARE карты</div>
-    <div class="flex gap6">
-      <button class="btn bt-gho btn-sm" onclick="om('m-reg-card')">＋ Выпустить</button>
-      <button class="btn bt-pri btn-sm" onclick="om('m-bind')">🔗 Привязать UID</button>
-    </div>
-  </div>
-
-  <!-- MIFARE UID Guide -->
-  <div class="nfc-info-box warn mb16">
-    <div class="flex ic gap10 mb12" style="margin-bottom:8px">
-      <span style="font-size:18px">📱</span>
-      <span class="fw7">Как получить UID карты MIFARE Classic</span>
-    </div>
-    <div class="t-sm t2" style="line-height:1.7">
-      1. Установите на Android: <b>NFC Tools</b> или <b>NFC TagInfo by NXP</b><br>
-      2. Откройте приложение → «Читать» → поднесите карту<br>
-      3. Найдите строку <b>«Serial number» / «UID»</b> — скопируйте (например: <span class="mono">04:A1:B2:C3</span>)<br>
-      4. Вставьте UID в поле ниже для привязки к карте в системе
-    </div>
-  </div>
-
-  <div class="pnl">
-    <div class="pnl-h">
-      <span class="pnl-t">Все карты <span class="chip" id="cntChip">0</span></span>
-      <input type="text" class="fi" id="cardSrch" placeholder="🔍 Поиск…" style="width:180px;padding:7px 12px;font-size:13px" oninput="filterCards()">
-    </div>
-    <div style="padding:0"><div class="tbl-w"><table>
-      <thead><tr>
-        <th>Владелец</th><th>UID карты</th><th>Тип</th><th>Баланс</th><th>Лимит</th><th>Терминал</th><th>Статус</th><th>Действия</th>
-      </tr></thead>
-      <tbody id="cardsTbl"></tbody>
-    </table></div></div>
-  </div>
-</div>
-</div>
-
-<!-- ══════════════ EVENTS ══════════════ -->
-<div class="view" id="v-events">
-<div class="wrap">
-  <div class="sh">
-    <div class="sh-t">📋 Журнал событий</div>
-    <button class="btn bt-dan btn-sm" onclick="clearEvents()">🗑 Очистить</button>
-  </div>
-  <div class="pnl">
-    <div class="pnl-b" style="padding:10px 14px">
-      <div class="elog" style="max-height:600px" id="fullElog"></div>
-    </div>
-  </div>
-</div>
-</div>
-
-<!-- ══════════════ MODALS ══════════════ -->
-
-<!-- Add Terminal -->
-<div class="mo" id="m-add-term">
-<div class="mod">
-  <div class="mod-h"><span class="mod-t">🖥 Новый терминал</span><button class="mod-x" onclick="cm('m-add-term')">✕</button></div>
-  <div class="mod-b">
-    <div class="fr">
-      <div class="fg"><label class="fl">Название</label><input class="fi" id="tN" placeholder="Касса №5"></div>
-      <div class="fg"><label class="fl">ID</label><input class="fi" id="tI" placeholder="TERM-005" readonly></div>
-    </div>
-    <div class="fg"><label class="fl">Местоположение</label><input class="fi" id="tL" placeholder="Зал А, стойка 2"></div>
-    <div class="fr">
-      <div class="fg"><label class="fl">Тип</label>
-        <select class="fs" id="tT"><option value="pos">POS-терминал</option><option value="kiosk">Киоск</option><option value="mobile">Мобильный</option><option value="gate">Турникет</option></select>
-      </div>
-      <div class="fg"><label class="fl">Дн. лимит (₽)</label><input type="number" class="fi" id="tLim" placeholder="100000"></div>
-    </div>
-    <div class="fg">
-      <label class="fl">PIN доступа (для терминала)</label>
-      <input type="text" class="fi" id="tPin" placeholder="1234" maxlength="6">
-      <div class="t-xs t3 mt8">Терминал запросит этот PIN при открытии в режиме оплаты</div>
-    </div>
-  </div>
-  <div class="mod-f">
-    <button class="btn bt-gho" onclick="cm('m-add-term')">Отмена</button>
-    <button class="btn bt-pri" onclick="addTerminal()">Создать</button>
-  </div>
-</div>
-</div>
-
-<!-- Register Card -->
-<div class="mo" id="m-reg-card">
-<div class="mod">
-  <div class="mod-h"><span class="mod-t">💳 Выпуск карты</span><button class="mod-x" onclick="cm('m-reg-card')">✕</button></div>
-  <div class="mod-b">
-    <div class="nfc-info-box info mb12">
-      <span class="t-xs fw7 t-blue">📱 UID карты MIFARE:</span>
-      <span class="t-xs t2"> считайте приложением NFC Tools на телефоне, затем введите ниже.</span>
-    </div>
-    <div class="fr">
-      <div class="fg"><label class="fl">Владелец</label><input class="fi" id="cO" placeholder="Иван Иванов"></div>
-      <div class="fg"><label class="fl">Телефон</label><input class="fi" id="cP" placeholder="+7 999 000 00 00"></div>
-    </div>
-    <div class="fg">
-      <label class="fl">UID карты (MIFARE / NFC)</label>
-      <div class="flex gap6">
-        <input class="fi" id="cU" placeholder="04:A1:B2:C3:D4:E5:F6" style="flex:1">
-        <button class="btn bt-gho" onclick="genUid()">🎲 Авто</button>
-      </div>
-      <div class="t-xs t3 mt8">Формат: 04:XX:XX:XX:XX:XX:XX (7 байт) или 04:XX:XX:XX (4 байт)</div>
-    </div>
-    <div class="fr">
-      <div class="fg"><label class="fl">Тип</label>
-        <select class="fs" id="cT"><option value="standard">Стандартная</option><option value="premium">Премиум</option><option value="corporate">Корпоративная</option><option value="guest">Гостевая</option></select>
-      </div>
-      <div class="fg"><label class="fl">Нач. баланс (₽)</label><input type="number" class="fi" id="cB" value="0"></div>
-    </div>
-    <div class="fr">
-      <div class="fg"><label class="fl">Лимит/транзакция (₽)</label><input type="number" class="fi" id="cLim" value="5000"></div>
-      <div class="fg"><label class="fl">Привязать к терминалу</label>
-        <select class="fs" id="cTerm"><option value="">— Все терминалы —</option></select>
-      </div>
-    </div>
-  </div>
-  <div class="mod-f">
-    <button class="btn bt-gho" onclick="cm('m-reg-card')">Отмена</button>
-    <button class="btn bt-suc" onclick="regCard()">Выпустить</button>
-  </div>
-</div>
-</div>
-
-<!-- Bind NFC UID -->
-<div class="mo" id="m-bind">
-<div class="mod">
-  <div class="mod-h"><span class="mod-t">🔗 Привязка UID к карте</span><button class="mod-x" onclick="cm('m-bind')">✕</button></div>
-  <div class="mod-b">
-    <div class="mifare-note" style="margin-bottom:14px">
-      <div class="fw7 t-sm" style="margin-bottom:6px">📱 Как получить UID MIFARE Classic:</div>
-      <div class="t-xs t2" style="line-height:1.8">
-        Android → <b>NFC Tools</b> → «Читать» → поднесите карту → скопируйте <b>Serial number</b><br>
-        Или: <b>NFC TagInfo</b> → поднесите → «Tag Information» → «ID»
-      </div>
-    </div>
-    <div class="fg">
-      <label class="fl">UID карты (вставьте из NFC Tools)</label>
-      <input class="fi" id="bUid" placeholder="04:A1:B2:C3:D4:E5:F6">
-      <div class="t-xs t3 mt8">Допускается формат с двоеточиями или без: 04A1B2C3D4E5F6</div>
-    </div>
-    <div class="fg">
-      <label class="fl">Привязать к карте</label>
-      <select class="fs" id="bCard"></select>
-    </div>
-    <div id="bPreview" class="dn"></div>
-  </div>
-  <div class="mod-f">
-    <button class="btn bt-gho" onclick="cm('m-bind')">Отмена</button>
-    <button class="btn bt-pri" onclick="bindUid()">Привязать</button>
-  </div>
-</div>
-</div>
-
-<!-- Card Detail -->
-<div class="mo" id="m-card">
-<div class="mod">
-  <div class="mod-h"><span class="mod-t" id="mCardT">Карта</span><button class="mod-x" onclick="cm('m-card')">✕</button></div>
-  <div class="mod-b" id="mCardB"></div>
-  <div class="mod-f" id="mCardF"></div>
-</div>
-</div>
-
-<!-- Terminal Detail -->
-<div class="mo" id="m-term">
-<div class="mod" style="max-width:540px">
-  <div class="mod-h"><span class="mod-t" id="mTermT">Терминал</span><button class="mod-x" onclick="cm('m-term')">✕</button></div>
-  <div class="mod-b" id="mTermB"></div>
-  <div class="mod-f" id="mTermF"></div>
-</div>
-</div>
-
-<!-- Topup -->
-<div class="mo" id="m-topup">
-<div class="mod" style="max-width:360px">
-  <div class="mod-h"><span class="mod-t">💰 Пополнение баланса</span><button class="mod-x" onclick="cm('m-topup')">✕</button></div>
-  <div class="mod-b">
-    <div class="fg"><label class="fl">Карта</label><div class="chip" id="topupCardName">—</div></div>
-    <div class="fg"><label class="fl">Сумма пополнения (₽)</label><input type="number" class="fi" id="topupAmt" placeholder="500" min="1"></div>
-    <div class="flex gap6 mt8">
-      <button class="btn bt-gho btn-sm" onclick="setTopup(500)">+500</button>
-      <button class="btn bt-gho btn-sm" onclick="setTopup(1000)">+1000</button>
-      <button class="btn bt-gho btn-sm" onclick="setTopup(3000)">+3000</button>
-      <button class="btn bt-gho btn-sm" onclick="setTopup(5000)">+5000</button>
-    </div>
-  </div>
-  <div class="mod-f">
-    <button class="btn bt-gho" onclick="cm('m-topup')">Отмена</button>
-    <button class="btn bt-suc" onclick="doTopup()">Пополнить</button>
-  </div>
-</div>
-</div>
-
-<div id="toasts"></div>
-
-<script>
-// ═══════════════════════════════════ STATE / STORAGE ═══════════════════════════════════
-const STORE_KEY = 'nfcpos_v2';
-
-function loadState() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || defaultState(); }
-  catch { return defaultState(); }
-}
-function saveState() { localStorage.setItem(STORE_KEY, JSON.stringify(S)); }
-
-function defaultState() {
-  return {
-    terminals: [
-      {id:'TERM-001',name:'Касса №1',loc:'Зал А',type:'pos',status:'online',mode:'idle',txns:84,revenue:28400,limit:200000,daily:28400,pin:'1234'},
-      {id:'TERM-002',name:'Касса №2 (Бар)',loc:'Бар',type:'pos',status:'online',mode:'idle',txns:63,revenue:21300,limit:150000,daily:21300,pin:'5678'},
-      {id:'TERM-003',name:'Киоск (Вход)',loc:'Холл',type:'kiosk',status:'online',mode:'idle',txns:71,revenue:17800,limit:100000,daily:17800,pin:'0000'},
-      {id:'TERM-004',name:'Мобильный',loc:'Склад',type:'mobile',status:'offline',mode:'idle',txns:29,revenue:15900,limit:50000,daily:15900,pin:'9999'},
-    ],
-    cards: [
-      {id:'CARD-001',owner:'Алексей Соколов',phone:'+7 916 123-45-67',uid:'04:A1:B2:C3:D4:E5:F6',type:'premium',balance:12500,limit:10000,terminal:'',status:'active',lastUsed:'14:32',lastAmt:0},
-      {id:'CARD-002',owner:'Мария Петрова',phone:'+7 903 987-65-43',uid:'04:F1:E2:D3:C4:B5:A6',type:'standard',balance:3200,limit:5000,terminal:'TERM-001',status:'active',lastUsed:'13:15',lastAmt:0},
-      {id:'CARD-003',owner:'Иван Сидоров',phone:'+7 925 111-22-33',uid:'04:11:22:33:44:55:66',type:'corporate',balance:50000,limit:20000,terminal:'TERM-002',status:'active',lastUsed:'12:58',lastAmt:0},
-      {id:'CARD-004',owner:'Анна Козлова',phone:'+7 977 444-55-66',uid:'04:AA:BB:CC:DD:EE:FF',type:'standard',balance:800,limit:5000,terminal:'',status:'active',lastUsed:'11:44',lastAmt:0},
-      {id:'CARD-005',owner:'Тестовая MIFARE',phone:'—',uid:'04:DE:AD:BE:EF:01:02',type:'guest',balance:500,limit:1000,terminal:'TERM-001',status:'active',lastUsed:'10:21',lastAmt:0},
-      {id:'CARD-006',owner:'Ольга Морозова',phone:'+7 915 222-33-44',uid:'04:DE:AD:BE:EF:00:01',type:'standard',balance:0,limit:5000,terminal:'',status:'blocked',lastUsed:'09:05',lastAmt:0},
-      {id:'CARD-007',owner:'Без UID (не привязана)',phone:'—',uid:'',type:'standard',balance:1500,limit:5000,terminal:'',status:'unbound',lastUsed:'—',lastAmt:0},
-    ],
-    events: [],
-    nextTermNum: 5,
-    nextCardNum: 8,
-  };
-}
-
-let S = loadState();
-
-// ═══════════════════════════════════ INIT ═══════════════════════════════════
-function init() {
-  clock(); setInterval(clock,1000);
-  renderAll();
-  addEv('info','Пульт управления запущен','SYS');
-  addEv('info','MIFARE Classic: используйте ручной ввод UID','NFC');
-  setInterval(syncCheck,3000);
-  setInterval(simLive,9000);
-}
-
-function clock() {
-  document.getElementById('clk').textContent = new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-}
-
-function renderAll() {
-  saveState();
-  renderStats();
-  renderDashTerms();
-  renderDashCards();
-  renderElog('dashElog');
-  renderElog('fullElog');
-  renderTermGrid();
-  renderCardsTable(S.cards);
-  document.getElementById('cntChip').textContent = S.cards.length+' шт.';
-  updSelects();
-}
-
-// ═══════════════════════════════════ SYNC ═══════════════════════════════════
-function syncCheck() {
-  const saved = loadState();
-  // Merge terminal statuses from terminal.html changes
-  saved.terminals.forEach(st => {
-    const lt = S.terminals.find(t=>t.id===st.id);
-    if(lt) {
-      if(lt.txns !== st.txns || lt.revenue !== st.revenue) {
-        lt.txns = st.txns; lt.revenue = st.revenue;
-        lt.daily = st.daily; lt.mode = st.mode;
-      }
-    }
-  });
-  S.events = saved.events;
-  renderAll();
-}
-
-// ═══════════════════════════════════ STATS ═══════════════════════════════════
-function renderStats() {
-  const total_txns = S.terminals.reduce((s,t)=>s+t.txns,0);
-  const total_rev  = S.terminals.reduce((s,t)=>s+t.revenue,0);
-  const online = S.terminals.filter(t=>t.status==='online').length;
-  const payMode = S.terminals.filter(t=>t.mode==='payment').length;
-  document.getElementById('statsRow').innerHTML = [
-    {acc:'var(--blue)',   icon:'🖥',  val:S.terminals.length, lbl:'Терминалов',   trend:`${online} онлайн`},
-    {acc:'var(--green)',  icon:'💳',  val:S.cards.length,     lbl:'NFC-карт',     trend:`${S.cards.filter(c=>c.status==='active').length} активных`},
-    {acc:'var(--purple)', icon:'✅',  val:total_txns,         lbl:'Транзакций',   trend:'за всё время'},
-    {acc:'var(--yellow)', icon:'💰',  val:fmt(total_rev),     lbl:'Выручка',      trend:'суммарно'},
-    {acc:'var(--green)',  icon:'⚡',  val:payMode,            lbl:'В режиме оплаты', trend:`из ${online} онлайн`},
-    {acc:'var(--red)',    icon:'🔒',  val:S.cards.filter(c=>c.status==='blocked').length, lbl:'Заблокировано', trend:'карт'},
-  ].map(sc=>`
-    <div class="sc" style="--acc:${sc.acc}">
-      <div class="sc-icon">${sc.icon}</div>
-      <div class="sc-val">${sc.val}</div>
-      <div class="sc-lbl">${sc.lbl}</div>
-      <div class="sc-trend">${sc.trend}</div>
-    </div>
-  `).join('');
-}
-
-// ═══════════════════════════════════ TERMINALS ═══════════════════════════════════
-function renderDashTerms() {
-  document.getElementById('dashTermTbl').innerHTML = S.terminals.map(t=>`
-    <tr>
-      <td><div class="fw7">${t.name}</div><div class="t-xs t3">${t.id} · ${t.loc}</div></td>
-      <td>${sBdg(t.status)}</td>
-      <td>${mBdg(t.mode)}</td>
-      <td class="fw7">${t.txns}</td>
-      <td>
-        ${t.status==='online'
-          ?`<button class="btn btn-sm ${t.mode==='payment'?'bt-dan':'bt-suc'}" onclick="setPayMode('${t.id}')">${t.mode==='payment'?'⏸ Стоп':'💳 Оплата'}</button>`
-          :`<button class="btn btn-sm bt-pri" onclick="toggleStatus('${t.id}')">▶ Вкл</button>`}
-      </td>
-    </tr>
-  `).join('');
-}
-
-function renderTermGrid() {
-  document.getElementById('termGrid').innerHTML = S.terminals.map(t=>`
-    <div class="tc ${t.mode==='payment'?'pay':''} ${t.status==='offline'?'off':''}" onclick="openTerm('${t.id}')">
-      <div class="tc-id">${t.id}</div>
-      <div class="flex ic gap10" style="margin-bottom:6px">
-        <div style="flex:1">
-          <div class="tc-name">${t.name}</div>
-          <div class="tc-loc">📍 ${t.loc} · ${ttLbl(t.type)}</div>
+<body class="bg-zinc-950 text-zinc-200">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="w-72 bg-zinc-900 border-r border-zinc-700 flex flex-col">
+            <div class="p-6 border-b border-zinc-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-emerald-500 rounded-2xl flex items-center justify-center text-black text-xl font-bold">N</div>
+                    <div>
+                        <div class="text-2xl font-semibold tracking-tighter text-white">NFC<span class="text-emerald-400">POS</span></div>
+                        <div class="text-xs text-emerald-400 font-mono">УПРАВЛЕНИЕ • СБЕР</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-4">
+                <div onclick="switchTab(0)" class="tab-button flex items-center gap-3 px-5 py-3.5 hover:bg-zinc-800 rounded-2xl cursor-pointer bg-zinc-800 text-white mb-1" id="tab-0">
+                    <i class="fa-solid fa-gauge-high w-5"></i>
+                    <span class="font-medium">Дашборд</span>
+                </div>
+                <div onclick="switchTab(1)" class="tab-button flex items-center gap-3 px-5 py-3.5 hover:bg-zinc-800 rounded-2xl cursor-pointer" id="tab-1">
+                    <i class="fa-solid fa-credit-card w-5"></i>
+                    <span class="font-medium">NFC Карты</span>
+                </div>
+                <div onclick="switchTab(2)" class="tab-button flex items-center gap-3 px-5 py-3.5 hover:bg-zinc-800 rounded-2xl cursor-pointer" id="tab-2">
+                    <i class="fa-solid fa-store w-5"></i>
+                    <span class="font-medium">Терминалы</span>
+                </div>
+                <div onclick="switchTab(3)" class="tab-button flex items-center gap-3 px-5 py-3.5 hover:bg-zinc-800 rounded-2xl cursor-pointer" id="tab-3">
+                    <i class="fa-solid fa-list-check w-5"></i>
+                    <span class="font-medium">Журнал</span>
+                </div>
+            </div>
+            
+            <div class="mt-auto p-6">
+                <div class="bg-zinc-950 rounded-3xl p-5 text-xs border border-emerald-900">
+                    <div class="flex justify-between text-emerald-400 mb-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                            <span class="font-medium">ONLINE</span>
+                        </div>
+                        <span class="font-mono">СБЕР #01</span>
+                    </div>
+                    <button onclick="sendCommandToTerminal()" 
+                            class="w-full bg-white text-zinc-900 hover:bg-amber-200 py-3 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        ОТПРАВИТЬ КОМАНДУ НА ТЕРМИНАЛ
+                    </button>
+                </div>
+            </div>
         </div>
-        ${sBdg(t.status)}
-      </div>
-      ${t.mode==='payment'?'<div class="bdg b-green" style="margin-bottom:10px;display:inline-flex">⚡ РЕЖИМ ОПЛАТЫ АКТИВЕН</div>':''}
-      <div class="tc-stats">
-        <div class="ts"><div class="ts-v t-blue">${t.txns}</div><div class="ts-l">Транз.</div></div>
-        <div class="ts"><div class="ts-v t-green" style="font-size:14px">${fmt(t.revenue)}</div><div class="ts-l">Выручка</div></div>
-      </div>
-      <div style="margin-top:10px">
-        <div class="flex ic gap6 mb12" style="margin-bottom:4px">
-          <span class="t-xs t3">Дн. лимит:</span>
-          <span class="t-xs fw7">${fmt(t.daily)} / ${fmt(t.limit)}</span>
+        
+        <!-- Main Content -->
+        <div class="flex-1 overflow-auto">
+            <div class="p-8">
+                <!-- Tab 0: Dashboard -->
+                <div id="content-0">
+                    <h1 class="text-5xl font-semibold tracking-tighter mb-2">Панель управления NFC</h1>
+                    <p class="text-zinc-400 mb-10">Реальное взаимодействие с терминалом в стиле Сбербанка</p>
+                    
+                    <div class="grid grid-cols-12 gap-6">
+                        <div class="col-span-7 bg-zinc-900 rounded-3xl p-8">
+                            <div class="flex items-center justify-between mb-8">
+                                <div class="text-lg font-medium">Активные NFC карты</div>
+                                <button onclick="showAddCardModal()" 
+                                        class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 px-6 py-2 rounded-2xl text-sm">
+                                    <i class="fa-solid fa-plus"></i> НОВАЯ КАРТА
+                                </button>
+                            </div>
+                            <div class="space-y-4" id="cards-list">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                        
+                        <div class="col-span-5 bg-zinc-900 rounded-3xl p-8">
+                            <div class="text-emerald-400 text-sm font-medium mb-6 flex items-center gap-2">
+                                <i class="fa-solid fa-bolt"></i> ЖИВОЙ ЖУРНАЛ СОБЫТИЙ
+                            </div>
+                            <div id="live-logs" class="space-y-5 text-sm font-light h-[380px] overflow-auto pr-2 custom-scroll">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab 1: Cards -->
+                <div id="content-1" class="hidden">
+                    <h2 class="text-4xl font-semibold mb-8">Управление NFC картами</h2>
+                    <div class="bg-zinc-900 rounded-3xl p-2" id="full-cards-table">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+                
+                <!-- Tab 2: Terminals -->
+                <div id="content-2" class="hidden">
+                    <h2 class="text-4xl font-semibold mb-8">Терминалы</h2>
+                    <div onclick="openTerminal()" class="cursor-pointer bg-gradient-to-br from-emerald-900 to-zinc-900 border border-emerald-700 rounded-3xl p-8 flex gap-8 items-center hover:border-emerald-400 transition-all">
+                        <img src="https://picsum.photos/id/1015/280/220" class="w-64 rounded-2xl shadow-2xl" alt="Сбер терминал">
+                        <div>
+                            <div class="uppercase text-emerald-400 text-xs tracking-widest mb-3">СБЕРБАНК</div>
+                            <div class="text-5xl font-semibold tracking-tighter">Терминал #01</div>
+                            <div class="text-2xl text-zinc-400">Готов к приёму NFC</div>
+                            <div class="mt-8 text-xs leading-relaxed max-w-xs">
+                                Откройте <span class="font-mono bg-black px-2 py-1 rounded">terminal.html</span> в соседней вкладке.<br>
+                                Нажмите кнопку ниже чтобы отправить команду оплаты.
+                            </div>
+                            <button onclick="event.stopImmediatePropagation();sendPaymentCommandToTerminal();return false" 
+                                    class="mt-8 px-8 py-4 bg-white text-black font-semibold rounded-3xl flex items-center gap-3">
+                                ОТПРАВИТЬ ЗАПРОС ОПЛАТЫ НА ТЕРМИНАЛ
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab 3: Logs -->
+                <div id="content-3" class="hidden">
+                    <h2 class="text-4xl font-semibold mb-8">Полный журнал событий</h2>
+                    <div id="full-logs" class="space-y-3">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="pb-w"><div class="pb-f" style="width:${Math.min((t.daily/t.limit)*100,100)}%"></div></div>
-      </div>
-      <div class="tc-acts" onclick="event.stopPropagation()">
-        ${t.status==='online'
-          ?`<button class="btn btn-sm ${t.mode==='payment'?'bt-dan':'bt-suc'}" onclick="setPayMode('${t.id}')">${t.mode==='payment'?'⏸ Стоп':'💳 Режим оплаты'}</button>
-            <button class="btn bt-gho btn-sm" onclick="openTerm('${t.id}')">Детали</button>`
-          :`<button class="btn bt-pri btn-sm" onclick="toggleStatus('${t.id}')">▶ Включить</button>`}
-        <button class="btn bt-dan btn-sm" onclick="removeTerm('${t.id}')">🗑</button>
-      </div>
     </div>
-  `).join('');
-}
-
-function openTerm(id) {
-  const t = S.terminals.find(x=>x.id===id);
-  if(!t) return;
-  const lc = S.cards.filter(c=>c.terminal===id);
-  document.getElementById('mTermT').textContent = t.name;
-  document.getElementById('mTermB').innerHTML = `
-    <div class="g2" style="margin-bottom:14px">
-      <div class="ts"><div class="ts-v t-blue">${t.txns}</div><div class="ts-l">Транзакций</div></div>
-      <div class="ts"><div class="ts-v t-green" style="font-size:15px">${fmt(t.revenue)}</div><div class="ts-l">Выручка</div></div>
-    </div>
-    <div class="fr mb12">
-      <div class="fg"><label class="fl">Статус</label><div class="flex ic gap6">${sBdg(t.status)}${mBdg(t.mode)}</div></div>
-      <div class="fg"><label class="fl">Тип</label><span class="chip">${ttLbl(t.type)}</span></div>
-    </div>
-    <div class="fg">
-      <label class="fl">PIN доступа</label>
-      <div class="flex ic gap10">
-        <div class="mono" style="font-size:18px;letter-spacing:4px">${t.pin||'—'}</div>
-        <div class="t-xs t3">Введите на странице терминала</div>
-      </div>
-    </div>
-    <div class="fg">
-      <label class="fl">Дневной лимит</label>
-      <div class="flex ic gap10">
-        <div style="flex:1"><div class="pb-w"><div class="pb-f" style="width:${Math.min((t.daily/t.limit)*100,100)}%"></div></div></div>
-        <span class="t-sm fw7">${fmt(t.daily)} / ${fmt(t.limit)}</span>
-      </div>
-    </div>
-    <div class="fg">
-      <label class="fl">Привязанные карты (${lc.length})</label>
-      ${lc.length ? lc.map(c=>`
-        <div class="ci">
-          <div class="ci-icon">💳</div>
-          <div class="ci-info">
-            <div class="ci-name">${c.owner}</div>
-            <div class="ci-uid">${c.uid||'⚠ UID не привязан'}</div>
-          </div>
-          ${cBdg(c.status)}
+    
+    <!-- Add Card Modal -->
+    <div onclick="if(event.target.id==='modal-backdrop')hideAddCardModal()" id="modal-backdrop" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div onclick="event.stopImmediatePropagation()" class="bg-zinc-900 w-full max-w-md rounded-3xl p-8">
+            <h3 class="text-2xl font-semibold mb-6">Добавить новую NFC карту</h3>
+            <input id="new-owner" type="text" placeholder="Имя владельца" 
+                   class="w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-2xl px-5 py-4 outline-none mb-4">
+            <input id="new-nfc" type="text" placeholder="NFC ID (например 04A1B2C3D4E5)" 
+                   class="w-full bg-zinc-800 border border-zinc-700 focus:border-emerald-500 rounded-2xl px-5 py-4 outline-none mb-6 font-mono">
+            <div class="flex gap-4">
+                <button onclick="hideAddCardModal()" 
+                        class="flex-1 py-4 text-sm border border-zinc-700 rounded-2xl">ОТМЕНА</button>
+                <button onclick="addNewCard()" 
+                        class="flex-1 py-4 text-sm bg-emerald-500 text-black font-semibold rounded-2xl">ДОБАВИТЬ КАРТУ</button>
+            </div>
         </div>
-      `).join('') : '<div class="t-sm t3">Нет привязанных карт</div>'}
     </div>
-  `;
-  document.getElementById('mTermF').innerHTML = `
-    <button class="btn bt-gho" onclick="cm('m-term')">Закрыть</button>
-    ${t.status==='online'
-      ?`<button class="btn ${t.mode==='payment'?'bt-dan':'bt-suc'}" onclick="setPayMode('${t.id}');cm('m-term')">${t.mode==='payment'?'⏸ Стоп':'💳 Режим оплаты'}</button>`
-      :`<button class="btn bt-pri" onclick="toggleStatus('${t.id}');cm('m-term')">▶ Включить</button>`}
-    <a href="terminal.html" target="_blank" class="btn bt-pri">🖥 Открыть →</a>
-  `;
-  om('m-term');
-}
-
-function setPayMode(id) {
-  const t = S.terminals.find(x=>x.id===id);
-  if(!t||t.status==='offline') return;
-  t.mode = t.mode==='payment'?'idle':'payment';
-  addEv(t.mode==='payment'?'success':'info',`${t.name}: ${t.mode==='payment'?'→ Режим ОПЛАТЫ':'← Ожидание'}`,t.id);
-  toast(t.mode==='payment'?`${t.name} — режим оплаты ВКЛ`:`${t.name} — режим оплаты ВЫКЛ`,t.mode==='payment'?'suc':'inf');
-  renderAll();
-}
-
-function toggleStatus(id) {
-  const t = S.terminals.find(x=>x.id===id);
-  if(!t) return;
-  t.status = t.status==='online'?'offline':'online';
-  if(t.status==='offline') t.mode='idle';
-  addEv(t.status==='online'?'success':'warn',`${t.name}: ${t.status==='online'?'онлайн':'офлайн'}`,t.id);
-  toast(`${t.name} — ${t.status==='online'?'онлайн':'офлайн'}`,t.status==='online'?'suc':'war');
-  renderAll();
-}
-
-function addTerminal() {
-  const name = document.getElementById('tN').value.trim();
-  const loc  = document.getElementById('tL').value.trim()||'Не указано';
-  const type = document.getElementById('tT').value;
-  const limit= parseInt(document.getElementById('tLim').value)||100000;
-  const pin  = document.getElementById('tPin').value.trim()||'0000';
-  if(!name){toast('Введите название','war');return;}
-  const id = 'TERM-'+String(S.nextTermNum).padStart(3,'0');
-  S.nextTermNum++;
-  S.terminals.push({id,name,loc,type,status:'online',mode:'idle',txns:0,revenue:0,limit,daily:0,pin});
-  addEv('success',`Создан терминал: ${name} (${id}) PIN:${pin}`,'SYS');
-  toast('Терминал создан!','suc');
-  cm('m-add-term');
-  ['tN','tL','tLim','tPin'].forEach(i=>document.getElementById(i).value='');
-  renderAll();
-}
-
-function removeTerm(id) {
-  if(!confirm('Удалить терминал?')) return;
-  S.terminals = S.terminals.filter(t=>t.id!==id);
-  addEv('warn','Терминал удалён: '+id,'SYS');
-  toast('Терминал удалён','war');
-  renderAll();
-}
-
-// ═══════════════════════════════════ CARDS ═══════════════════════════════════
-function renderDashCards() {
-  document.getElementById('dashCardsTbl').innerHTML = S.cards.slice(0,7).map(c=>`
-    <tr>
-      <td><div class="fw7">${c.owner}</div><div class="t-xs t3">${c.phone}</div></td>
-      <td><span class="mono">${c.uid||'<span style="color:var(--red);font-size:11px">⚠ нет UID</span>'}</span></td>
-      <td class="fw7 ${c.balance<500?'t-red':'t-green'}">${fmt(c.balance)}</td>
-      <td>${cBdg(c.status)}</td>
-      <td class="t-xs t3">${c.lastUsed}${c.lastAmt?` · ${fmt(c.lastAmt)}`:''}</td>
-    </tr>
-  `).join('');
-}
-
-function renderCardsTable(cards) {
-  const tb = document.getElementById('cardsTbl');
-  if(!tb) return;
-  tb.innerHTML = cards.map(c=>`
-    <tr>
-      <td><div class="fw7">${c.owner}</div><div class="t-xs t3">${c.phone}</div></td>
-      <td>
-        ${c.uid
-          ?`<span class="mono">${c.uid}</span>`
-          :`<span class="t-xs t-red fw7">⚠ UID не привязан</span>`}
-      </td>
-      <td><span class="bdg b-gray">${ctLbl(c.type)}</span></td>
-      <td class="fw7 ${c.balance<500?'t-red':'t-green'}">${fmt(c.balance)}</td>
-      <td class="t2 t-sm">${fmt(c.limit)}</td>
-      <td>${c.terminal?`<span class="chip">🖥 ${c.terminal}</span>`:'<span class="t3 t-xs">Все</span>'}</td>
-      <td>${cBdg(c.status)}</td>
-      <td>
-        <div class="flex gap6">
-          <button class="btn bt-gho btn-xs" onclick="openCard('${c.id}')">Инфо</button>
-          <button class="btn bt-gho btn-xs" onclick="openTopup('${c.id}')">+ ₽</button>
-          <button class="btn btn-xs ${c.status==='blocked'?'bt-suc':'bt-dan'}" onclick="toggleBlock('${c.id}')">${c.status==='blocked'?'✔':'🔒'}</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
-}
-
-function filterCards() {
-  const q = document.getElementById('cardSrch').value.toLowerCase();
-  renderCardsTable(S.cards.filter(c=>
-    c.owner.toLowerCase().includes(q)||c.uid.toLowerCase().includes(q)||c.id.includes(q)
-  ));
-}
-
-function openCard(id) {
-  const c = S.cards.find(x=>x.id===id);
-  if(!c) return;
-  document.getElementById('mCardT').textContent = c.owner;
-  document.getElementById('mCardB').innerHTML = `
-    <div class="g2 mb12">
-      <div class="ts"><div class="ts-v t-green" style="font-size:22px">${fmt(c.balance)}</div><div class="ts-l">Баланс</div></div>
-      <div class="ts"><div class="ts-v t2" style="font-size:15px">${fmt(c.limit)}</div><div class="ts-l">Лимит</div></div>
-    </div>
-    <div class="fg"><label class="fl">UID карты (MIFARE / NFC)</label>
-      ${c.uid
-        ?`<div style="background:var(--bg4);border:1px solid var(--borderL);border-radius:var(--rs);padding:10px 14px;font-family:monospace;font-size:14px;color:var(--blue)">${c.uid}</div>`
-        :`<div style="background:var(--redG);border:1px solid rgba(239,68,68,.3);border-radius:var(--rs);padding:10px 14px;font-size:13px;color:var(--red)">⚠ UID не привязан — используйте NFC Tools на телефоне</div>`}
-    </div>
-    <div class="fr">
-      <div class="fg"><label class="fl">Тип</label><span class="bdg b-gray">${ctLbl(c.type)}</span></div>
-      <div class="fg"><label class="fl">Статус</label>${cBdg(c.status)}</div>
-    </div>
-    <div class="fg"><label class="fl">Телефон</label><div class="t-sm">${c.phone}</div></div>
-    <div class="fg"><label class="fl">Терминал</label>${c.terminal?`<span class="chip">🖥 ${c.terminal}</span>`:'<span class="t3">Все терминалы</span>'}</div>
-    <div class="fg"><label class="fl">Последняя операция</label><div class="t-sm">${c.lastUsed}${c.lastAmt?' · '+fmt(c.lastAmt):''}</div></div>
-  `;
-  document.getElementById('mCardF').innerHTML = `
-    <button class="btn bt-gho" onclick="cm('m-card')">Закрыть</button>
-    <button class="btn bt-gho" onclick="cm('m-card');openTopup('${c.id}')">+ Пополнить</button>
-    <button class="btn ${c.status==='blocked'?'bt-suc':'bt-dan'}" onclick="toggleBlock('${c.id}');cm('m-card')">${c.status==='blocked'?'✔ Разблок.':'🔒 Заблокировать'}</button>
-    <button class="btn bt-gho" onclick="cm('m-card');document.getElementById('bCard').value='${c.id}';om('m-bind')">🔗 Привязать UID</button>
-  `;
-  om('m-card');
-}
-
-function regCard() {
-  const owner = document.getElementById('cO').value.trim();
-  const phone = document.getElementById('cP').value.trim();
-  let uid   = document.getElementById('cU').value.trim();
-  const type  = document.getElementById('cT').value;
-  const balance = parseInt(document.getElementById('cB').value)||0;
-  const limit = parseInt(document.getElementById('cLim').value)||5000;
-  const terminal = document.getElementById('cTerm').value;
-  if(!owner){toast('Введите владельца','war');return;}
-  uid = normalizeUid(uid);
-  if(uid && S.cards.find(c=>c.uid===uid)){toast('Этот UID уже занят!','err');return;}
-  const id = 'CARD-'+String(S.nextCardNum).padStart(3,'0');
-  S.nextCardNum++;
-  S.cards.push({id,owner,phone:phone||'—',uid,type,balance,limit,terminal,status:uid?'active':'unbound',lastUsed:'—',lastAmt:0});
-  addEv('success',`Выпущена карта: ${owner} UID:${uid||'без UID'}`,'SYS');
-  toast('Карта выпущена!','suc');
-  cm('m-reg-card');
-  ['cO','cP','cU'].forEach(i=>document.getElementById(i).value='');
-  document.getElementById('cB').value='0';
-  renderAll();
-}
-
-function genUid() {
-  const b=['04'];
-  for(let i=0;i<6;i++) b.push(Math.floor(Math.random()*256).toString(16).padStart(2,'0').toUpperCase());
-  document.getElementById('cU').value=b.join(':');
-}
-
-function normalizeUid(uid) {
-  if(!uid) return '';
-  const clean = uid.replace(/[^0-9A-Fa-f]/g,'');
-  const pairs = clean.match(/.{1,2}/g)||[];
-  return pairs.map(p=>p.toUpperCase()).join(':');
-}
-
-function bindUid() {
-  let uid = document.getElementById('bUid').value.trim();
-  const cardId = document.getElementById('bCard').value;
-  uid = normalizeUid(uid);
-  if(!uid){toast('Введите UID','war');return;}
-  if(!cardId){toast('Выберите карту','war');return;}
-  const ex = S.cards.find(c=>c.uid===uid&&c.id!==cardId);
-  if(ex){toast('UID уже привязан: '+ex.owner,'err');return;}
-  const card = S.cards.find(c=>c.id===cardId);
-  card.uid=uid; card.status='active';
-  addEv('success',`UID привязан: ${card.owner} → ${uid}`,'SYS');
-  toast('UID привязан к карте '+card.owner,'suc');
-  cm('m-bind');
-  document.getElementById('bUid').value='';
-  renderAll();
-}
-
-let _topupCardId=null;
-function openTopup(id) {
-  _topupCardId=id;
-  const c=S.cards.find(x=>x.id===id);
-  document.getElementById('topupCardName').textContent=c?`${c.owner} · ${fmt(c.balance)}`:'—';
-  document.getElementById('topupAmt').value='';
-  om('m-topup');
-}
-function setTopup(n){document.getElementById('topupAmt').value=n}
-function doTopup() {
-  const amt=parseInt(document.getElementById('topupAmt').value);
-  if(!amt||amt<=0){toast('Введите сумму','war');return;}
-  const c=S.cards.find(x=>x.id===_topupCardId);
-  if(!c){toast('Карта не найдена','err');return;}
-  c.balance+=amt;
-  addEv('success',`Пополнение: ${c.owner} +${fmt(amt)} → ${fmt(c.balance)}`,c.id);
-  toast(`+${fmt(amt)} → ${c.owner}`,'suc');
-  cm('m-topup');
-  renderAll();
-}
-
-function toggleBlock(id) {
-  const c=S.cards.find(x=>x.id===id);
-  if(!c)return;
-  c.status=c.status==='blocked'?'active':'blocked';
-  addEv(c.status==='blocked'?'warn':'success',`${c.owner}: ${c.status==='blocked'?'заблокирована':'разблокирована'}`,c.id);
-  toast(`Карта ${c.status==='blocked'?'заблокирована':'разблокирована'}`,c.status==='blocked'?'war':'suc');
-  renderAll();
-}
-
-// ═══════════════════════════════════ EVENTS ═══════════════════════════════════
-function addEv(type,text,src) {
-  const t=new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  S.events.unshift({type,text,src,t});
-  if(S.events.length>100) S.events.pop();
-  saveState();
-  renderElog('dashElog'); renderElog('fullElog');
-}
-function clearEvents(){S.events=[];saveState();renderElog('dashElog');renderElog('fullElog');}
-function renderElog(elId) {
-  const el=document.getElementById(elId); if(!el)return;
-  const cm2={'success':'var(--green)','error':'var(--red)','warn':'var(--yellow)','info':'var(--blue)'};
-  el.innerHTML=S.events.map(e=>`
-    <div class="ei">
-      <div class="edot" style="background:${cm2[e.type]||'var(--t3)'}"></div>
-      <div class="etime">${e.t}</div>
-      <div class="etxt">${e.text}</div>
-      <div class="etag">${e.src}</div>
-    </div>
-  `).join('')||'<div class="t-sm t3 tc-txt" style="padding:12px">Нет событий</div>';
-}
-
-// ═══════════════════════════════════ LIVE SIM ═══════════════════════════════════
-function simLive() {
-  const online=S.terminals.filter(t=>t.status==='online');
-  if(!online.length) return;
-  const t=online[Math.floor(Math.random()*online.length)];
-  const active=S.cards.filter(c=>c.status==='active'&&c.balance>100);
-  if(active.length&&Math.random()>.4) {
-    const c=active[Math.floor(Math.random()*active.length)];
-    const amt=[120,180,250,320,500,650,800][Math.floor(Math.random()*7)];
-    if(c.balance>=amt) {
-      c.balance-=amt; c.lastUsed=new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}); c.lastAmt=amt;
-      t.txns++; t.revenue+=amt; t.daily+=amt;
-      addEv('success',`[Авто] ${fmt(amt)} · ${c.owner} → ${t.name}`,'SIM');
-      renderAll(); return;
-    }
-  }
-  addEv('info','Heartbeat: '+online.length+' терминалов онлайн','SYS');
-}
-
-// ═══════════════════════════════════ SELECTS ═══════════════════════════════════
-function updSelects() {
-  const tOpts=S.terminals.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
-  const cOpts=S.cards.map(c=>`<option value="${c.id}">${c.owner} — ${c.id}</option>`).join('');
-  const el1=document.getElementById('cTerm'); if(el1)el1.innerHTML='<option value="">— Все терминалы —</option>'+tOpts;
-  const el2=document.getElementById('bCard'); if(el2)el2.innerHTML=cOpts;
-  // auto-gen next term ID
-  document.getElementById('tI').value='TERM-'+String(S.nextTermNum).padStart(3,'0');
-}
-
-// ═══════════════════════════════════ BADGES ═══════════════════════════════════
-function sBdg(s){const m={online:'b-green',offline:'b-gray',maintenance:'b-yellow'};const l={online:'Онлайн',offline:'Офлайн',maintenance:'Обслуживание'};return`<span class="bdg ${m[s]||'b-gray'}">${l[s]||s}</span>`}
-function mBdg(m){const mp={idle:'b-gray',payment:'b-green',blocked:'b-red'};const l={idle:'Ожидание',payment:'Оплата',blocked:'Блок'};return`<span class="bdg ${mp[m]||'b-gray'}">${l[m]||m}</span>`}
-function cBdg(s){const m={active:'b-green',blocked:'b-red',unbound:'b-yellow',expired:'b-gray'};const l={active:'Активна',blocked:'Блок',unbound:'Нет UID',expired:'Истекла'};return`<span class="bdg ${m[s]||'b-gray'}">${l[s]||s}</span>`}
-function ctLbl(t){return{standard:'Стандарт',premium:'Премиум',corporate:'Корпорат.',guest:'Гостевая'}[t]||t}
-function ttLbl(t){return{pos:'POS',kiosk:'Киоск',mobile:'Мобильный',gate:'Турникет'}[t]||t}
-function fmt(n){if(n===undefined||n===null)return'0 ₽';return n>=1000?(n/1000).toFixed(n%1000===0?0:1)+'к ₽':n+' ₽'}
-
-// ═══════════════════════════════════ MODAL / TOAST / VIEW ═══════════════════════════════════
-function om(id){document.getElementById(id).classList.add('on')}
-function cm(id){document.getElementById(id).classList.remove('on')}
-function sv(name) {
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
-  document.querySelectorAll('.ntab').forEach(b=>b.classList.remove('on'));
-  document.getElementById('v-'+name).classList.add('on');
-  document.querySelectorAll('.ntab').forEach(b=>{
-    if(b.textContent.toLowerCase().includes({dash:'дашб',terminals:'терм',cards:'карт',events:'собы'}[name]||name)) b.classList.add('on');
-  });
-}
-document.querySelectorAll('.mo').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('on')}));
-
-function toast(msg,type='inf'){
-  const el=document.createElement('div');
-  el.className=`toast t-${type}`;
-  const ic={suc:'✅',err:'❌',war:'⚠️',inf:'ℹ️'};
-  el.innerHTML=`<span>${ic[type]||'ℹ️'}</span><span>${msg}</span>`;
-  document.getElementById('toasts').appendChild(el);
-  setTimeout(()=>{el.classList.add('hide');setTimeout(()=>el.remove(),300)},3500);
-}
-
-init();
-</script>
+    
+    <script>
+        let cards = [
+            { id: "04A1B2C3D4E5", owner: "Алексей Иванов", balance: 1840, status: "active", lastUsed: "2 мин назад" },
+            { id: "04F7A9B2C318", owner: "Мария Петрова", balance: 920, status: "active", lastUsed: "Только что" },
+            { id: "0482C6D9E1F2", owner: "Дмитрий Соколов", balance: 3250, status: "active", lastUsed: "47 мин назад" }
+        ];
+        
+        let logs = [];
+        let channel = null;
+        
+        function addLog(event, details, type = 'system') {
+            const entry = {
+                time: new Date().toLocaleTimeString('ru-RU'),
+                event: event,
+                details: details,
+                type: type
+            };
+            logs.unshift(entry);
+            if (logs.length > 15) logs.pop();
+            renderLogs();
+        }
+        
+        function renderCards() {
+            const container = document.getElementById('cards-list');
+            container.innerHTML = '';
+            cards.forEach((card, i) => {
+                const div = document.createElement('div');
+                div.className = `card flex items-center justify-between bg-zinc-800 px-6 py-5 rounded-2xl border border-transparent hover:border-emerald-900`;
+                div.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="w-9 h-9 bg-emerald-900 rounded-2xl flex items-center justify-center text-emerald-400">
+                            <i class="fa-solid fa-credit-card"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium">${card.owner}</div>
+                            <div class="font-mono text-xs text-emerald-400">${card.id}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-emerald-400 text-xl font-light">${card.balance} ₽</div>
+                        <div onclick="sendCardToTerminal(${i});event.stopImmediatePropagation()" 
+                             class="text-[10px] mt-2 inline-block border border-emerald-700 hover:bg-emerald-900 px-4 py-1 rounded-3xl cursor-pointer">Отправить на терминал</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        function renderFullCards() {
+            let html = `<table class="w-full"><thead><tr class="text-xs text-zinc-400 border-b border-zinc-700"><th class="py-5 px-8 text-left">ID</th><th class="py-5 px-8 text-left">ВЛАДЕЛЕЦ</th><th class="py-5 px-8 text-left">БАЛАНС</th><th class="py-5 px-8 text-left">СТАТУС</th><th></th></tr></thead><tbody>`;
+            
+            cards.forEach((card, i) => {
+                html += `
+                    <tr class="border-b border-zinc-800 last:border-none hover:bg-zinc-800/60">
+                        <td class="py-6 px-8 font-mono text-sm text-emerald-300">${card.id}</td>
+                        <td class="py-6 px-8">${card.owner}</td>
+                        <td class="py-6 px-8 font-semibold">${card.balance} ₽</td>
+                        <td class="py-6 px-8"><span class="px-5 py-1 text-xs rounded-3xl bg-emerald-900 text-emerald-400">АКТИВНА</span></td>
+                        <td class="py-6 px-8 text-right">
+                            <button onclick="sendCardToTerminal(${i});event.stopImmediatePropagation()" class="text-xs px-7 py-2.5 bg-zinc-800 hover:bg-emerald-900 transition-colors rounded-3xl">Отправить на терминал</button>
+                        </td>
+                    </tr>`;
+            });
+            html += `</tbody></table>`;
+            document.getElementById('full-cards-table').innerHTML = html;
+        }
+        
+        function renderLogs() {
+            const liveContainer = document.getElementById('live-logs');
+            liveContainer.innerHTML = '';
+            logs.forEach(log => {
+                const div = document.createElement('div');
+                div.className = `log-line flex gap-4 text-xs`;
+                div.innerHTML = `
+                    <div class="font-mono text-emerald-500 w-14 shrink-0">${log.time}</div>
+                    <div>
+                        <span class="font-medium">${log.event}</span>
+                        <div class="text-zinc-400">${log.details}</div>
+                    </div>
+                `;
+                liveContainer.appendChild(div);
+            });
+            
+            const fullContainer = document.getElementById('full-logs');
+            fullContainer.innerHTML = logs.map(log => `
+                <div class="bg-zinc-900 px-7 py-5 rounded-3xl flex items-center gap-6 text-sm">
+                    <div class="font-mono text-emerald-400 w-16">${log.time}</div>
+                    <div class="flex-1">${log.event} — <span class="text-zinc-400">${log.details}</span></div>
+                </div>
+            `).join('');
+        }
+        
+        function switchTab(n) {
+            for (let i = 0; i < 4; i++) {
+                const content = document.getElementById('content-' + i);
+                const tab = document.getElementById('tab-' + i);
+                if (content) content.classList.toggle('hidden', i !== n);
+                if (tab) tab.classList.toggle('bg-zinc-800', i === n);
+            }
+        }
+        
+        function showAddCardModal() {
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            document.getElementById('new-owner').focus();
+        }
+        
+        function hideAddCardModal() {
+            document.getElementById('modal-backdrop').classList.add('hidden');
+        }
+        
+        function addNewCard() {
+            const owner = document.getElementById('new-owner').value.trim() || "Новый клиент";
+            const nfcId = document.getElementById('new-nfc').value.trim() || ("04" + Math.floor(Math.random()*8999999999).toString(16).toUpperCase());
+            
+            cards.unshift({
+                id: nfcId,
+                owner: owner,
+                balance: Math.floor(Math.random() * 2500) + 300,
+                status: "active",
+                lastUsed: "Только что"
+            });
+            
+            renderCards();
+            renderFullCards();
+            addLog("Карта добавлена", owner + " • " + nfcId, "system");
+            hideAddCardModal();
+            
+            document.getElementById('new-owner').value = '';
+            document.getElementById('new-nfc').value = '';
+        }
+        
+        function sendCardToTerminal(index) {
+            const card = cards[index];
+            if (!card) return;
+            
+            addLog("Отправка на терминал", card.owner + " (" + card.id + ")", "scan");
+            
+            if ('BroadcastChannel' in window) {
+                const ch = new BroadcastChannel('nfc-pos-channel');
+                ch.postMessage({
+                    type: 'PAYMENT_REQUEST',
+                    amount: 1250,
+                    card: card
+                });
+                ch.close();
+            }
+            
+            localStorage.setItem('nfc-admin-command', JSON.stringify({
+                type: 'PAYMENT_REQUEST',
+                amount: 1250,
+                card: card
+            }));
+            
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed; bottom:40px; left:50%; transform:translateX(-50%); background:rgb(16 185 129); color:black; padding:16px 28px; border-radius:9999px; font-size:14px; box-shadow: 0 25px 50px -12px rgb(0 0 0); z-index:9999';
+            toast.innerHTML = `Команда отправлена на терминал • ${card.owner}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2500);
+        }
+        
+        function sendCommandToTerminal() {
+            const amount = prompt("Введите сумму для отправки на терминал (руб):", "890");
+            if (!amount) return;
+            
+            const command = {
+                type: 'PAYMENT_REQUEST',
+                amount: parseInt(amount),
+                card: cards[0]
+            };
+            
+            if ('BroadcastChannel' in window) {
+                const ch = new BroadcastChannel('nfc-pos-channel');
+                ch.postMessage(command);
+                ch.close();
+            }
+            localStorage.setItem('nfc-admin-command', JSON.stringify(command));
+            
+            addLog("Команда отправлена", `Оплата ${amount} ₽ на Сбер Терминал`, "payment");
+        }
+        
+        function sendPaymentCommandToTerminal() {
+            sendCommandToTerminal();
+        }
+        
+        function openTerminal() {
+            window.open('terminal.html', '_blank');
+        }
+        
+        function initTailwind() {
+            const style = document.createElement('style');
+            style.innerHTML = `.custom-scroll::-webkit-scrollbar { width: 6px; } .custom-scroll::-webkit-scrollbar-thumb { background: #22c55e; border-radius: 20px; }`;
+            document.head.append(style);
+        }
+        
+        window.onload = function() {
+            initTailwind();
+            renderCards();
+            renderFullCards();
+            
+            // Initial logs
+            logs = [
+                {time: "14:41", event: "Терминал подключен", details: "Сбер #01 • Статус: онлайн", type: "system"},
+                {time: "14:40", event: "NFC Сканирование", details: "Мария Петрова • 1250 ₽", type: "scan"},
+                {time: "14:39", event: "Новая карта", details: "Зарегистрирована карта Дмитрия Соколова", type: "system"}
+            ];
+            renderLogs();
+            
+            // Listen for responses from terminal
+            if ('BroadcastChannel' in window) {
+                const channel = new BroadcastChannel('nfc-pos-channel');
+                channel.onmessage = function(ev) {
+                    const msg = ev.data;
+                    if (msg.type === 'PAYMENT_SUCCESS') {
+                        addLog("ОПЛАТА УСПЕШНА", `${msg.owner} • ${msg.amount} ₽`, "payment");
+                    }
+                    if (msg.type === 'PAYMENT_CANCELLED') {
+                        addLog("ОПЛАТА ОТМЕНЕНА", msg.reason || "", "error");
+                    }
+                };
+            }
+            
+            // Auto refresh logs
+            setInterval(() => {
+                if (Math.random() > 0.6) {
+                    const events = ["NFC Tap", "Balance Updated", "Terminal Heartbeat"];
+                    addLog(events[Math.floor(Math.random()*events.length)], "Автообновление", "system");
+                }
+            }, 7000);
+            
+            switchTab(0);
+            console.log('%cПанель управления NFC готова. Используйте кнопку «Отправить команду на терминал» для взаимодействия с terminal.html', 'color:#4ade80');
+        };
+    </script>
 </body>
 </html>
