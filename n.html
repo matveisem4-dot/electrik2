@@ -3,238 +3,243 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Касса • NFC Управление</title>
+    <title>Касса • NFC POS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
-        .tag-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .tag-card:hover { transform: translateY(-8px); box-shadow: 0 25px 50px -12px rgb(16 185 129); }
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .card { transition: all 0.2s cubic-bezier(0.4,0,0.2,1); }
+        .card:hover { transform: translateY(-4px); }
     </style>
 </head>
 <body class="bg-zinc-950 text-zinc-200">
-    <div class="flex h-screen">
-        <!-- SIDEBAR -->
-        <div class="w-72 bg-zinc-900 p-6 flex flex-col border-r border-zinc-700">
-            <div class="flex items-center gap-3 mb-12">
-                <div class="text-4xl font-bold tracking-tighter text-emerald-400">POS</div>
-                <div class="text-xs bg-emerald-900 px-3 py-1 rounded-3xl">КАССА</div>
+    <div class="max-w-6xl mx-auto p-8">
+        <div class="flex justify-between items-center mb-12">
+            <div>
+                <div class="flex items-center gap-4">
+                    <div class="text-5xl font-bold tracking-tighter text-emerald-400">NFC</div>
+                    <div class="text-5xl font-bold tracking-tighter">POS</div>
+                </div>
+                <div class="text-emerald-400 text-sm tracking-widest">КАССА • ГЛОБАЛЬНОЕ СОЕДИНЕНИЕ</div>
             </div>
-            <div onclick="switchTab(0)" id="tab0" class="flex items-center gap-3 px-6 py-4 rounded-3xl cursor-pointer bg-emerald-900 text-white mb-2">📊 Обзор</div>
-            <div onclick="switchTab(1)" id="tab1" class="flex items-center gap-3 px-6 py-4 rounded-3xl cursor-pointer">🏷️ Метки</div>
-            <div onclick="switchTab(2)" id="tab2" class="flex items-center gap-3 px-6 py-4 rounded-3xl cursor-pointer">📟 Терминалы</div>
-            <div onclick="switchTab(3)" id="tab3" class="flex items-center gap-3 px-6 py-4 rounded-3xl cursor-pointer">📜 История</div>
+            <a href="terminal.html" target="_blank" 
+               class="bg-emerald-500 hover:bg-emerald-400 text-black px-10 py-4 rounded-3xl font-semibold flex items-center gap-3">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+                ОТКРЫТЬ ТЕРМИНАЛ
+            </a>
         </div>
 
-        <div class="flex-1 overflow-auto p-10">
-            <!-- TAB 0: OVERVIEW -->
-            <div id="content-0">
-                <h1 class="text-6xl font-bold tracking-tighter">Касса NFC</h1>
-                <p class="text-emerald-400">Управление метками, терминалами и реальными платежами</p>
-                <div class="mt-12 grid grid-cols-3 gap-6" id="overview-cards"></div>
-            </div>
-
-            <!-- TAB 1: TAGS -->
-            <div id="content-1" class="hidden">
-                <div class="flex justify-between items-center mb-8">
-                    <h2 class="text-4xl font-bold">Метки и карты</h2>
-                    <button onclick="createNewTag()" class="bg-emerald-500 text-black px-8 py-4 rounded-3xl font-semibold flex items-center gap-3">
-                        <i class="fa-solid fa-plus"></i> НОВАЯ МЕТКА
+        <div class="grid grid-cols-12 gap-8">
+            <!-- Метки -->
+            <div class="col-span-7 bg-zinc-900 rounded-3xl p-8">
+                <div class="flex justify-between mb-8">
+                    <h2 class="text-3xl font-semibold">Метки и карты</h2>
+                    <button onclick="addNewTag()" 
+                            class="bg-white text-black px-8 py-3 rounded-3xl text-sm font-medium flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> ДОБАВИТЬ МЕТКУ
                     </button>
                 </div>
-                <div id="tags-grid" class="grid grid-cols-3 gap-6"></div>
+                <div id="tags-list" class="grid grid-cols-2 gap-4"></div>
             </div>
 
-            <!-- TAB 2: TERMINALS -->
-            <div id="content-2" class="hidden">
-                <h2 class="text-4xl font-bold mb-8">Терминалы</h2>
-                <div id="terminals-list" class="grid grid-cols-2 gap-6"></div>
-            </div>
+            <!-- Терминалы и действия -->
+            <div class="col-span-5 space-y-6">
+                <div class="bg-zinc-900 rounded-3xl p-8">
+                    <h3 class="font-semibold text-lg mb-6 flex items-center gap-2">
+                        <i class="fa-solid fa-plug"></i> Активные терминалы (AID)
+                    </h3>
+                    <div id="terminal-list" class="space-y-4"></div>
+                    <button onclick="createNewTerminal()" 
+                            class="mt-6 w-full py-4 border border-dashed border-emerald-400 text-emerald-400 rounded-3xl text-sm hover:bg-emerald-900">
+                        + ЗАПУСТИТЬ НОВЫЙ ТЕРМИНАЛ (ГЕНЕРАЦИЯ AID)
+                    </button>
+                </div>
 
-            <!-- TAB 3: HISTORY -->
-            <div id="content-3" class="hidden">
-                <h2 class="text-4xl font-bold mb-8">История операций</h2>
-                <div id="history-list" class="space-y-4"></div>
+                <div onclick="createPaymentQR()" 
+                     class="bg-gradient-to-br from-emerald-500 to-teal-400 text-black p-8 rounded-3xl cursor-pointer hover:brightness-110 transition-all">
+                    <div class="flex items-center gap-4">
+                        <div class="text-4xl">📱</div>
+                        <div class="flex-1">
+                            <div class="font-bold text-xl">Создать QR для оплаты</div>
+                            <div class="text-sm opacity-75">QR ведёт на страницу с кнопкой «Оплатить»</div>
+                        </div>
+                    </div>
+                </div>
             </div>
+        </div>
+
+        <div class="mt-12 bg-zinc-900 rounded-3xl p-8">
+            <h3 class="font-semibold mb-6">История операций</h3>
+            <div id="history" class="space-y-3 text-sm"></div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <script>
-        let tags = JSON.parse(localStorage.getItem('nfc_tags_v2')) || [];
-        let terminals = JSON.parse(localStorage.getItem('nfc_terminals')) || [
-            {id:1, name:"Терминал 01", aid:"A0000000031010", qr:"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=A0000000031010"},
-            {id:2, name:"Терминал 02", aid:"B0000000042020", qr:"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=B0000000042020"}
-        ];
+        let tags = JSON.parse(localStorage.getItem('tags')) || [];
+        let terminals = JSON.parse(localStorage.getItem('terminals')) || [];
         let history = [];
 
-        const channel = new BroadcastChannel('nfc-pos-channel');
+        function generateShortAID() {
+            const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+            let code = "";
+            for (let i = 0; i < 6; i++) {
+                code += chars[Math.floor(Math.random() * chars.length)];
+            }
+            return code;
+        }
 
         function saveData() {
-            localStorage.setItem('nfc_tags_v2', JSON.stringify(tags));
-            localStorage.setItem('nfc_terminals', JSON.stringify(terminals));
+            localStorage.setItem('tags', JSON.stringify(tags));
+            localStorage.setItem('terminals', JSON.stringify(terminals));
         }
 
-        function addHistory(action, detail) {
-            history.unshift({time: new Date().toLocaleTimeString('ru-RU'), action, detail});
+        function addHistory(msg) {
+            history.unshift({time: new Date().toLocaleTimeString('ru-RU'), msg});
+            if (history.length > 12) history.pop();
             renderHistory();
-        }
-
-        function renderAll() {
-            renderTags();
-            renderTerminals();
-            renderOverview();
-            renderHistory();
-        }
-
-        function createNewTag() {
-            const owner = prompt("Имя владельца:", "Клиент " + (tags.length+1));
-            const nfcId = "04" + Math.random().toString(16).slice(2,14).toUpperCase();
-            const aid = "A" + Math.random().toString(16).slice(2,16).toUpperCase();
-            
-            tags.unshift({
-                nfcId: nfcId,
-                aid: aid,
-                owner: owner,
-                balance: 1500,
-                status: "active",
-                qr: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${aid}`
-            });
-            saveData();
-            renderAll();
-            addHistory("Новая метка", owner);
-            channel.postMessage({type:"NEW_TAG", tag: tags[0]});
-        }
-
-        function toggleBlock(index) {
-            tags[index].status = tags[index].status === "active" ? "blocked" : "active";
-            saveData();
-            renderAll();
-            addHistory(tags[index].status === "blocked" ? "Метка заблокирована" : "Метка разблокирована", tags[index].owner);
-        }
-
-        function deleteTag(index) {
-            if (confirm("Удалить метку полностью?")) {
-                const name = tags[index].owner;
-                tags.splice(index,1);
-                saveData();
-                renderAll();
-                addHistory("Метка удалена", name);
-            }
-        }
-
-        function sendPaymentToTerminal(termIndex) {
-            const amount = parseInt(prompt("Сумма к оплате:", "750")) || 750;
-            const term = terminals[termIndex];
-            
-            channel.postMessage({
-                type: "PAYMENT_REQUEST",
-                amount: amount,
-                terminalId: term.id,
-                terminalName: term.name,
-                aid: term.aid,
-                qr: term.qr
-            });
-            
-            addHistory("Запрос оплаты отправлен", `${term.name} — ${amount} ₽`);
-            alert(`Запрос на ${amount} ₽ отправлен на ${term.name}\n\nОткройте terminal.html`);
         }
 
         function renderTags() {
-            const container = document.getElementById('tags-grid');
-            container.innerHTML = tags.map((tag,i) => `
-                <div class="tag-card bg-zinc-900 rounded-3xl p-6 border ${tag.status==='blocked'?'border-red-500':'border-emerald-500'}">
+            const container = document.getElementById('tags-list');
+            container.innerHTML = tags.map((tag, i) => `
+                <div class="card bg-zinc-800 rounded-3xl p-6 border ${tag.blocked ? 'border-red-500' : 'border-emerald-500'}">
                     <div class="flex justify-between">
-                        <div class="font-mono text-lg">${tag.nfcId}</div>
-                        <div class="text-xs px-4 py-1 rounded-3xl ${tag.status==='active'?'bg-emerald-900 text-emerald-400':'bg-red-900 text-red-400'}">${tag.status.toUpperCase()}</div>
-                    </div>
-                    <div class="mt-6 text-3xl font-light">${tag.balance} ₽</div>
-                    <div class="text-sm text-zinc-400">${tag.owner}</div>
-                    <div class="text-[10px] font-mono text-amber-400 mt-4">${tag.aid}</div>
-                    <div class="flex gap-3 mt-8">
-                        <button onclick="toggleBlock(${i});event.stopImmediatePropagation()" class="flex-1 py-3 text-xs border border-zinc-600 rounded-2xl">${tag.status==='active'?'Заблокировать':'Разблокировать'}</button>
-                        <button onclick="deleteTag(${i});event.stopImmediatePropagation()" class="flex-1 py-3 text-xs bg-red-900 hover:bg-red-800 rounded-2xl">Удалить</button>
+                        <div>
+                            <div class="font-mono text-emerald-400">${tag.aid}</div>
+                            <div class="text-white mt-1">${tag.owner}</div>
+                            <div class="text-xs text-zinc-400">${tag.nfcId}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-3xl font-light">${tag.balance} ₽</div>
+                            <div class="flex gap-2 mt-6">
+                                <button onclick="toggleBlock(${i}); event.stopImmediatePropagation()" class="text-xs px-5 py-2 border border-zinc-600 rounded-2xl">${tag.blocked ? 'Разблокировать' : 'Заблокировать'}</button>
+                                <button onclick="deleteTag(${i}); event.stopImmediatePropagation()" class="text-xs px-5 py-2 bg-red-900 rounded-2xl">Удалить</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `).join('');
         }
 
         function renderTerminals() {
-            const container = document.getElementById('terminals-list');
-            container.innerHTML = terminals.map((t,i) => `
-                <div class="bg-zinc-900 rounded-3xl p-8 border border-emerald-800">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <div class="text-2xl font-semibold">${t.name}</div>
-                            <div class="font-mono text-emerald-400 text-sm mt-1">${t.aid}</div>
-                        </div>
-                        <img src="${t.qr}" class="w-20 h-20 rounded-2xl">
+            const container = document.getElementById('terminal-list');
+            container.innerHTML = terminals.map((t, i) => `
+                <div class="bg-zinc-800 rounded-3xl p-5 flex items-center justify-between">
+                    <div>
+                        <div class="font-mono text-emerald-400 text-sm">${t.aid}</div>
+                        <div class="text-white">${t.name}</div>
                     </div>
-                    <button onclick="sendPaymentToTerminal(${i})" 
-                            class="mt-10 w-full py-6 bg-white text-black font-bold rounded-3xl text-sm tracking-widest">ОТПРАВИТЬ ЗАПРОС ОПЛАТЫ НА ЭТОТ ТЕРМИНАЛ</button>
+                    <button onclick="sendToTerminal(${i}); event.stopImmediatePropagation()" 
+                            class="bg-emerald-500 text-black text-xs font-medium px-8 py-3 rounded-3xl">Отправить запрос оплаты</button>
                 </div>
             `).join('');
-        }
-
-        function renderOverview() {
-            // Simple stats
-            document.getElementById('overview-cards').innerHTML = `
-                <div class="bg-zinc-900 rounded-3xl p-8">
-                    <div class="text-emerald-400 text-sm">АКТИВНЫХ МЕТОК</div>
-                    <div class="text-7xl font-light mt-4">${tags.filter(t=>t.status==='active').length}</div>
-                </div>
-                <div class="bg-zinc-900 rounded-3xl p-8">
-                    <div class="text-emerald-400 text-sm">ОБЩИЙ БАЛАНС</div>
-                    <div class="text-7xl font-light mt-4">${tags.reduce((a,t)=>a+t.balance,0)} ₽</div>
-                </div>
-                <div class="bg-zinc-900 rounded-3xl p-8">
-                    <div class="text-emerald-400 text-sm">ТЕРМИНАЛОВ</div>
-                    <div class="text-7xl font-light mt-4">${terminals.length}</div>
-                </div>
-            `;
         }
 
         function renderHistory() {
-            document.getElementById('history-list').innerHTML = history.map(h => `
-                <div class="bg-zinc-900 p-6 rounded-3xl flex gap-6">
-                    <div class="font-mono text-xs text-emerald-400 w-20">${h.time}</div>
-                    <div class="flex-1">${h.action}<div class="text-xs text-zinc-500">${h.detail}</div></div>
+            const container = document.getElementById('history');
+            container.innerHTML = history.map(h => `
+                <div class="flex gap-6 text-xs">
+                    <div class="font-mono text-emerald-400 w-16">${h.time}</div>
+                    <div>${h.msg}</div>
                 </div>
             `).join('');
         }
 
-        function switchTab(n) {
-            for (let i = 0; i < 4; i++) {
-                const el = document.getElementById('content-' + i);
-                const tab = document.getElementById('tab' + i);
-                if (el) el.classList.toggle('hidden', i !== n);
-                if (tab) tab.classList.toggle('bg-emerald-900', i === n);
+        function addNewTag() {
+            const owner = prompt("Имя владельца метки:", "Клиент");
+            if (!owner) return;
+            const nfcId = "04" + Math.random().toString(16).slice(2, 14).toUpperCase();
+            const aid = generateShortAID();
+            
+            tags.unshift({
+                nfcId,
+                aid,
+                owner,
+                balance: 2500,
+                blocked: false
+            });
+            saveData();
+            renderTags();
+            addHistory(`Новая метка создана • AID: ${aid}`);
+        }
+
+        function toggleBlock(i) {
+            tags[i].blocked = !tags[i].blocked;
+            saveData();
+            renderTags();
+            addHistory(tags[i].blocked ? 'Метка заблокирована' : 'Метка разблокирована', tags[i].aid);
+        }
+
+        function deleteTag(i) {
+            if (confirm('Удалить метку полностью?')) {
+                const aid = tags[i].aid;
+                tags.splice(i, 1);
+                saveData();
+                renderTags();
+                addHistory('Метка удалена', aid);
             }
         }
 
-        channel.onmessage = (e) => {
-            if (e.data.type === "PAYMENT_SUCCESS") {
-                addHistory("Оплата прошла", `${e.data.owner || ''} — ${e.data.amount} ₽`);
-                // Update balance
-                const tag = tags.find(t => t.aid === e.data.aid);
-                if (tag) {
-                    tag.balance = Math.max(0, tag.balance - e.data.amount);
-                    saveData();
-                    renderAll();
-                }
-            }
-        };
+        function createNewTerminal() {
+            const aid = generateShortAID();
+            terminals.unshift({
+                aid: aid,
+                name: "Терминал " + aid,
+                connected: true
+            });
+            saveData();
+            renderTerminals();
+            addHistory('Новый терминал запущен', 'AID: ' + aid);
+            alert('Терминал создан с AID: ' + aid + '\n\nОткройте terminal.html и введите этот AID для подключения.');
+        }
+
+        function sendToTerminal(i) {
+            const term = terminals[i];
+            const amount = prompt("Сумма оплаты:", "1250");
+            if (!amount) return;
+            
+            localStorage.setItem('pending_payment', JSON.stringify({
+                aid: term.aid,
+                amount: parseInt(amount),
+                timestamp: Date.now()
+            }));
+            
+            addHistory('Запрос отправлен на терминал', `${term.aid} • ${amount} ₽`);
+            alert(`Запрос на ${amount} ₽ отправлен на терминал ${term.aid}.\n\nОткройте terminal.html`);
+        }
+
+        function createPaymentQR() {
+            const amount = prompt("Сумма для QR-оплаты:", "890");
+            if (!amount) return;
+            
+            const aid = generateShortAID();
+            const url = `terminal.html?aid=${aid}&amount=${amount}`;
+            
+            const win = window.open(url, '_blank');
+            addHistory('QR для оплаты создан', `AID: ${aid} • ${amount} ₽`);
+        }
 
         window.onload = () => {
             if (tags.length === 0) {
                 tags = [
-                    {nfcId:"04A1B2C3D4E5", aid:"A0000000031010", balance:3240, owner:"Алексей Иванов", status:"active"},
-                    {nfcId:"04F7A9B2C318", aid:"B0000000042020", balance:870, owner:"Мария Петрова", status:"active"}
+                    {nfcId: "04A1B2C3D4E5", aid: "KX9P2M", owner: "Алексей Иванов", balance: 3240, blocked: false},
+                    {nfcId: "04F7A9B2C318", aid: "Q7W8V1", owner: "Мария Петрова", balance: 1250, blocked: false}
                 ];
-                saveData();
             }
-            renderAll();
-            switchTab(0);
+            renderTags();
+            renderTerminals();
+            renderHistory();
+            
+            // Listen for terminal responses
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'payment_completed') {
+                    const data = JSON.parse(e.newValue || '{}');
+                    addHistory('Оплата прошла', `${data.amount} ₽ • ${data.aid}`);
+                }
+            });
+            
+            console.log("%cКасса готова. Откройте terminal.html во второй вкладке.", "color:#22c55e; font-size:13px");
         };
     </script>
 </body>
