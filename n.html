@@ -3,169 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Касса • NFC POS</title>
+    <title>МЕГА ПОС — КАССА</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
-        body { font-family: 'Inter', system-ui, sans-serif; }
-        .card { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
-        .card:hover { transform: translateY(-6px); }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .header { font-family: 'Space Grotesk', sans-serif; }
     </style>
 </head>
-<body class="bg-zinc-950 text-zinc-200">
-    <div class="max-w-6xl mx-auto p-8">
-        <div class="flex justify-between mb-10">
-            <div class="text-5xl font-bold tracking-tighter text-emerald-400">NFC POS</div>
-            <a href="terminal.html" target="_blank" class="bg-emerald-500 text-black px-10 py-4 rounded-3xl font-bold flex items-center gap-3 hover:scale-105">
-                <i class="fa-solid fa-mobile-screen-button"></i> ОТКРЫТЬ ТЕРМИНАЛ
-            </a>
+<body class="bg-zinc-950 text-white">
+    <div class="max-w-4xl mx-auto p-8">
+        <div class="flex justify-between items-center mb-10">
+            <div class="header text-5xl font-bold text-emerald-400 tracking-tighter">МЕГА ПОС</div>
+            <div class="text-emerald-400">КАССА</div>
         </div>
 
-        <div class="grid grid-cols-12 gap-8">
-            <div class="col-span-7 bg-zinc-900 rounded-3xl p-8">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-3xl font-semibold">Метки</h2>
-                    <button onclick="addNewTag()" class="bg-white text-black px-8 py-3 rounded-3xl flex items-center gap-2 text-sm font-medium">
-                        <i class="fa-solid fa-plus"></i> НОВАЯ МЕТКА
-                    </button>
-                </div>
-                <div id="tags-list" class="grid grid-cols-2 gap-4"></div>
-            </div>
+        <button onclick="generateConnectionQR()" 
+                class="w-full py-8 bg-emerald-500 text-black text-2xl font-bold rounded-3xl flex items-center justify-center gap-4 hover:scale-105 transition">
+            <i class="fa-solid fa-qrcode text-3xl"></i>
+            ПОДКЛЮЧИТЬ ТЕРМИНАЛ (ПОКАЗАТЬ QR)
+        </button>
 
-            <div class="col-span-5 bg-zinc-900 rounded-3xl p-8">
-                <h3 class="font-semibold mb-6">Терминалы (AID)</h3>
-                <div id="terminals-list" class="space-y-4"></div>
-                <button onclick="createTerminal()" class="mt-8 w-full py-5 border border-dashed border-emerald-400 text-emerald-400 rounded-3xl hover:bg-emerald-900">
-                    + ЗАПУСТИТЬ ТЕРМИНАЛ (генерация AID)
-                </button>
-            </div>
+        <div id="qr-container" class="hidden mt-10 text-center">
+            <p class="text-emerald-400 mb-4">Отсканируйте этот QR код на телефоне в terminal.html</p>
+            <img id="qr-image" class="mx-auto rounded-2xl shadow-2xl">
+            <p class="text-xs text-zinc-500 mt-6">Код подключения: <span id="room-code" class="font-mono text-emerald-400"></span></p>
         </div>
 
-        <div class="mt-12 bg-zinc-900 rounded-3xl p-8">
-            <h3 class="font-semibold mb-6">История</h3>
-            <div id="history" class="space-y-4 text-sm"></div>
+        <div class="mt-16">
+            <h2 class="text-xl mb-4 text-emerald-400">Подключённые терминалы</h2>
+            <div id="connected-terminals" class="space-y-3"></div>
         </div>
     </div>
 
     <script>
-        let tags = JSON.parse(localStorage.getItem('nfc_tags')) || [];
-        let terminals = JSON.parse(localStorage.getItem('nfc_terminals')) || [];
-        let history = [];
+        let currentRoom = "";
 
-        function generateAID() {
-            const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-            let s = "";
-            for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
-            return s;
+        function generateConnectionQR() {
+            currentRoom = "MP" + Math.floor(100000 + Math.random() * 900000);
+            const url = `terminal.html?room=${currentRoom}`;
+            document.getElementById('qr-image').src = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(url)}`;
+            document.getElementById('room-code').textContent = currentRoom;
+            document.getElementById('qr-container').classList.remove('hidden');
+            
+            // Симуляция подключения терминала
+            setTimeout(() => {
+                addConnectedTerminal(currentRoom);
+            }, 3000);
         }
 
-        function save() {
-            localStorage.setItem('nfc_tags', JSON.stringify(tags));
-            localStorage.setItem('nfc_terminals', JSON.stringify(terminals));
-        }
-
-        function addHistory(text) {
-            history.unshift({time: new Date().toLocaleTimeString('ru-RU'), text});
-            if (history.length > 15) history.pop();
-            renderHistory();
-        }
-
-        function renderTags() {
-            const container = document.getElementById('tags-list');
-            container.innerHTML = tags.map((tag, i) => `
-                <div class="card bg-zinc-800 rounded-3xl p-6 border ${tag.blocked?'border-red-500':'border-emerald-500'}">
-                    <div class="flex justify-between">
-                        <div>
-                            <div class="font-mono text-emerald-400">${tag.aid}</div>
-                            <div class="font-medium mt-1">${tag.owner}</div>
-                            <div class="text-xs text-zinc-400">${tag.nfcId}</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-3xl font-light">${tag.balance}₽</div>
-                            <div class="flex gap-2 mt-6">
-                                <button onclick="toggleBlock(${i});event.stopImmediatePropagation()" class="text-xs px-6 py-2 border border-zinc-600 rounded-2xl">${tag.blocked?'Разблокировать':'Заблокировать'}</button>
-                                <button onclick="deleteTag(${i});event.stopImmediatePropagation()" class="text-xs px-6 py-2 bg-red-900 rounded-2xl">Удалить</button>
-                            </div>
-                        </div>
-                    </div>
+        function addConnectedTerminal(room) {
+            const div = document.createElement('div');
+            div.className = "bg-zinc-900 rounded-3xl p-6 flex justify-between items-center";
+            div.innerHTML = `
+                <div>
+                    <div class="text-emerald-400 font-mono">Терминал подключён</div>
+                    <div class="text-sm text-zinc-400">Room: ${room}</div>
                 </div>
-            `).join('');
+                <button onclick="sendPaymentToTerminal('${room}')" 
+                        class="bg-emerald-500 text-black px-8 py-4 rounded-3xl text-sm font-bold">Отправить оплату</button>
+            `;
+            document.getElementById('connected-terminals').appendChild(div);
         }
 
-        function renderTerminals() {
-            const container = document.getElementById('terminals-list');
-            container.innerHTML = terminals.map((t,i) => `
-                <div class="bg-zinc-800 rounded-3xl p-6 flex items-center justify-between">
-                    <div class="font-mono text-emerald-400">${t.aid}</div>
-                    <button onclick="sendPaymentRequest(${i});event.stopImmediatePropagation()" class="bg-emerald-500 text-black px-8 py-3 rounded-3xl text-sm font-medium">Отправить оплату</button>
-                </div>
-            `).join('');
-        }
-
-        function renderHistory() {
-            document.getElementById('history').innerHTML = history.map(h => `
-                <div class="flex gap-6 bg-zinc-800 p-5 rounded-2xl">
-                    <div class="font-mono text-emerald-400 w-20">${h.time}</div>
-                    <div>${h.text}</div>
-                </div>
-            `).join('');
-        }
-
-        function addNewTag() {
-            const owner = prompt("Имя владельца:", "Клиент");
-            if (!owner) return;
-            const nfcId = "04" + Math.random().toString(16).slice(2,14).toUpperCase();
-            const aid = generateAID();
-            tags.unshift({nfcId, aid, owner, balance: 2500, blocked: false});
-            save();
-            renderTags();
-            addHistory(`Новая метка • ${aid}`);
-        }
-
-        function toggleBlock(i) {
-            tags[i].blocked = !tags[i].blocked;
-            save();
-            renderTags();
-            addHistory(tags[i].blocked ? 'Метка заблокирована' : 'Метка разблокирована');
-        }
-
-        function deleteTag(i) {
-            if (confirm("Удалить метку?")) {
-                tags.splice(i,1);
-                save();
-                renderTags();
-                addHistory("Метка удалена");
+        function sendPaymentToTerminal(room) {
+            const amount = prompt("Сумма оплаты:", "890");
+            if (amount) {
+                localStorage.setItem('payment_request', JSON.stringify({
+                    room: room,
+                    amount: parseInt(amount),
+                    time: Date.now()
+                }));
+                alert(`Запрос на ${amount} ₽ отправлен на терминал ${room}`);
             }
-        }
-
-        function createTerminal() {
-            const aid = generateAID();
-            terminals.unshift({aid, name: "Терминал " + aid});
-            save();
-            renderTerminals();
-            addHistory("Терминал запущен • AID: " + aid);
-            alert("Терминал создан с AID: " + aid + "\n\nОткройте terminal.html и введите этот AID");
-        }
-
-        function sendPaymentRequest(i) {
-            const term = terminals[i];
-            const amount = parseInt(prompt("Сумма оплаты:", "890")) || 890;
-            localStorage.setItem("pending_payment", JSON.stringify({aid: term.aid, amount}));
-            addHistory(`Запрос отправлен на терминал • ${term.aid} • ${amount}₽`);
-            alert("Запрос отправлен в терминал. Откройте terminal.html");
         }
 
         window.onload = () => {
-            if (tags.length === 0) {
-                tags = [
-                    {nfcId:"04A1B2C3D4E5", aid:"KX9P2M", owner:"Алексей Иванов", balance:3240, blocked:false},
-                    {nfcId:"04F7A9B2C318", aid:"Q7W8V1", owner:"Мария Петрова", balance:1250, blocked:false}
-                ];
-            }
-            renderTags();
-            renderTerminals();
-            renderHistory();
+            console.log("%cМЕГА ПОС КАССА готова. Нажми кнопку чтобы сгенерировать QR для терминала на телефоне.", "color:#22c55e");
         };
     </script>
 </body>
