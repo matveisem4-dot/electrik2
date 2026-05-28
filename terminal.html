@@ -3,86 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Терминал • NFC</title>
+    <title>МЕГА ПОС — ТЕРМИНАЛ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
-        .terminal { background: linear-gradient(180deg, #052005, #0a1a0a); }
-        .nfc-glow { animation: glow 2s infinite alternate; }
-        @keyframes glow { from { text-shadow: 0 0 20px #22c55e; } to { text-shadow: 0 0 50px #22c55e; } }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap');
+        .terminal-bg { background: linear-gradient(180deg, #052e05, #021402); }
     </style>
 </head>
 <body class="bg-zinc-950 text-white">
-    <div class="max-w-md mx-auto min-h-screen terminal flex flex-col border border-emerald-500">
-        <div class="h-16 bg-emerald-600 flex items-center px-6 text-black font-bold text-3xl tracking-tighter">СБЕР</div>
+    <div class="max-w-md mx-auto min-h-screen terminal-bg flex flex-col">
+        <div class="h-20 bg-emerald-600 flex items-center px-6 text-4xl font-bold text-black header">МЕГА ПОС</div>
         
-        <div class="flex-1 flex flex-col p-8">
-            <div id="idle" class="flex-1 flex flex-col items-center justify-center text-center">
-                <div onclick="connectTerminal()" class="w-64 h-64 rounded-3xl border-8 border-emerald-400 flex items-center justify-center nfc-glow cursor-pointer">
-                    <div class="text-center">
-                        <i class="fa-solid fa-nfc-symbol text-8xl text-emerald-400"></i>
-                        <div class="mt-8 text-emerald-300 text-sm">ПРИКЛАДЫВАЙ МЕТКУ</div>
-                    </div>
+        <div class="flex-1 p-8 flex flex-col items-center justify-center text-center">
+            <div id="connect-screen">
+                <i class="fa-solid fa-mobile-screen-button text-8xl text-emerald-400 mb-8"></i>
+                <h2 class="text-3xl font-bold mb-8">Терминал МЕГА ПОС</h2>
+                <button onclick="scanQR()" 
+                        class="w-full py-8 bg-white text-black rounded-3xl text-xl font-bold mb-6">
+                    СКАНИРОВАТЬ QR ОТ КАССЫ
+                </button>
+                <input id="manual-room" placeholder="Или введите код комнаты" 
+                       class="w-full bg-zinc-900 text-center py-6 rounded-3xl text-xl font-mono outline-none">
+                <button onclick="connectManual()" class="mt-4 text-emerald-400 text-sm">Подключиться по коду</button>
+            </div>
+
+            <div id="main-terminal" class="hidden w-full">
+                <div class="text-emerald-400 text-sm mb-4">ПОДКЛЮЧЁН К КАССЕ</div>
+                <div id="current-room" class="font-mono text-4xl text-emerald-400 mb-12"></div>
+                
+                <div id="waiting" class="text-center">
+                    <div class="text-6xl mb-6">📱</div>
+                    <div class="text-2xl font-medium">Ожидаем запрос оплаты от кассы...</div>
                 </div>
-                <div class="mt-12 text-xs text-emerald-400 font-mono" id="aid-show">AID: —</div>
-            </div>
 
-            <div id="payment" class="hidden flex-1 flex flex-col items-center justify-center text-center">
-                <div class="text-emerald-400 text-sm tracking-widest">ОПЛАТА</div>
-                <div id="pay-amount" class="text-7xl font-light text-white mt-6">890</div>
-                <div class="text-zinc-400">рублей</div>
-                <button onclick="processPayment()" class="mt-16 bg-white text-black px-16 py-6 rounded-3xl font-bold text-xl">ОПЛАТИТЬ МЕТКОЙ</button>
+                <div id="payment-screen" class="hidden">
+                    <div class="text-6xl font-light mb-4" id="pay-sum">890</div>
+                    <div class="text-emerald-400">рублей к оплате</div>
+                    <button onclick="confirmPayment()" 
+                            class="mt-16 w-full py-8 bg-emerald-500 text-black text-2xl font-bold rounded-3xl">
+                        ПРИКЛАДЫВАЙ МЕТКУ
+                    </button>
+                </div>
             </div>
-
-            <div id="success" class="hidden flex-1 flex flex-col items-center justify-center">
-                <i class="fa-solid fa-check-circle text-emerald-400 text-[140px]"></i>
-                <div class="text-4xl font-light mt-8 text-emerald-400">ОПЛАЧЕНО</div>
-                <button onclick="resetTerminal()" class="mt-16 px-12 py-5 border border-emerald-400 rounded-3xl">НОВАЯ ОПЕРАЦИЯ</button>
-            </div>
-        </div>
-
-        <div class="h-14 bg-black border-t border-emerald-900 flex items-center px-6 text-xs">
-            <input id="aid-input" placeholder="Введите AID из кассы" class="flex-1 bg-transparent outline-none text-emerald-300 font-mono">
-            <button onclick="connectTerminal()" class="ml-4 bg-emerald-500 text-black px-8 py-3 rounded-2xl text-xs font-bold">ПОДКЛЮЧИТЬ</button>
         </div>
     </div>
 
     <script>
-        let currentAID = "";
-        let currentAmount = 0;
+        let currentRoom = "";
 
-        function connectTerminal() {
-            let input = document.getElementById('aid-input').value.trim().toUpperCase();
-            if (!input) input = "KX9P2M"; // default for demo
-            currentAID = input;
-            document.getElementById('aid-show').textContent = "AID: " + currentAID;
-            
-            const pending = JSON.parse(localStorage.getItem('pending_payment') || '{}');
-            if (pending.aid === currentAID) {
-                currentAmount = pending.amount;
-                document.getElementById('idle').classList.add('hidden');
-                document.getElementById('payment').classList.remove('hidden');
-                document.getElementById('pay-amount').textContent = currentAmount;
-            }
+        function scanQR() {
+            const room = prompt("Введите код комнаты из QR (или отсканируйте):", "MP123456");
+            if (room) connectToRoom(room);
         }
 
-        function processPayment() {
-            document.getElementById('payment').classList.add('hidden');
-            document.getElementById('success').classList.remove('hidden');
-            
-            localStorage.setItem('payment_completed', JSON.stringify({amount: currentAmount, aid: currentAID}));
-            setTimeout(resetTerminal, 2000);
+        function connectManual() {
+            const room = document.getElementById('manual-room').value.trim();
+            if (room) connectToRoom(room);
         }
 
-        function resetTerminal() {
-            document.getElementById('success').classList.add('hidden');
-            document.getElementById('payment').classList.add('hidden');
-            document.getElementById('idle').classList.remove('hidden');
+        function connectToRoom(room) {
+            currentRoom = room;
+            document.getElementById('connect-screen').classList.add('hidden');
+            document.getElementById('main-terminal').classList.remove('hidden');
+            document.getElementById('current-room').textContent = room;
+
+            // Проверяем запросы оплаты
+            setInterval(() => {
+                const req = JSON.parse(localStorage.getItem('payment_request') || '{}');
+                if (req.room === currentRoom) {
+                    document.getElementById('waiting').classList.add('hidden');
+                    document.getElementById('payment-screen').classList.remove('hidden');
+                    document.getElementById('pay-sum').textContent = req.amount;
+                }
+            }, 1000);
+        }
+
+        function confirmPayment() {
+            const req = JSON.parse(localStorage.getItem('payment_request') || '{}');
+            alert(`Оплата ${req.amount} ₽ прошла успешно!`);
+            localStorage.removeItem('payment_request');
+            document.getElementById('payment-screen').classList.add('hidden');
+            document.getElementById('waiting').classList.remove('hidden');
         }
 
         window.onload = () => {
-            console.log("%cТерминал готов. Введите AID из index.html", "color:#22c55e");
+            const params = new URLSearchParams(window.location.search);
+            const room = params.get('room');
+            if (room) {
+                connectToRoom(room);
+            }
         };
     </script>
 </body>
