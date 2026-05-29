@@ -1,84 +1,61 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>МЕГА ПОС — ТЕРМИНАЛ</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap');
-        .terminal { background: linear-gradient(180deg, #052005, #021402); }
-        .glow { animation: glow 2s infinite alternate; }
-        @keyframes glow { from { text-shadow: 0 0 20px #22c55e; } to { text-shadow: 0 0 45px #22c55e; } }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>NFC POS — Терминал</title>
+  <style>
+    :root{
+      color-scheme:dark;
+      --bg:#070b10; --panel:#0d141d; --panel-2:#111a24; --line:rgba(255,255,255,.09);
+      --text:#edf7ff; --muted:#8fa1b5; --blue:#38bdf8; --green:#34d399; --warn:#fbbf24; --red:#fb7185;
+      --radius:24px; --shadow:0 24px 70px rgba(0,0,0,.42); font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+    *{box-sizing:border-box} body{margin:0;min-height:100svh;background:radial-gradient(circle at 20% -10%,rgba(56,189,248,.2),transparent 32%),radial-gradient(circle at 90% 5%,rgba(52,211,153,.14),transparent 30%),var(--bg);color:var(--text)}
+    button,input,select{font:inherit} button{border:0;cursor:pointer} .app{width:min(1180px,100%);margin:auto;padding:18px 14px 92px}.top{position:sticky;top:0;z-index:5;margin:-18px -14px 18px;padding:14px;background:linear-gradient(180deg,rgba(7,11,16,.96),rgba(7,11,16,.76));backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+    .bar{display:flex;align-items:center;justify-content:space-between;gap:12px}.brand{display:flex;align-items:center;gap:12px}.logo{width:44px;height:44px;display:grid;place-items:center;border-radius:16px;background:linear-gradient(135deg,rgba(56,189,248,.22),rgba(52,211,153,.14));border:1px solid rgba(56,189,248,.22)}
+    h1,h2,h3,p{margin:0}.brand h1{font-size:17px;letter-spacing:-.02em}.brand p{font-size:12px;color:var(--muted)}.pill{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border-radius:999px;background:rgba(52,211,153,.1);color:#a7f3d0;border:1px solid rgba(52,211,153,.22);font-size:12px;font-weight:700}.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 6px rgba(52,211,153,.1)}
+    .grid{display:grid;gap:14px}.hero{grid-template-columns:1fr}.card{border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.025));box-shadow:var(--shadow);border-radius:var(--radius);padding:16px}.scan{min-height:360px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative;overflow:hidden}.scan:before{content:"";position:absolute;inset:18px;border-radius:28px;border:1px dashed rgba(56,189,248,.25)}.scan>*{position:relative}.nfc{width:150px;height:150px;border-radius:42px;display:grid;place-items:center;background:radial-gradient(circle,rgba(56,189,248,.22),rgba(56,189,248,.06));border:1px solid rgba(56,189,248,.25);margin-bottom:18px}.waves{font-size:74px;color:var(--blue);filter:drop-shadow(0 0 22px rgba(56,189,248,.38))}.mode{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.18em}.scan h2{font-size:31px;margin:8px 0}.scan p{max-width:520px;color:var(--muted);line-height:1.55}.actions{display:grid;grid-template-columns:1fr;gap:10px;margin-top:18px;width:100%;max-width:520px}.btn{min-height:50px;border-radius:16px;padding:0 16px;font-weight:800;color:#041018;background:#e5edf7}.btn.blue{background:var(--blue)}.btn.green{background:var(--green)}.btn.ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--line)}.btn.warn{background:var(--warn);color:#17110a}.btn:disabled{opacity:.45;cursor:not-allowed}
+    .side{display:grid;gap:14px}.section-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.section-title h3{font-size:16px}.field{display:grid;gap:7px;margin-bottom:10px}label{font-size:12px;color:var(--muted);font-weight:700}input,select{width:100%;min-height:48px;border-radius:15px;border:1px solid var(--line);background:#091019;color:var(--text);padding:0 13px;outline:none}input:focus,select:focus{border-color:rgba(56,189,248,.62);box-shadow:0 0 0 4px rgba(56,189,248,.1)}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat{border-radius:18px;background:rgba(255,255,255,.04);border:1px solid var(--line);padding:12px}.stat b{display:block;font-size:22px}.stat span{font-size:11px;color:var(--muted)}.status{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:6px 9px;font-size:12px;border:1px solid var(--line);color:var(--muted)}.status.pay{color:#bae6fd;background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.24)}.status.ok{color:#a7f3d0;background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.24)}.status.err{color:#fecdd3;background:rgba(251,113,133,.1);border-color:rgba(251,113,133,.24)}
+    .list{display:grid;gap:10px;max-height:330px;overflow:auto;padding-right:2px}.event{display:grid;gap:5px;padding:12px;border-radius:16px;background:rgba(255,255,255,.035);border:1px solid var(--line)}.event div{display:flex;justify-content:space-between;gap:10px}.event small,.event time{color:var(--muted);font-size:11px}.terminal-card{display:flex;align-items:center;justify-content:space-between;gap:10px;border-radius:18px;border:1px solid rgba(56,189,248,.12);background:rgba(56,189,248,.055);padding:12px}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.bottomnav{position:fixed;left:10px;right:10px;bottom:10px;z-index:8;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:8px;border:1px solid var(--line);border-radius:22px;background:rgba(9,16,25,.86);backdrop-filter:blur(16px)}.bottomnav a{text-align:center;text-decoration:none;color:var(--text);padding:13px;border-radius:16px;background:rgba(255,255,255,.04);font-weight:800}.bottomnav a.active{background:rgba(56,189,248,.18);color:#bae6fd}
+    @media (min-width:760px){.app{padding:24px 22px 28px}.top{margin:-24px -22px 22px;padding:18px 22px}.hero{grid-template-columns:1.35fr .9fr}.actions{grid-template-columns:1fr 1fr}.bottomnav{position:static;margin-top:16px;max-width:360px}.scan h2{font-size:42px}}
+  </style>
 </head>
-<body class="bg-zinc-950 text-white">
-    <div class="max-w-md mx-auto min-h-screen terminal flex flex-col border border-emerald-600">
-        <div class="h-20 bg-emerald-600 flex items-center px-8 text-black text-4xl font-bold">МЕГА ПОС</div>
-        
-        <div class="flex-1 p-10 flex flex-col items-center justify-center text-center">
-            <div id="connect-screen">
-                <i class="fa-solid fa-mobile-screen-button text-8xl text-emerald-400 mb-10 glow"></i>
-                <h2 class="text-3xl font-bold mb-8">ТЕРМИНАЛ</h2>
-                <input id="aid-input" type="text" maxlength="8" placeholder="Введите AID от кассы" 
-                       class="w-full text-center text-5xl font-mono bg-black border border-emerald-500 rounded-3xl py-8 outline-none mb-8">
-                <button onclick="connectTerminal()" 
-                        class="w-full py-8 bg-emerald-500 text-black text-2xl font-bold rounded-3xl">ПОДКЛЮЧИТЬСЯ</button>
-            </div>
-
-            <div id="main-screen" class="hidden w-full text-center">
-                <div class="text-emerald-400 text-sm tracking-widest mb-6">ПОДКЛЮЧЁН</div>
-                <div id="current-aid" class="text-6xl font-mono text-emerald-400 mb-12"></div>
-                
-                <div id="waiting" class="text-2xl font-medium text-emerald-300">Ожидаем запрос оплаты от кассы...</div>
-                
-                <div id="payment-screen" class="hidden mt-12">
-                    <div class="text-emerald-400 text-sm mb-4">ЗАПРОС ОПЛАТЫ</div>
-                    <div id="payment-amount" class="text-7xl font-light text-white">890</div>
-                    <div class="text-zinc-400">рублей</div>
-                    <button onclick="confirmPayment()" 
-                            class="mt-16 w-full py-10 bg-white text-black text-2xl font-bold rounded-3xl">ПРИКЛАДЫВАЙ МЕТКУ</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        let currentAID = "";
-
-        function connectTerminal() {
-            const input = document.getElementById('aid-input').value.trim().toUpperCase();
-            if (!input) return alert("Введите AID из кассы");
-            
-            currentAID = input;
-            document.getElementById('connect-screen').classList.add('hidden');
-            document.getElementById('main-screen').classList.remove('hidden');
-            document.getElementById('current-aid').textContent = currentAID;
-            
-            setInterval(checkForRequest, 800);
-        }
-
-        function checkForRequest() {
-            const req = JSON.parse(localStorage.getItem('pending_payment') || '{}');
-            if (req.aid === currentAID && req.amount) {
-                document.getElementById('waiting').classList.add('hidden');
-                document.getElementById('payment-screen').classList.remove('hidden');
-                document.getElementById('payment-amount').textContent = req.amount;
-            }
-        }
-
-        function confirmPayment() {
-            const req = JSON.parse(localStorage.getItem('pending_payment') || '{}');
-            alert(`Оплата ${req.amount} ₽ прошла успешно!`);
-            localStorage.removeItem('pending_payment');
-            document.getElementById('payment-screen').classList.add('hidden');
-            document.getElementById('waiting').classList.remove('hidden');
-        }
-
-        window.onload = () => {
-            console.log("%cТерминал запущен. Введите AID из cashier.html", "color:#22c55e");
-        };
-    </script>
+<body>
+  <div class="app">
+    <header class="top"><div class="bar"><div class="brand"><div class="logo">⌁</div><div><h1>Терминал NFC</h1><p id="terminalName">PAY-02 · front desk</p></div></div><span class="pill"><i class="dot"></i><span id="connection">online</span></span></div></header>
+    <main class="grid hero">
+      <section class="card scan">
+        <div class="nfc"><div class="waves">◖))</div></div><div class="mode" id="modeLabel">режим чтения</div><h2 id="scanTitle">Поднесите NFC-карту</h2><p id="scanHelp">Используйте Web NFC на Android Chrome или введите ID домашней NFC-метки вручную для тестирования регистрации, привязки и оплаты.</p>
+        <div class="actions"><button class="btn blue" id="readBtn">Считать через NFC</button><button class="btn green" id="payBtn">Включить оплату</button><button class="btn ghost" id="bindBtn">Режим привязки</button><button class="btn warn" id="resetBtn">Завершить режим</button></div>
+      </section>
+      <aside class="side">
+        <section class="card"><div class="section-title"><h3>Ручной NFC/ID тест</h3><span class="status" id="modeBadge">read</span></div><div class="field"><label for="nfcId">Уникальный ID карты или метки</label><input id="nfcId" class="mono" autocomplete="off" placeholder="04:A3:19:7B:2C:90"></div><div class="field"><label for="holder">Имя владельца / гость</label><input id="holder" placeholder="Анна, стол 4, сотрудник..."></div><button class="btn blue" id="submitManual">Обработать ID</button></section>
+        <section class="card"><div class="section-title"><h3>Показатели</h3><span class="status ok">sync</span></div><div class="stats"><div class="stat"><b id="cardsCount">0</b><span>карт</span></div><div class="stat"><b id="txCount">0</b><span>операций</span></div><div class="stat"><b id="sumCount">0₽</b><span>сумма</span></div></div></section>
+        <section class="card"><div class="section-title"><h3>Выбранный терминал</h3><span class="status pay" id="terminalMode">idle</span></div><div class="terminal-card"><div><b id="activeTerminal">PAY-02</b><p style="color:var(--muted);font-size:12px;margin-top:3px">Смена режима приходит из кассы</p></div><span class="mono" id="terminalCode">T-002</span></div></section>
+      </aside>
+      <section class="card" style="grid-column:1/-1"><div class="section-title"><h3>Лента событий</h3><span class="status" id="lastSeen">now</span></div><div class="list" id="events"></div></section>
+    </main>
+    <nav class="bottomnav"><a class="active" href="/terminal.html">Терминал</a><a href="/cashier.html">Касса</a></nav>
+  </div>
+<script>
+(function(){
+  const KEY='nfc-pos-state-v1';
+  const channel=('BroadcastChannel' in window)?new BroadcastChannel('nfc-pos'):null;
+  const defaultState={selectedTerminal:'T-002',terminals:[{id:'T-001',name:'PAY-01',place:'Бар',status:'online',mode:'idle'},{id:'T-002',name:'PAY-02',place:'Front desk',status:'online',mode:'read'},{id:'T-003',name:'PAY-03',place:'Киоск',status:'offline',mode:'idle'}],cards:[{id:'04:A3:19:7B:2C:90',holder:'Тестовая метка',status:'active',bound:'T-002',created:new Date().toLocaleString('ru-RU')}],transactions:[],events:[{type:'system',text:'Терминал загружен и готов к чтению NFC',time:new Date().toLocaleTimeString('ru-RU')}]} ;
+  const $=id=>document.getElementById(id); let state=load();
+  function load(){try{return JSON.parse(localStorage.getItem(KEY))||defaultState}catch(e){return defaultState}}
+  function save(){localStorage.setItem(KEY,JSON.stringify(state));channel&&channel.postMessage(state);render()}
+  function event(text,type='info'){state.events.unshift({type,text,time:new Date().toLocaleTimeString('ru-RU')});state.events=state.events.slice(0,60)}
+  function terminal(){return state.terminals.find(t=>t.id===state.selectedTerminal)||state.terminals[0]}
+  function setMode(mode){const t=terminal();t.mode=mode;event(`${t.name}: режим изменён на ${mode}`,'mode');save()}
+  function processId(raw){const id=(raw||$('nfcId').value||randomId()).trim().toUpperCase();if(!id)return;const holder=$('holder').value.trim()||'Гость';const t=terminal();let card=state.cards.find(c=>c.id===id);if(t.mode==='bind'){if(!card){card={id,holder,status:'active',bound:t.id,created:new Date().toLocaleString('ru-RU')};state.cards.unshift(card);event(`Выпущена новая NFC-карта ${id} для ${holder}`,'card')}else{card.holder=holder;card.bound=t.id;card.status='active';event(`Карта ${id} привязана к ${t.name}`,'bind')}}else if(t.mode==='pay'){if(card&&card.status==='active'){const amount=[190,250,390,520,740][Math.floor(Math.random()*5)];state.transactions.unshift({id:'TX-'+Date.now().toString(36).toUpperCase(),card:id,terminal:t.id,amount,time:new Date().toLocaleString('ru-RU'),status:'approved'});event(`Оплата ${amount}₽ по карте ${id} подтверждена`,'pay');t.mode='read'}else{event(`Оплата отклонена: карта ${id} не зарегистрирована`,'error')}}else{if(card){event(`Считана активная карта ${id} · ${card.holder}`,'read')}else{event(`Считан неизвестный ID ${id}. Перейдите в режим привязки.`,'read')}}$('nfcId').value=id;save()}
+  function randomId(){return Array.from({length:6},()=>Math.floor(Math.random()*256).toString(16).padStart(2,'0')).join(':').toUpperCase()}
+  async function webNfc(){if(!('NDEFReader' in window)){event('Web NFC недоступен. Используйте ручной ввод ID на этом устройстве.','warn');save();return}try{const reader=new NDEFReader();await reader.scan();event('Web NFC сканирование запущено — поднесите метку','nfc');reader.onreading=e=>processId(e.serialNumber||randomId());reader.onerror=()=>{event('Ошибка чтения NFC. Проверьте разрешения браузера.','error');save()}}catch(err){event('Доступ к NFC не выдан: '+err.message,'error');save()}}
+  function render(){const t=terminal();$('terminalName').textContent=`${t.name} · ${t.place}`;$('activeTerminal').textContent=t.name;$('terminalCode').textContent=t.id;$('terminalMode').textContent=t.mode;$('modeBadge').textContent=t.mode;$('modeLabel').textContent=t.mode==='pay'?'режим оплаты':t.mode==='bind'?'режим привязки':'режим чтения';$('scanTitle').textContent=t.mode==='pay'?'Ожидание оплаты':t.mode==='bind'?'Поднесите карту для выпуска':'Поднесите NFC-карту';$('scanHelp').textContent=t.mode==='pay'?'Следующее чтение зарегистрированной карты создаст транзакцию и вернёт терминал в режим чтения.':t.mode==='bind'?'Считанный ID будет зарегистрирован и привязан к выбранному терминалу.':'Считайте карту, проверьте статус или включите оплату с кассы.';$('cardsCount').textContent=state.cards.length;$('txCount').textContent=state.transactions.length;$('sumCount').textContent=state.transactions.reduce((s,x)=>s+x.amount,0)+'₽';$('events').innerHTML=state.events.map(e=>`<article class="event"><div><b>${escapeHtml(e.text)}</b><time>${e.time}</time></div><small>${e.type}</small></article>`).join('')}
+  function escapeHtml(s){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
+  $('readBtn').onclick=webNfc;$('payBtn').onclick=()=>setMode('pay');$('bindBtn').onclick=()=>setMode('bind');$('resetBtn').onclick=()=>setMode('read');$('submitManual').onclick=()=>processId();channel&&(channel.onmessage=e=>{state=e.data;render()});window.addEventListener('storage',e=>{if(e.key===KEY){state=load();render()}});render();save();
+})();
+</script>
 </body>
 </html>
