@@ -8,40 +8,37 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap');
-        .terminal { background: radial-gradient(circle at center, #0a2a0a, #000); }
-        .glow { animation: glow 2.5s infinite alternate; }
-        @keyframes glow { from { text-shadow: 0 0 20px #22c55e; } to { text-shadow: 0 0 60px #22c55e; } }
+        .terminal { background: linear-gradient(180deg, #052005, #021402); }
+        .glow { animation: glow 2s infinite alternate; }
+        @keyframes glow { from { text-shadow: 0 0 20px #22c55e; } to { text-shadow: 0 0 45px #22c55e; } }
     </style>
 </head>
-<body class="bg-black text-white">
-    <div class="max-w-md mx-auto min-h-screen terminal flex flex-col">
-        <div class="h-20 bg-gradient-to-r from-emerald-600 to-teal-500 flex items-center px-8 text-4xl font-bold text-black header">МЕГА ПОС</div>
+<body class="bg-zinc-950 text-white">
+    <div class="max-w-md mx-auto min-h-screen terminal flex flex-col border border-emerald-600">
+        <div class="h-20 bg-emerald-600 flex items-center px-8 text-black text-4xl font-bold">МЕГА ПОС</div>
         
-        <div class="flex-1 flex flex-col items-center justify-center p-10 text-center">
+        <div class="flex-1 p-10 flex flex-col items-center justify-center text-center">
             <div id="connect-screen">
-                <div class="text-emerald-400 text-6xl mb-8 glow">📟</div>
-                <h2 class="text-4xl font-bold mb-10">ТЕРМИНАЛ</h2>
-                <input id="aid-input" type="text" maxlength="8" placeholder="AID от кассы" 
-                       class="w-full text-center text-5xl font-mono bg-zinc-900 border border-emerald-500 rounded-3xl py-8 outline-none mb-10">
+                <i class="fa-solid fa-mobile-screen-button text-8xl text-emerald-400 mb-10 glow"></i>
+                <h2 class="text-3xl font-bold mb-8">ТЕРМИНАЛ</h2>
+                <input id="aid-input" type="text" maxlength="8" placeholder="Введите AID от кассы" 
+                       class="w-full text-center text-5xl font-mono bg-black border border-emerald-500 rounded-3xl py-8 outline-none mb-8">
                 <button onclick="connectTerminal()" 
-                        class="w-full py-8 bg-emerald-500 hover:bg-emerald-400 text-black text-2xl font-bold rounded-3xl transition">
-                    ПОДКЛЮЧИТЬСЯ
-                </button>
+                        class="w-full py-8 bg-emerald-500 text-black text-2xl font-bold rounded-3xl">ПОДКЛЮЧИТЬСЯ</button>
             </div>
 
-            <div id="main-screen" class="hidden w-full">
-                <div class="text-emerald-400 text-sm tracking-widest mb-4">ПОДКЛЮЧЁН</div>
-                <div id="aid-display" class="text-6xl font-mono text-emerald-400 mb-12 glow"></div>
+            <div id="main-screen" class="hidden w-full text-center">
+                <div class="text-emerald-400 text-sm tracking-widest mb-6">ПОДКЛЮЧЁН</div>
+                <div id="current-aid" class="text-6xl font-mono text-emerald-400 mb-12"></div>
                 
-                <div id="waiting-screen" class="text-xl text-emerald-300">Ожидаем запрос от кассы...</div>
+                <div id="waiting" class="text-2xl font-medium text-emerald-300">Ожидаем запрос оплаты от кассы...</div>
                 
-                <div id="payment-screen" class="hidden">
-                    <div class="text-7xl font-light text-white mb-6" id="pay-amount">890</div>
-                    <div class="text-emerald-400 mb-12">к оплате</div>
-                    <button onclick="simulateNFCPayment()" 
-                            class="w-full py-12 bg-white text-black text-2xl font-bold rounded-3xl active:scale-95 transition">
-                        ПРИКЛАДЫВАЙ МЕТКУ
-                    </button>
+                <div id="payment-screen" class="hidden mt-12">
+                    <div class="text-emerald-400 text-sm mb-4">ЗАПРОС ОПЛАТЫ</div>
+                    <div id="payment-amount" class="text-7xl font-light text-white">890</div>
+                    <div class="text-zinc-400">рублей</div>
+                    <button onclick="confirmPayment()" 
+                            class="mt-16 w-full py-10 bg-white text-black text-2xl font-bold rounded-3xl">ПРИКЛАДЫВАЙ МЕТКУ</button>
                 </div>
             </div>
         </div>
@@ -57,32 +54,30 @@
             currentAID = input;
             document.getElementById('connect-screen').classList.add('hidden');
             document.getElementById('main-screen').classList.remove('hidden');
-            document.getElementById('aid-display').textContent = currentAID;
-
-            setInterval(checkForPayment, 800);
+            document.getElementById('current-aid').textContent = currentAID;
+            
+            setInterval(checkForRequest, 800);
         }
 
-        function checkForPayment() {
+        function checkForRequest() {
             const req = JSON.parse(localStorage.getItem('pending_payment') || '{}');
-            if (req.aid === currentAID) {
-                document.getElementById('waiting-screen').classList.add('hidden');
+            if (req.aid === currentAID && req.amount) {
+                document.getElementById('waiting').classList.add('hidden');
                 document.getElementById('payment-screen').classList.remove('hidden');
-                document.getElementById('pay-amount').textContent = req.amount;
+                document.getElementById('payment-amount').textContent = req.amount;
             }
         }
 
-        function simulateNFCPayment() {
+        function confirmPayment() {
             const req = JSON.parse(localStorage.getItem('pending_payment') || '{}');
-            if (!req.amount) return;
-            
-            alert(`✅ Оплата ${req.amount} ₽ прошла успешно!\nМетка считана.`);
+            alert(`Оплата ${req.amount} ₽ прошла успешно!`);
             localStorage.removeItem('pending_payment');
             document.getElementById('payment-screen').classList.add('hidden');
-            document.getElementById('waiting-screen').classList.remove('hidden');
+            document.getElementById('waiting').classList.remove('hidden');
         }
 
         window.onload = () => {
-            console.log("%cТерминал МЕГА ПОС готов. Дизайн улучшен, анимации добавлены.", "color:#22c55e");
+            console.log("%cТерминал запущен. Введите AID из cashier.html", "color:#22c55e");
         };
     </script>
 </body>
