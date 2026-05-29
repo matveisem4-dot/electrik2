@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>МЕГА ПОС — КАССА</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .header { font-family: 'Space Grotesk', sans-serif; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <div class="max-w-6xl mx-auto p-8">
+        <div class="header text-6xl font-bold text-emerald-400 mb-2">МЕГА ПОС</div>
+        <div class="text-emerald-400 mb-10">КАССА</div>
+
+        <button onclick="addNewTag()" class="mb-10 bg-emerald-500 text-black px-10 py-5 rounded-3xl font-semibold flex items-center gap-3">
+            <i class="fa-solid fa-plus"></i> ДОБАВИТЬ МЕТКУ
+        </button>
+
+        <div class="grid grid-cols-12 gap-8">
+            <div class="col-span-7">
+                <h2 class="text-2xl font-semibold mb-6">Метки</h2>
+                <div id="tags-list" class="space-y-4"></div>
+            </div>
+            <div class="col-span-5">
+                <h2 class="text-2xl font-semibold mb-6">Терминалы</h2>
+                <div id="terminals-list" class="space-y-4"></div>
+                <button onclick="createTerminal()" class="mt-8 w-full py-6 border-2 border-dashed border-emerald-400 text-emerald-400 rounded-3xl hover:bg-emerald-900">
+                    + Новый терминал (AID только цифры)
+                </button>
+            </div>
+        </div>
+
+        <div class="mt-12 bg-zinc-900 rounded-3xl p-8">
+            <h3 class="font-semibold mb-6">История</h3>
+            <div id="history" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <script>
+        let tags = JSON.parse(localStorage.getItem('tags')) || [];
+        let terminals = JSON.parse(localStorage.getItem('terminals')) || [];
+        let history = [];
+
+        function generateNumericAID() {
+            return Math.floor(100000 + Math.random() * 900000).toString();
+        }
+
+        function save() {
+            localStorage.setItem('tags', JSON.stringify(tags));
+            localStorage.setItem('terminals', JSON.stringify(terminals));
+        }
+
+        function addHistory(text) {
+            history.unshift({time: new Date().toLocaleTimeString('ru-RU'), text});
+            if (history.length > 15) history.pop();
+            renderHistory();
+        }
+
+        function renderTags() {
+            const container = document.getElementById('tags-list');
+            container.innerHTML = tags.map((tag,i) => `
+                <div class="bg-zinc-900 rounded-3xl p-6 flex justify-between items-center border ${tag.blocked ? 'border-red-500' : 'border-emerald-500'}">
+                    <div>
+                        <div class="font-mono text-emerald-400">${tag.aid}</div>
+                        <div class="font-medium">${tag.owner}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-4xl font-light">${tag.balance} ₽</div>
+                        <div class="flex gap-3 mt-4">
+                            <button onclick="toggleBlock(${i});event.stopImmediatePropagation()" class="px-6 py-2 text-xs border rounded-2xl">${tag.blocked ? 'Разблокировать' : 'Заблокировать'}</button>
+                            <button onclick="deleteTag(${i});event.stopImmediatePropagation()" class="px-6 py-2 text-xs bg-red-900 rounded-2xl">Удалить</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderTerminals() {
+            const container = document.getElementById('terminals-list');
+            container.innerHTML = terminals.map(t => `
+                <div class="bg-zinc-900 rounded-3xl p-6 flex justify-between items-center">
+                    <div class="font-mono text-emerald-400">${t.aid}</div>
+                    <button onclick="sendPayment('${t.aid}')" class="bg-emerald-500 text-black px-8 py-4 rounded-3xl text-sm font-medium">Отправить оплату</button>
+                </div>
+            `).join('');
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('history');
+            container.innerHTML = history.map(h => `
+                <div class="bg-zinc-900 p-5 rounded-2xl flex gap-6 text-sm">
+                    <div class="font-mono text-emerald-400 w-20">${h.time}</div>
+                    <div>${h.text}</div>
+                </div>
+            `).join('');
+        }
+
+        function addNewTag() {
+            const owner = prompt("Имя владельца:", "Клиент");
+            if (!owner) return;
+            const nfcId = "04" + Math.random().toString(16).slice(2,14).toUpperCase();
+            const aid = generateNumericAID();
+            tags.unshift({nfcId, aid, owner, balance: 5000, blocked: false});
+            save();
+            renderTags();
+            addHistory(`Добавлена метка • AID ${aid}`);
+        }
+
+        function toggleBlock(i) {
+            tags[i].blocked = !tags[i].blocked;
+            save();
+            renderTags();
+            addHistory(tags[i].blocked ? "Метка заблокирована" : "Метка разблокирована");
+        }
+
+        function deleteTag(i) {
+            if (confirm("Удалить метку?")) {
+                const aid = tags[i].aid;
+                tags.splice(i,1);
+                save();
+                renderTags();
+                addHistory("Метка удалена: " + aid);
+            }
+        }
+
+        function createTerminal() {
+            const aid = generateNumericAID();
+            terminals.unshift({aid});
+            save();
+            renderTerminals();
+            addHistory("Новый терминал создан • AID: " + aid);
+            alert("Терминал создан!\nAID: " + aid + "\n\nОткройте terminal.html на другом устройстве и введите этот AID");
+        }
+
+        function sendPayment(aid) {
+            const amount = prompt("Сумма оплаты:", "890");
+            if (!amount) return;
+            localStorage.setItem("pending_payment", JSON.stringify({aid: aid, amount: parseInt(amount)}));
+            addHistory(`Запрос оплаты ${amount} ₽ отправлен на AID ${aid}`);
+            alert("Запрос отправлен на терминал " + aid);
+        }
+
+        window.onload = () => {
+            if (tags.length === 0) {
+                tags = [
+                    {nfcId:"04A1B2C3D4E5", aid:"123456", owner:"Алексей Иванов", balance:12480, blocked:false},
+                    {nfcId:"04F7A9B2C318", aid:"654321", owner:"Мария Петрова", balance:3420, blocked:false}
+                ];
+            }
+            renderTags();
+            renderTerminals();
+            renderHistory();
+        };
+    </script>
+</body>
+</html>
