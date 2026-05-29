@@ -10,55 +10,40 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
         .header { font-family: 'Space Grotesk', sans-serif; }
-        .card { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
-        .card:hover { transform: translateY(-8px); }
     </style>
 </head>
 <body class="bg-zinc-950 text-zinc-200">
     <div class="max-w-6xl mx-auto p-8">
-        <div class="header text-6xl font-bold text-emerald-400 mb-2 tracking-tighter">МЕГА ПОС</div>
-        <p class="text-emerald-400 mb-10">КАССА • Полноценный банк + товары</p>
+        <div class="header text-6xl font-bold text-emerald-400 mb-2">МЕГА ПОС</div>
+        <div class="text-emerald-400 mb-10">КАССА • УПРАВЛЕНИЕ МЕТКАМИ</div>
+
+        <button onclick="addNewTag()" class="mb-10 bg-emerald-500 text-black px-10 py-5 rounded-3xl font-semibold flex items-center gap-3">
+            <i class="fa-solid fa-plus"></i> ДОБАВИТЬ НОВУЮ МЕТКУ
+        </button>
 
         <div class="grid grid-cols-12 gap-8">
-            <!-- Метки -->
-            <div class="col-span-7 bg-zinc-900 rounded-3xl p-8">
-                <div class="flex justify-between mb-6">
-                    <h2 class="text-3xl font-semibold">Метки NFC</h2>
-                    <button onclick="addNewTag()" class="bg-emerald-500 text-black px-8 py-4 rounded-3xl flex items-center gap-3">
-                        <i class="fa-solid fa-plus"></i> НОВАЯ МЕТКА
-                    </button>
-                </div>
-                <div id="tags-list" class="grid grid-cols-2 gap-6"></div>
+            <div class="col-span-7">
+                <h2 class="text-2xl font-semibold mb-6">Метки</h2>
+                <div id="tags-list" class="space-y-4"></div>
             </div>
-
-            <!-- Товары и действия -->
-            <div class="col-span-5 space-y-8">
-                <div class="bg-zinc-900 rounded-3xl p-8">
-                    <h3 class="text-xl font-semibold mb-6">Товары</h3>
-                    <div id="products-list" class="space-y-3"></div>
-                    <button onclick="addProduct()" class="mt-6 text-sm w-full py-4 border border-dashed border-emerald-400 text-emerald-400 rounded-3xl">+ Добавить товар</button>
-                </div>
-
-                <button onclick="sendPaymentRequest()" 
-                        class="w-full py-8 bg-gradient-to-r from-emerald-500 to-teal-400 text-black font-bold text-2xl rounded-3xl">
-                    ОТПРАВИТЬ ЗАПРОС НА ТЕРМИНАЛ
+            <div class="col-span-5">
+                <h2 class="text-2xl font-semibold mb-6">Терминалы</h2>
+                <div id="terminal-list" class="space-y-4"></div>
+                <button onclick="createNewTerminal()" class="mt-8 w-full py-6 border-2 border-dashed border-emerald-400 text-emerald-400 rounded-3xl hover:bg-emerald-900">
+                    + ЗАПУСТИТЬ НОВЫЙ ТЕРМИНАЛ
                 </button>
             </div>
         </div>
 
-        <div class="mt-12 bg-zinc-900 rounded-3xl p-8">
+        <div class="mt-16 bg-zinc-900 rounded-3xl p-8">
             <h3 class="font-semibold mb-6">История операций</h3>
-            <div id="history" class="space-y-4"></div>
+            <div id="history" class="space-y-4 text-sm"></div>
         </div>
     </div>
 
     <script>
-        let tags = JSON.parse(localStorage.getItem('tags_v5')) || [];
-        let products = JSON.parse(localStorage.getItem('products')) || [
-            {name: "Кофе", price: 180},
-            {name: "Бургер", price: 450},
-            {name: "Вода", price: 90}
-        ];
+        let tags = JSON.parse(localStorage.getItem('tags')) || [];
+        let terminals = JSON.parse(localStorage.getItem('terminals')) || [];
         let history = [];
 
         function generateAID() {
@@ -69,52 +54,49 @@
         }
 
         function save() {
-            localStorage.setItem('tags_v5', JSON.stringify(tags));
-            localStorage.setItem('products', JSON.stringify(products));
+            localStorage.setItem('tags', JSON.stringify(tags));
+            localStorage.setItem('terminals', JSON.stringify(terminals));
         }
 
         function addHistory(text) {
             history.unshift({time: new Date().toLocaleTimeString('ru-RU'), text});
+            if (history.length > 15) history.pop();
             renderHistory();
         }
 
         function renderTags() {
             const container = document.getElementById('tags-list');
-            container.innerHTML = tags.map((tag, i) => `
-                <div class="card bg-zinc-800 rounded-3xl p-6 border ${tag.blocked?'border-red-500':'border-emerald-500'}">
-                    <div class="flex justify-between">
-                        <div>
-                            <div class="font-mono text-emerald-400">${tag.aid}</div>
-                            <div class="font-medium">${tag.owner}</div>
-                            <div class="text-xs text-zinc-400">${tag.nfcId}</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-4xl font-light">${tag.balance} ₽</div>
-                            <div class="flex gap-2 mt-6">
-                                <button onclick="editTag(${i});event.stopImmediatePropagation()" class="text-xs px-5 py-2 border border-zinc-600 rounded-2xl">Изменить</button>
-                                <button onclick="toggleBlock(${i});event.stopImmediatePropagation()" class="text-xs px-5 py-2 border border-zinc-600 rounded-2xl">${tag.blocked?'Разблокировать':'Заблокировать'}</button>
-                                <button onclick="deleteTag(${i});event.stopImmediatePropagation()" class="text-xs px-5 py-2 bg-red-900 rounded-2xl">Удалить</button>
-                            </div>
+            container.innerHTML = tags.map((tag,i) => `
+                <div class="bg-zinc-900 rounded-3xl p-6 flex justify-between items-center border ${tag.blocked ? 'border-red-500' : 'border-emerald-500'}">
+                    <div>
+                        <div class="font-mono text-emerald-400">${tag.aid}</div>
+                        <div class="font-medium">${tag.owner}</div>
+                        <div class="text-xs text-zinc-400">${tag.nfcId}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-4xl font-light">${tag.balance} ₽</div>
+                        <div class="flex gap-3 mt-6">
+                            <button onclick="toggleBlock(${i});event.stopImmediatePropagation()" class="text-xs px-6 py-2 border border-zinc-600 rounded-2xl">${tag.blocked ? 'Разблокировать' : 'Заблокировать'}</button>
+                            <button onclick="deleteTag(${i});event.stopImmediatePropagation()" class="text-xs px-6 py-2 bg-red-900 rounded-2xl">Удалить</button>
                         </div>
                     </div>
                 </div>
             `).join('');
         }
 
-        function renderProducts() {
-            const container = document.getElementById('products-list');
-            container.innerHTML = products.map(p => `
-                <div class="bg-zinc-800 rounded-2xl p-4 flex justify-between items-center">
-                    <div>${p.name}</div>
-                    <div class="font-medium">${p.price} ₽</div>
+        function renderTerminals() {
+            const container = document.getElementById('terminal-list');
+            container.innerHTML = terminals.map(t => `
+                <div class="bg-zinc-900 rounded-3xl p-6 flex justify-between items-center">
+                    <div class="font-mono text-emerald-400">${t.aid}</div>
+                    <button onclick="sendPayment(${i});event.stopImmediatePropagation()" class="bg-emerald-500 text-black px-8 py-4 rounded-3xl text-sm font-medium">Отправить оплату</button>
                 </div>
             `).join('');
         }
 
         function renderHistory() {
-            const container = document.getElementById('history');
-            container.innerHTML = history.map(h => `
-                <div class="bg-zinc-800 px-6 py-5 rounded-2xl flex gap-6">
+            document.getElementById('history').innerHTML = history.map(h => `
+                <div class="flex gap-6 bg-zinc-800 p-5 rounded-2xl">
                     <div class="font-mono text-emerald-400 w-20">${h.time}</div>
                     <div>${h.text}</div>
                 </div>
@@ -122,25 +104,14 @@
         }
 
         function addNewTag() {
-            const owner = prompt("Имя владельца:", "Новый клиент");
+            const owner = prompt("Имя владельца:", "Клиент");
             if (!owner) return;
             const nfcId = "04" + Math.random().toString(16).slice(2,14).toUpperCase();
             const aid = generateAID();
-            tags.unshift({nfcId, aid, owner, balance: 3000, blocked: false});
+            tags.unshift({nfcId, aid, owner, balance: 5000, blocked: false});
             save();
             renderTags();
-            addHistory(`Добавлена новая метка • ${aid}`);
-        }
-
-        function editTag(i) {
-            const tag = tags[i];
-            const newName = prompt("Новое имя владельца:", tag.owner);
-            const newBalance = parseInt(prompt("Новый баланс:", tag.balance));
-            if (newName) tag.owner = newName;
-            if (!isNaN(newBalance)) tag.balance = newBalance;
-            save();
-            renderTags();
-            addHistory("Метка отредактирована");
+            addHistory(`Добавлена метка • ${aid}`);
         }
 
         function toggleBlock(i) {
@@ -151,7 +122,7 @@
         }
 
         function deleteTag(i) {
-            if (confirm("Удалить метку полностью?")) {
+            if (confirm("Удалить метку?")) {
                 tags.splice(i,1);
                 save();
                 renderTags();
@@ -159,29 +130,21 @@
             }
         }
 
-        function addProduct() {
-            const name = prompt("Название товара:");
-            const price = parseInt(prompt("Цена товара:"));
-            if (name && price) {
-                products.push({name, price});
-                save();
-                renderProducts();
-            }
-        }
-
         function createNewTerminal() {
             const aid = generateAID();
-            localStorage.setItem('current_terminal_aid', aid);
-            alert("Новый терминал создан!\nAID: " + aid + "\n\nОткройте terminal.html на телефоне и введите этот AID");
-            addHistory("Создан новый терминал • AID: " + aid);
+            terminals.unshift({aid});
+            save();
+            renderTerminals();
+            addHistory("Новый терминал • AID: " + aid);
+            alert("Терминал создан!\nAID: " + aid + "\n\nОткройте terminal.html на телефоне и введите этот AID");
         }
 
-        function sendPaymentRequest() {
+        function sendPayment(i) {
             const amount = parseInt(prompt("Сумма оплаты:", "890")) || 890;
-            const aid = prompt("AID терминала (из terminal.html):", "KX9P2M");
-            localStorage.setItem('pending_payment', JSON.stringify({aid, amount}));
-            addHistory(`Запрос оплаты ${amount} ₽ отправлен на терминал ${aid}`);
-            alert("Запрос отправлен на терминал. Откройте terminal.html");
+            const aid = terminals[i].aid;
+            localStorage.setItem("pending_payment", JSON.stringify({aid: aid, amount: amount}));
+            addHistory(`Запрос оплаты ${amount}₽ отправлен на терминал ${aid}`);
+            alert(`Запрос на ${amount} ₽ отправлен на терминал ${aid}`);
         }
 
         window.onload = () => {
@@ -192,7 +155,7 @@
                 ];
             }
             renderTags();
-            renderProducts();
+            renderTerminals();
             renderHistory();
         };
     </script>
