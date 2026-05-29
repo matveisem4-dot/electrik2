@@ -29,8 +29,7 @@
           <div class="nfc" id="nfcIcon"><div class="waves">◖))</div></div>
           <div class="mode" id="modeLabel">готов</div>
           <h2 id="title">Ожидание</h2>
-          <p id="help">Терминал активен. Когда поступит команда чтения, экран автоматически перейдёт в режим NFC.</p>
-          <div class="result" id="result">Последний UID: <b class="mono" id="lastUid">—</b></div>
+          <p id="help">Терминал активен и постоянно слушает команды. Когда касса отправит запрос, экран автоматически перейдёт в режим NFC.</p>
           <div class="tools" id="devTools">
             <div class="field"><input class="mono" id="manualUid" placeholder="UID для теста"></div>
             <button class="btn ghost" id="simulateBtn">Симуляция</button>
@@ -50,11 +49,12 @@
 (function(){
   const KEY='nfc-pos-real-v2', TKEY='nfc-pos-terminal-id-v3', START='nfc-pos-terminal-started-v1';
   const channel=('BroadcastChannel'in window)?new BroadcastChannel('nfc-pos-real'):null;
-  const $=id=>document.getElementById(id); let state=load(); let nfcReader=null; let nfcStarted=false;
+  const $=id=>document.getElementById(id); let state=load(); let nfcReader=null; let nfcStarted=false; let lastCommandId='';
   let terminalId=localStorage.getItem(TKEY)||makeTerminalId(); localStorage.setItem(TKEY,terminalId);
   function base(){return{terminals:{},cards:{},commands:{},transactions:[],events:[]}}
   function load(){try{return JSON.parse(localStorage.getItem(KEY))||base()}catch(e){return base()}}
   function save(){localStorage.setItem(KEY,JSON.stringify(state));channel&&channel.postMessage({state});render()}
+  function refresh(){state=load();register();render()}
   function makeTerminalId(){let s='';const a=new Uint32Array(2);crypto.getRandomValues(a);s=String((a[0]%9000000000)+1000000000)+String((a[1]%900000)+100000);return s.slice(0,12)}
   function uid(){return Array.from({length:7},()=>Math.floor(Math.random()*256).toString(16).padStart(2,'0')).join(':').toUpperCase()}
   function event(text,type='terminal'){state.events.unshift({text,type,time:new Date().toLocaleTimeString('ru-RU')});state.events=state.events.slice(0,90)}
@@ -63,11 +63,11 @@
   function currentCommand(){return state.commands[terminalId]}
   async function startTerminal(){localStorage.setItem(START,'1');$('boot').classList.add('hidden');$('terminal').classList.remove('hidden');register();event('Терминал '+terminalId+' запущен','online');save();await startNfc(false)}
   async function startNfc(showOk=true){nfcStarted=true;if(!('NDEFReader'in window)){if(showOk)toast('Web NFC недоступен, включён тестовый режим');$('devTools').classList.add('show');return}try{nfcReader=new NDEFReader();await nfcReader.scan();nfcReader.onreading=e=>completeRead(e.serialNumber||uid());nfcReader.onerror=()=>toast('Ошибка NFC чтения');if(showOk)toast('NFC запущен')}catch(err){$('devTools').classList.add('show');toast('Разрешение NFC не выдано') }}
-  function completeRead(raw){const id=(raw||$('manualUid').value||uid()).trim().toUpperCase();if(!id)return;const cmd=currentCommand();$('lastUid').textContent=id;if(!cmd||cmd.status!=='pending'){event('Локально считан UID '+id,'read');save();return}cmd.status='done';cmd.cardUid=id;cmd.doneAt=Date.now();state.commands[terminalId]=cmd;event('UID '+id+' отправлен','read');save();toast('Карта считана')}
+  function completeRead(raw){const id=(raw||$('manualUid').value||uid()).trim().toUpperCase();if(!id)return;const cmd=currentCommand();if(!cmd||cmd.status!=='pending'){event('Локально считан UID '+id,'read');save();return}cmd.status='done';cmd.cardUid=id;cmd.doneAt=Date.now();state.commands[terminalId]=cmd;event('UID '+id+' отправлен','read');save();toast('Карта считана')}
   function clearCommand(){state.commands[terminalId]=null;event('Команда сброшена','mode');save()}
-  function render(){register();$('terminalId').textContent=terminalId;const cmd=currentCommand();if(cmd&&cmd.cardUid)$('lastUid').textContent=cmd.cardUid;if(cmd&&cmd.status==='pending'){$('nfcIcon').classList.add('wait');$('modeLabel').textContent=cmd.type==='payment'?'оплата':'чтение карты';$('title').textContent='Поднесите карту';$('help').textContent=cmd.type==='payment'?'Идёт безопасное считывание карты для оплаты.':'Идёт безопасное считывание NFC-карты.';$('liveText').textContent='reading'}else if(cmd&&cmd.status==='done'){$('nfcIcon').classList.remove('wait');$('modeLabel').textContent='готово';$('title').textContent='Карта считана';$('help').textContent='Данные переданы. Терминал готов к следующей операции.';$('liveText').textContent='done'}else{$('nfcIcon').classList.remove('wait');$('modeLabel').textContent='готов';$('title').textContent='Ожидание';$('help').textContent='Терминал активен. Когда поступит команда чтения, экран автоматически перейдёт в режим NFC.';$('liveText').textContent=nfcStarted?'nfc on':'ready'}}
+  function render(){register();$('terminalId').textContent=terminalId;const cmd=currentCommand();if(cmd&&cmd.id&&cmd.id!==lastCommandId){lastCommandId=cmd.id;if(cmd.status==='pending')toast('Команда от кассы получена')}if(cmd&&cmd.status==='pending'){$('nfcIcon').classList.add('wait');$('modeLabel').textContent=cmd.type==='payment'?'оплата':cmd.type==='identify'?'идентификация':'выпуск карты';$('title').textContent='Поднесите карту';$('help').textContent=cmd.type==='payment'?'Идёт считывание карты для оплаты по корзине кассы.':'Терминал получил команду и ждёт NFC-карту.';$('liveText').textContent='reading'}else if(cmd&&cmd.status==='done'){$('nfcIcon').classList.remove('wait');$('modeLabel').textContent='готово';$('title').textContent='Карта считана';$('help').textContent='Данные переданы. Терминал готов к следующей операции.';$('liveText').textContent='done'}else{$('nfcIcon').classList.remove('wait');$('modeLabel').textContent='готов';$('title').textContent='Ожидание';$('help').textContent='Терминал активен и постоянно слушает команды кассы.';$('liveText').textContent=nfcStarted?'nfc on':'ready'}}
   $('startBtn').onclick=startTerminal;$('copyIdBtn').onclick=async()=>{await navigator.clipboard.writeText(terminalId).catch(()=>{});toast('ID скопирован')};$('simulateBtn').onclick=()=>completeRead(uid());$('manualBtn').onclick=()=>completeRead();$('clearBtn').onclick=clearCommand;
-  channel&&(channel.onmessage=e=>{if(e.data&&e.data.state){state=e.data.state;render()}});window.addEventListener('storage',e=>{if(e.key===KEY){state=load();render()}});setInterval(()=>{if(localStorage.getItem(START)==='1'){$('boot').classList.add('hidden');$('terminal').classList.remove('hidden');state=load();register();localStorage.setItem(KEY,JSON.stringify(state));render()}},1200);if(localStorage.getItem(START)==='1'){startTerminal()}else{$('terminalId').textContent=terminalId}
+  channel&&(channel.onmessage=e=>{if(e.data&&e.data.state){state=e.data.state;register();render()}});window.addEventListener('storage',e=>{if(e.key===KEY){refresh()}});setInterval(()=>{if(localStorage.getItem(START)==='1'){$('boot').classList.add('hidden');$('terminal').classList.remove('hidden');refresh();localStorage.setItem(KEY,JSON.stringify(state));channel&&channel.postMessage({state})}},350);if(localStorage.getItem(START)==='1'){startTerminal()}else{$('terminalId').textContent=terminalId}
 })();
 </script>
 </body>
